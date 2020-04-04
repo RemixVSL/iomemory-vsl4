@@ -151,6 +151,7 @@ void kfioc_bio_has_error(void) {
 #                 0   not timer_setup, use function and data of timer instead
 # git commit:
 # kernel version: v4.15
+# iomemory-vsl:   3
 KFIOC_X_HAS_TIMER_SETUP() {
     local test_flag="$1"
     local test_code='
