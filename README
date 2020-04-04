@@ -1,0 +1,195 @@
+Building the ioMemory VSL (Driver) from Source
+----------------------------------------------
+
+The iomemory-vsl4 driver is distributed as a source package. Source packages from
+other distributions are not guaranteed to work.
+
+You need to build the driver from a source package that corresponds to your
+OS kernel.
+
+To determine what kernel version is running on your system, use the
+following command:
+
+    $ uname -r
+
+Note: Installation commands require administrator privileges. Log in as
+      root or use sudo to run the install.
+
+Note: Make sure you have the right development download for your kernel.
+      The running kernel version can be found by running "uname -r" and the
+      module directory would then be found like this:
+
+          $ ls /lib/modules/$(uname -r)
+
+      Kernel development sources are found, on most distributions, by
+      symlinks in this module directory.  These symlinks are "source" and
+      "build" and should resolve to appropriate directories.
+
+1. Download current driver source and support packages from
+   http://support.fusionio.com
+
+   Note: The exact source package to download depends on your operating
+         system, but it is either an .rpm package (for operating systems
+         that use .rpm packages) or a tar installation package (for
+         anything else).  Fortunately the tar files are not distribution
+         specific and can be built on any supported distribution.
+
+2. Change directory to wherever you downloaded the source package.
+
+3. Follow the instructions below in either Building from an .rpm Source
+   Package or Building from a Debian Source Package to create an
+   installation package tailored to your needs.
+
+
+Building a .rpm Installation Package
+------------------------------------
+
+To build a .rpm installation package:
+
+1. Remove prior versions of the ioDrive driver .rpm and utilities:
+
+       $ rpm -qa 'iomemory-vsl*'
+       $ rpm -qa 'fio-*'
+       $ rpm -e <packages listed in previous commands>
+
+2. Install the prerequisite files for your kernel version.
+
+   On CentOS 5 or RHEL 5, you need kernel-devel, kernel-headers, (which
+   may already be in the default OS installation) and GCC4.
+
+       $ yum install kernel-devel kernel-headers gcc rsync
+
+3. To build an .rpm installation package for the current kernel from a
+   .src.rpm, run this command:
+
+       $ rpmbuild --rebuild iomemory-vsl4-4.3.7.1205-1.src.rpm
+
+   When using a .src.rpm source package for a non-running kernel, run this
+   command:
+
+       $ rpmbuild --rebuild --define 'rpm_kernel_version 2.6.24.4-64.fc8-x86_64' iomemory-vsl4-4.3.7.1205-1.src.rpm
+
+   The new .rpm package is located in a directory that is indicated in the
+   output from the rpmbuild command.  To find it, look for the "Wrote:"
+   line. In the following example, the .rpm packages are located in the
+   /usr/src/redhat/RPMS/x86_64/ directory.  See the sample "rpmbuild"
+   output below:
+
+       ...
+       Processing files: iomemory-vsl4-source-4.3.7.1205-1
+       Requires(rpmlib): rpmlib(PayloadFilesHavePrefix) <= 4.0-1 rpmlib(CompressedFileNames) <= 3.0.4-1
+       Obsoletes: iodrive-driver-source
+       Checking for unpackaged file(s): /usr/lib/rpm/check-files /var/tmp/iomemory-vsl4-4.3.7.1205-root
+       Wrote: /usr/src/redhat/RPMS/x86_64/iomemory-vsl4-2.6.18-128.el5-4.3.7.1205-1.x86_64.rpm
+       Wrote: /usr/src/redhat/RPMS/x86_64/iomemory-vsl4-source-4.3.7.1205-1.x86_64.rpm
+
+   Make a note of the .rpm location; you will need this information for the installation.
+
+   Note: A .rpm installation package can also be built from a .tar.gz or
+         .tar.bz2 file using similar rpmbuild commands to those listed
+         above by using "-ta" instead of "--rebuild":
+
+             $ rpmbuild -ta iomemory-vsl4_4.3.7.1205-1.tar.gz
+
+4. Install the generated driver in conjunction with any additional files
+   (fio-util, fio-firmware, etc.) that have been downloaded from
+   http://support.fusionio.com .
+
+
+Building a Debian Installation Package
+--------------------------------------
+
+To build a Debian installation package:
+
+1. Install the prerequisites for building the iomemory-vsl4 source driver
+   package (a complete list of dependencies are listed by the
+   "Build-Depends" tag in the debian/control file inside the tar):
+
+       $ sudo apt-get install gcc fakeroot build-essential debhelper linux-headers-$(uname --r) rsync
+
+   You can also install packages separately by running this command:
+
+       $ sudo apt-get install gcc rsync
+
+2. Download the driver source file for your target operating system at
+   http://support.fusionio.com
+
+3. Unpack the driver source file:
+
+       $ tar zxvf iomemory-vsl4_4.3.7.1205-1.tar.gz
+
+4. Change to the directory created in the previous step:
+
+       $ cd iomemory-vsl4-4.3.7.1205
+
+5. Begin the driver rebuild:
+
+       $ dpkg-buildpackage -rfakeroot -b
+
+   You can also build the driver as a root user, though this is not recommended:
+
+       $ sudo dpkg-buildpackage
+
+   Alternatively "debuild" can be used:
+
+       $ debuild
+
+6. The new .deb package is located in the parent directory.
+
+   Note: A failure of any of these builds may be due to required packages
+         missing from the system. The output from the failed command
+         informs you of which packages are missing. Try installing any
+         missing packages and then repeating the build process.
+
+
+7. Install the generated driver in conjunction with any additional files
+   (fio-util, fio-firmware, etc.) that have been downloaded from
+   http://support.fusionio.com .
+
+
+Building and Installing for Non-deb and Non-rpm Based Systems
+-------------------------------------------------------------
+
+The ioMemory VSL driver can be built and installed on systems without using
+RPM and .deb packaging.  A .tar file is available from
+http://support.fusionio.com for manually unpacking, building and
+installing.
+
+1. Ensure that kernel development files are installed.
+
+2. Download the driver source .tar.gz file from http://support.fusionio.com .
+
+3. Unpack the driver source file:
+
+       $ tar zxvf iomemory-vsl4_4.3.7.1205-1.tar.gz
+
+   Change directory into the unpacked source:
+
+       $ cd iomemory-vsl4-4.3.7.1205/root/usr/src/fio/iomemory-vsl4
+
+4. Build the driver:
+
+   If the target kernel is the currently running kernel:
+
+       $ make modules
+
+   If the target kernel is not running then indicate the target kernel
+   using KERNELVER:
+
+       $ make KERNELVER=2.6.36-5.2 modules
+
+5. Install the driver:
+
+       $ make modules_install
+
+   Or
+
+       $ make KERNELVER=2.6.36-5.2 modules_install
+
+For more information, see the User Guide.
+
+
+========================================================================
+Copyright (c) 2010-2014, Fusion-io, Inc. (acquired by SanDisk Corp. 2014)
+Copyright (c) 2014 SanDisk Corp. and/or all its affiliates. All rights reserved. (acquired by Western Digital Corp. 2016)
+Copyright (c) 2016 Western Digital Technologies, Inc. All rights reserved.

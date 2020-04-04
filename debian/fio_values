@@ -1,0 +1,7 @@
+fio_oem_name            := fusionio
+fio_oem_name_short      := fio
+fio_sourcedir           := /usr/src
+fio_driver_name         := iomemory-vsl4
+fio_version             := 4.3.7.1205
+fio_short_version       := 4.3.7
+fio_docdir              := /usr/share/doc

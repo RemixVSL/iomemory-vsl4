@@ -1,0 +1,5 @@
+usr/share/doc/iomemory-vsl4/License
+usr/share/doc/iomemory-vsl4/NOTICE.iomemory-vsl
+usr/lib/fio/libvsl_4.so
+usr/share/doc/fio/NOTICE.libvsl_4
+etc/ld.so.conf.d/fio.conf
