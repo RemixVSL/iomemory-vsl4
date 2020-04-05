@@ -51,9 +51,9 @@ A dkms.conf file is supplied, so it should be plug and play:
 ```
 sudo cp -r iomemory-vsl/root/usr/src/iomemory-vsl-4.3.7 /usr/src/
 sudo mkdir -p /var/lib/dkms/iomemory-vsl/4.3.7/build
-sudo ln -s /usr/src/iomemory-vsl-4.3.7 /var/lib/dkms/iomemory-vsl/4.3.6/source
-sudo dkms build -m iomemory-vsl -v 3.2.15
-sudo dkms install -m iomemory-vsl -v 3.2.15
+sudo ln -s /usr/src/iomemory-vsl-4.3.7 /var/lib/dkms/iomemory-vsl/4.3.7/source
+sudo dkms build -m iomemory-vsl -v 4.3.7
+sudo dkms install -m iomemory-vsl -v 4.3.7
 sudo modprobe iomemory-vsl
 ```
 With fio-utils installed you should see the following kind of...,:
