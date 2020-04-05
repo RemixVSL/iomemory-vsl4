@@ -35,7 +35,8 @@ KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
-    CFLAGS += -Werror
+# We don't want the -Wvla errors for now
+#    CFLAGS += -Werror
 endif
 
 # Set FUSION_DEBUG=0 to compile without debugging symbols
@@ -50,13 +51,31 @@ FIOARCH ?= $(shell uname -m)
 CCMAJOR ?= $(shell echo __GNUC__ | $(FIOCC) -E -xc - | tail -n 1)
 CCMINOR ?= $(shell echo __GNUC_MINOR__ | $(FIOCC) -E -xc - | tail -n 1)
 CCVER=$(CCMAJOR)$(CCMINOR)
+LAST_CCVER := $(shell ls -1 kfio | sed -n 's/.*_cc\([0-9][0-9]*\)_.*/\1/p' | tail -1)
+MODULE_VERSION ?= $(shell git rev-parse --short HEAD)
+
 TARGET ?= $(FIOARCH)_cc$(CCMAJOR)$(CCMINOR)
 
 KFIO_LIB ?= kfio/$(TARGET)_libkfio.o_shipped
+LAST_KFIO_LIB := $(shell ls -1 kfio | sort | tail -1)
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 
 all: modules
+
+gpl: fake_license modules patch_module_version
+
+.PHONY: fake_license
+fake_license:
+	sed -i 's/Proprietary/GPL/g' license.c
+
+.PHONY: check_n_fix_kfio_ccver
+check_n_fix_kfio_ccver:
+	if [ "${CCVER}" -gt "${LAST_CCVER}" ];then \
+		if [ ! -f "${KFIO_LIB}" ];then \
+			cp kfio/${LAST_KFIO_LIB} ${KFIO_LIB}; \
+		fi \
+	fi
 
 clean modules_clean:
 	$(MAKE) \
@@ -84,7 +103,16 @@ check_target_kernel:
 		$(MAKE) clean ; \
 	fi
 
-modules modules_install: check_target_kernel include/fio/port/linux/kfio_config.h
+.PHONY: add_module_version patch_module_version
+add_module_version patch_module_version:
+	@ret="$$("$(shell pwd)"/patch_module_version.sh "$(FIO_DRIVER_NAME)".ko "$(MODULE_VERSION)")" ; \
+	if [ -n "$$ret" ] ; then \
+		echo "" ; \
+		echo ""$$ret"" ; \
+		echo "" ; \
+	fi
+
+modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h
 	$(MAKE) \
     -j$(NCPUS) \
 	-C $(KERNEL_BUILD) \

@@ -848,8 +848,6 @@ void kfioc_test_blk_delay_queue(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-
-
 # flag:           KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
 # values:
 #                 0     for older kernels that don't have unplug_fn member in struct request_queue.
@@ -2771,7 +2769,6 @@ void kfioc_blkmq_complete_no_error(void) {
 '
     kfioc_test "$test_code" "$test_flag" 1
 }
-
 
 # flag:           KFIOC_HAS_BLK_MQ
 # usage:          undef for automatic selection by kernel version

@@ -3,10 +3,22 @@
 # Extra tests that are used for compatibility with newer kernels.
 # This file gets sourced by kfio_config.sh, to keep changes to a minimum
 #
+# TODO:
+# FIX SPECIAL: KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+#
 NCPUS=$(grep -c ^processor /proc/cpuinfo)
 TEST_RATE=$(expr $NCPUS "*" 2)
 
 KFIOC_TEST_LIST="${KFIOC_TEST_LIST}
+KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
+KFIOC_X_HAS_BLK_STOP_QUEUE
+KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER
+KFIOC_X_PART_STAT_REQUIRES_CPU
+KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN
+KFIOC_X_TASK_HAS_CPUS_ALLOWED
+KFIOC_X_BIO_HAS_BIO_SEGMENTS
+KFIOC_X_BIO_HAS_BI_PHYS_SEGMENTS
 KFIOC_X_HAS_BLK_QUEUE_FLAG_OPS
 KFIOC_X_BIO_HAS_ERROR
 KFIOC_X_REQ_HAS_ERRORS
@@ -54,6 +66,220 @@ start_tests()
     # We want more time for ourselves than the child tests
     TIMEOUT_DELTA=$(($TIMEOUT_DELTA+$TIMEOUT_DELTA/2))
     update_timeout
+}
+
+# flag:           KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
+# values:
+#                 1     for kernels that have the blk_mq_delay_device() helper
+#                 0     for kernels that do not
+# git commit:
+# comments:
+KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+#include <linux/blk-mq.h>
+
+void kfioc_test_blk_mq_delay_queue(void)
+{
+    blk_mq_delay_queue(NULL, 0)
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
+}
+
+# flag:          KFIOC_X_HAS_BLK_FS_REQUEST
+# usage:         1   Kernel has obsolete blk_fs_request macro
+#                0   It does not
+# kernel version 2.6.36 removed macro.
+KFIOC_X_HAS_BLK_STOP_QUEUE()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+int kfioc_has_blk_stop_queue(struct request_queue *rq)
+{
+    return blk_stop_queue(rq);
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror
+}
+
+# flag:           KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+# values:
+#                 0     starting 5.0 the request_queue has a spinlock_t for queue_lock
+#                 1     pre 5.0 kernels have a spinlock_t *queue_lock in request_queue.
+# git commit:     NA
+# comments:
+# iomemory-vsl:   4
+KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+
+void kfioc_test_request_queue_has_queue_lock_pointer(void) {
+    struct request_queue *q;
+    void *x
+    x = q->special
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1
+}
+
+
+# flag:           KFIOC_HAS_BLK_MQ
+# usage:          undef for automatic selection by kernel version
+#                 0     if the kernel doesn't support blk-mq
+#                 1     if the kernel has blk-mq
+# kernel version: v4.1-rc1
+# A popular distro has backported blk-mq.h into 3.10.0 kernel in a way that does
+# not work with the driver
+## The original test is broken, and missing linux/version.h
+KFIOC_HAS_BLK_MQ()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/version.h>
+#if LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)
+#include <linux/blk-mq.h>
+
+int kfioc_has_blk_mq(void)
+{
+    struct blk_mq_tag_set tag_set;
+    tag_set.nr_hw_queues = 1;
+    tag_set.cmd_size = 0;
+    if (!blk_mq_alloc_tag_set(&tag_set))
+    {
+        blk_mq_init_queue(&tag_set);
+    }
+    blk_mq_run_hw_queues(NULL,0);
+    return 1;
+}
+#else
+#error blk-mq was added in 3.13.0 kernel
+#endif
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
+}
+
+# flag:           KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER
+# values:
+#                 0     starting 5.0 the request_queue has a spinlock_t for queue_lock
+#                 1     pre 5.0 kernels have a spinlock_t *queue_lock in request_queue.
+# git commit:     NA
+# comments:
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+
+void kfioc_test_request_queue_has_queue_lock_pointer(void) {
+    spinlock_t *l;
+    struct request_queue *q;
+    q->queue_lock = l;
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1
+}
+
+# flag:           KFIOC_X_PART_STAT_REQUIRES_CPU
+# values:
+#                 0     newer kernels don't need the cpu for stats
+#                 1     older kernels need the cpu for stats
+# git commit:
+# comments:       in newer
+KFIOC_X_PART_STAT_REQUIRES_CPU()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/genhd.h>
+struct gendisk *gd;
+void kfioc_test_part_stat_requires_cpu(void) {
+  part_stat_inc(1, &gd->part0, ios[0]);
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1
+}
+
+# flag:           KFIOC_REQUEST_QUEUE_HAS_REQUEST_FN
+# values:
+#                 0     for newer kernels that don't have request_fn member in struct request_queue.
+#                 1     for older kernels that have request_fn member in struct request_queue.
+# git commit:     NA
+# comments:
+KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+
+void kfioc_test_request_queue_request_fn(void) {
+    struct request_queue q = { .request_fn = NULL };
+    (void)q;
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1
+}
+
+# flag:          KFIOC_X_TASK_HAS_CPUS_ALLOWED
+# usage:         1   Task struct has CPUs allowed as mask
+#                0   It does not
+KFIOC_X_TASK_HAS_CPUS_ALLOWED()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/sched.h>
+void kfioc_check_task_has_cpus_allowed(void)
+{
+    cpumask_t *cpu_mask = NULL;
+    struct task_struct *tsk = NULL;
+    tsk->cpus_allowed = *cpu_mask;
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror
+}
+
+# flag:           KFIOC_X_BIO_HAS_BIO_SEGMENTS
+# usage:          0     if kernel has no bio_segments
+#                 1     if kernel has bio_segments
+KFIOC_X_BIO_HAS_BIO_SEGMENTS()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/bio.h>
+
+void kfioc_test_bio_has_bio_segments(void) {
+    struct bio *bio = NULL;
+    unsigned segs;
+    segs = bio_segments(bio);
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
+}
+
+# flag:           KFIOC_BIO_HAS_BI_PHYS_SEGMENTS
+# usage:          0     if bio has no bi_phys_segments
+#                 1     if bio has bi_phys_segments
+KFIOC_X_BIO_HAS_BI_PHYS_SEGMENTS()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/bio.h>
+
+void kfioc_test_bio_has_bi_phys_segments(void) {
+	struct bio bio;
+	void *test = &(bio.bi_phys_segments);
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
 # flag:          KFIOC_X_HAS_BLK_QUEUE_FLAG_OPS
