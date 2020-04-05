@@ -614,10 +614,8 @@ static void kfio_do_request(struct request_queue *q)
 #endif /* defined(__VMKLNX__) */
 
 #if KFIOC_HAS_BLK_MQ
-
 static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
                                        bool can_block);
-
 #if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 #else
@@ -632,7 +630,7 @@ static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_da
 #if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     fbio = req->special;
 #else
-    fbio = kfio_request_to_bio(disk, req, false);
+    // fbio = kfio_request_to_bio(disk, req, false);
 #endif
     if (!fbio)
     {
