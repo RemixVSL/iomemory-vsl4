@@ -112,7 +112,7 @@ add_module_version patch_module_version:
 		echo "" ; \
 	fi
 
-modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h
+modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
     -j$(NCPUS) \
 	-C $(KERNEL_BUILD) \
