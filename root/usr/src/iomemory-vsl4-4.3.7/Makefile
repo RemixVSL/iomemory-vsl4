@@ -36,7 +36,7 @@ KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
 # We don't want the -Wvla errors for now
-#    CFLAGS += -Werror
+#   CFLAGS += -Werror
 endif
 
 # Set FUSION_DEBUG=0 to compile without debugging symbols

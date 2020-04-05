@@ -7,7 +7,9 @@ Therefore it is NOT meant for production use, just for testing purposes.
 The current version is derived from iomemory-vsl-4.3.7.
 
 ## Important notes!!!
-At this moment the driver has only been tested with kernel 5.3, and ext4fs.
+At this moment the driver has only been tested with kernel 5.3, and ext4fs, by installing / playing Goat Simulator from steam, and running the FIO tests from the iomemory-vsl test suite on a logical volume.
+
+The original driver does some GCC specific things and will not compile with -Werror, when turning warnings into errors, due to -Wvla (variable length arrays) and some other dirty bits. It still contains some unsavory things that need cleaning, it does however "work" in the setting described above.
 
 ## Background
 Driver support for FusionIO cards has been lagging behind kernel
