@@ -37,7 +37,7 @@ sudo insmod iomemory-vsl4.ko
 If you are on CentOS or similiar distribution simply run
 ```
 git clone https://github.com/snuf/iomemory-vsl4
-cd iomemory-vsl/
+cd iomemory-vsl4/
 git checkout backport-iomemory-vsl
 rpmbuild -ba fio-driver.spec
 ```
@@ -49,12 +49,12 @@ Installation can be done according to the original README.
 ## DKMS
 A dkms.conf file is supplied, so it should be plug and play:
 ```
-sudo cp -r iomemory-vsl/root/usr/src/iomemory-vsl-4.3.7 /usr/src/
-sudo mkdir -p /var/lib/dkms/iomemory-vsl/4.3.7/build
-sudo ln -s /usr/src/iomemory-vsl-4.3.7 /var/lib/dkms/iomemory-vsl/4.3.7/source
-sudo dkms build -m iomemory-vsl -v 4.3.7
-sudo dkms install -m iomemory-vsl -v 4.3.7
-sudo modprobe iomemory-vsl
+sudo cp -r iomemory-vsl4/root/usr/src/iomemory-vsl4-4.3.7 /usr/src/
+sudo mkdir -p /var/lib/dkms/iomemory-vsl4/4.3.7/build
+sudo ln -s /usr/src/iomemory-vsl4-4.3.7 /var/lib/dkms/iomemory-vsl4/4.3.7/source
+sudo dkms build -m iomemory-vsl4 -v 4.3.7
+sudo dkms install -m iomemory-vsl4 -v 4.3.7
+sudo modprobe iomemory-vsl4
 ```
 With fio-utils installed you should see the following kind of...,:
 ```
