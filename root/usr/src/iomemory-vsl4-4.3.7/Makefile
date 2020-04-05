@@ -61,7 +61,7 @@ LAST_KFIO_LIB := $(shell ls -1 kfio | sort | tail -1)
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 
-all: modules
+all: modules patch_module_version
 
 gpl: fake_license modules patch_module_version
 
@@ -126,3 +126,6 @@ modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/
 	$@
 
 endif
+
+# 4.3.7.1205 bryce@a7e621e6fb50 -tag=7bd0632
+# 3.2.16.1731 pinnacles@4870ad45b7ea

@@ -18,9 +18,9 @@ fi
 
 if [ -e $module ]; then
     maxlength=$(perl -ne 'print length($1)."\n" if /(\d.\d.\d+.\d+ \w+@[\w\d]+)/' $module | head -1)
-    newlength=$(perl -sne 'print length("$2 $4 $tag a")."\n" if /((\d.\d.\d+.\d+) (\w+@([\w\d]+)))/' -- -tag=$tag $module | head -1)
-    if [ "$maxlength" == "$newlength" -a "$maxlength" == "34" ]; then
-        replace=$(perl -sne 'print "s/$1/$2 $4 $tag a/\n" if /((\d.\d.\d+.\d+) (\w+@([\w\d]+)))/' -- -tag=$tag $module | head -1)
+    newlength=$(perl -sne 'print length("$2 $tag           ")."\n" if /((\d.\d.\d+.\d+) (\w+@([\w\d]+)))/' -- -tag=$tag $module | head -1)
+    replace=$(perl -sne 'print "s/$1/$2 $tag           /"."\n" if /((\d.\d.\d+.\d+) (\w+@([\w\d]+)))/' -- -tag=$tag $module | head -1)
+    if [ "$maxlength" == "$newlength" -a "$maxlength" == "29" ]; then
         sed -i "$replace" $module
         echo "Ok: altered version for $module appended $tag"
     elif [ "$maxlength" == "$newlength" -a "$maxlength" == "" ]; then
