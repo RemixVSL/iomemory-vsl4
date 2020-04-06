@@ -346,7 +346,6 @@ Source to build driver for SanDisk Fusion ioMemory devices
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/gcc/align.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/gcc/compiler.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/public/fioapi.h
-/usr/src/iomemory-vsl4-4.3.7/kfio/.x86_64_cc48_libkfio.o.cmd
 /usr/src/iomemory-vsl4-4.3.7/kfio/x86_64_cc48_libkfio.o_shipped
 
 
