@@ -13,6 +13,7 @@ KFIOC_TEST_LIST="${KFIOC_TEST_LIST}
 KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
 KFIOC_X_HAS_BLK_STOP_QUEUE
 KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
 KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER
 KFIOC_X_PART_STAT_REQUIRES_CPU
 KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN
@@ -109,8 +110,8 @@ int kfioc_has_blk_stop_queue(struct request_queue *rq)
 
 # flag:           KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
 # values:
-#                 0     starting 5.0 the request_queue has a spinlock_t for queue_lock
-#                 1     pre 5.0 kernels have a spinlock_t *queue_lock in request_queue.
+#                 0
+#                 1    pre 5.3 kernels have special as part of the "do what you want"
 # git commit:     NA
 # comments:
 # iomemory-vsl:   4
@@ -122,14 +123,37 @@ KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL()
 
 void kfioc_test_request_queue_has_queue_lock_pointer(void) {
     struct request_queue *q;
-    void *x
-    x = q->special
+    void *x;
+    x = q->special;
 }
 '
 
     kfioc_test "$test_code" "$test_flag" 1
 }
 
+
+# flag:           KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
+# values:
+#                 0
+#                 1     5.3 kernels have queuedata as part of the "do what you want"
+# git commit:     NA
+# comments:
+# iomemory-vsl:   4
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+
+void kfioc_test_request_queue_has_queue_lock_pointer(void) {
+    struct request_queue *q;
+    void *x;
+    x = q->queuedata;
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1
+}
 
 # flag:           KFIOC_HAS_BLK_MQ
 # usage:          undef for automatic selection by kernel version

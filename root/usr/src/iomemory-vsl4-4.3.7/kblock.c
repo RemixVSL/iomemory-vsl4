@@ -622,15 +622,22 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
 static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 #endif
 {
+#if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL && ! KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
     struct kfio_disk *disk = hctx->driver_data;
+#endif
     struct request *req = bd->rq;
+#if KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
+    struct request_queue *q = req->q;
+#endif
     kfio_bio_t *fbio;
     int rc;
 
 #if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     fbio = req->special;
+#elif KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
+    fbio = q->queuedata;
 #else
-    // fbio = kfio_request_to_bio(disk, req, false);
+    fbio = kfio_request_to_bio(disk, req, false);
 #endif
     if (!fbio)
     {
@@ -652,6 +659,8 @@ static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_da
              */
 #if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
             req->special = fbio;
+#elif KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
+            q->queuedata = fbio;
 #endif
             goto retry;
         }
