@@ -1823,7 +1823,7 @@ KFIOC_BIO_HAS_INTEGRITY()
 
 void kfioc_test_bio_remaining(void) {
 	struct bio *bio = NULL;
-	bio_integrity(bio) = NULL;
+	bio_integrity(bio) == NULL;
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
