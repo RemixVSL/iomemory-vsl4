@@ -329,14 +329,8 @@ static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 
 static struct blk_mq_ops fio_mq_ops = {
     .queue_rq   = fio_queue_rq,
-# if KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
-    /* We want to use blk_mq_map_queues, but it's GPL: however, the block
-       driver will call it for us if the function pointer is NULL */
-    .map_queues = NULL,
-# else
-    .map_queue  = blk_mq_map_queue,
-# endif
-    .init_hctx  = fio_init_hctx,
+    .map_queues = blk_mq_map_queues,
+    .init_hctx  = fio_init_hctx
 };
 
 
@@ -837,10 +831,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
     infprint("%s : idx: %x : phys_segments: %x : size: %x",
              msg, BI_IDX(bio), bio_segments(bio), BI_SIZE(bio));
 
-#if KFIOC_BIO_HAS_SEG_SIZE
-    infprint("%s: seg_front_size %x : seg_back_size %x", msg,
-             bio->bi_seg_front_size, bio->bi_seg_back_size);
-#endif
     infprint("%s: max_vecs: %x : io_vec %p : end_io: %p : private: %p",
              msg, bio->bi_max_vecs, bio->bi_io_vec,
              bio->bi_end_io, bio->bi_private);
