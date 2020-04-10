@@ -49,17 +49,7 @@
 #include <fio/port/common-linux/kscsi_config.h>
 #include <linux/module.h>
 
-// See CRT-23. ESX asserts on DID_BAD_TARGET; it expects DID_NO_CONNECT.
-#if defined(__VMKLNX__)
-#undef DID_BAD_TARGET
-#define DID_BAD_TARGET DID_NO_CONNECT
-#endif
-
-#if (KFIOC_HAS_SCSI_LUNID_UINT == 1) || defined(__VMKLNX__)
-#define PRILunId   "u"
-#else
 #define PRILunId   "llu"
-#endif
 /**
  * @ingroup PORT_COMMON_LINUX
  * @{
