@@ -87,9 +87,7 @@ KFIOC_PARTITION_STATS
 KFIOC_HAS_NEW_BLKDEV_METHODS
 KFIOC_COMPAT_IOCTL_RETURNS_LONG
 KFIOC_DISCARD
-KFIOC_HAS_BIO_RW_SYNC
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
-KFIOC_BARRIER
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_HAS_SPIN_LOCK_IRQSAVE_NESTED
 KFIOC_MODULE_PARAM_ARRAY_NUMP
@@ -1016,25 +1014,6 @@ int kfioc_test_blk_queue_set_discard(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_HAS_BIO_RW_SYNC
-# values:
-#                 0     for kernel doesn't support BIO_RW_SYNC flag
-#                 1     for kernel supports the flag
-# comments:       2.6.18
-KFIOC_HAS_BIO_RW_SYNC()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_rw_sync_flag(void) {
-	struct bio bio;
-	bio.bi_rw = 1 << BIO_RW_SYNC;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
 
 # flag:           KFIOC_HAS_BIOVEC_ITERATORS
 # values:
@@ -1072,28 +1051,6 @@ void kfioc_test_blk_queue_discard_granularity(void)
     struct request_queue q;
 
     q.limits.discard_granularity = 0;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_BARRIER
-# values:
-#                 0     for kernel doesn't support our way to do barriers
-#                 1     for kernel support it
-# comments:
-KFIOC_BARRIER()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-
-void kfioc_test_blk_queue_set_discard(void) {
-	(void) blk_queue_ordered(NULL,QUEUE_ORDERED_NONE, NULL);
-	(void) blk_queue_ordered(NULL,QUEUE_ORDERED_TAG, NULL);
-	(void) blk_queue_ordered(NULL,QUEUE_ORDERED_TAG_FLUSH, NULL);
 }
 '
 
