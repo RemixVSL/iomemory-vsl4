@@ -35,33 +35,7 @@
 #include <fio/port/message_ids.h>
 
 // Ignore this whole file, if the block device is not being included in the build.
-#if KFIO_BLOCK_DEVICE
-
-#if defined(__VMKLNX__)
-// ESX block layer code is buggy.
-// Map all block layer calls to our own block layer module (modified from the DDK version).
-#define bdget fio_esx_bdget
-#define bdput fio_esx_bdput
-#define add_disk fio_esx_add_disk
-#define vmklnx_block_register_sglimit fio_esx_vmklnx_block_register_sglimit
-#define vmklnx_register_blkdev fio_esx_vmklnx_register_blkdev
-#define unregister_blkdev fio_esx_unregister_blkdev
-#define put_disk fio_esx_put_disk
-#define vmklnx_block_init_done fio_esx_vmklnx_block_init_done
-#define blk_complete_request fio_esx_blk_complete_request
-#define end_that_request_last fio_esx_end_that_request_last
-#define blk_queue_max_sectors fio_esx_blk_queue_max_sectors
-#define blk_cleanup_queue fio_esx_blk_cleanup_queue
-#define blk_queue_max_hw_segments fio_esx_blk_queue_max_hw_segments
-#define blk_queue_softirq_done fio_esx_blk_queue_softirq_done
-#define blk_queue_hardsect_size fio_esx_blk_queue_hardsect_size
-#define blk_queue_max_phys_segments fio_esx_blk_queue_max_phys_segments
-#define alloc_disk fio_esx_alloc_disk
-#define blk_init_queue fio_esx_blk_init_queue
-#define elv_next_request fio_esx_elv_next_request
-#define blk_stop_queue fio_esx_blk_stop_queue
-#define bio_endio fio_esx_bio_endio
-#endif  /* __VMKLNX__ */
+//#if KFIO_BLOCK_DEVICE
 
 #include "port-internal.h"
 #include <fio/port/dbgset.h>
@@ -80,18 +54,15 @@
 
 #include <linux/version.h>
 #include <linux/fs.h>
-#if !defined(__VMKLNX__)
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
-#endif
+
 
 #if KFIOC_HAS_BLK_MQ
 #include <linux/blk-mq.h>
 #endif
 extern int use_workqueue;
-#if !defined(__VMKLNX__)
 static int fio_major;
-#endif
 
 #if !KFIOC_HAS_BLK_QUEUE_MAX_SEGMENTS
 // About the same time blk_queue_max_segments() came to be, the inline to extract it appeared as well.
@@ -107,7 +78,7 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on);
 static void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending);
 static void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration);
 static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight);
-#if !defined(__VMKLNX__) && !KFIOC_PARTITION_STATS
+#if !KFIOC_PARTITION_STATS
 static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw);
 #endif
 
@@ -152,16 +123,6 @@ struct kfio_disk
 #if KFIOC_HAS_BLK_MQ
     struct blk_mq_tag_set tag_set;
 #endif
-#if defined(__VMKLNX__)
-    volatile enum
-    {
-        threadState_none, Running, Stopping, Stopped
-    } submit_thread_state;           ///< used if queuing requests via single thread: see use_workqueue
-
-    fusion_condvar_t      submit_thread_cv;
-    fusion_cv_lock_t      submit_thread_lk;
-    int                   major;
-#endif
 };
 
 enum {
@@ -205,19 +166,12 @@ extern int enable_discard;
 #endif
 #endif
 
-#if defined(__VMKLNX__) || KFIOC_HAS_RQ_POS_BYTES == 0
+#if KFIOC_HAS_RQ_POS_BYTES == 0
 #define blk_rq_pos(rq)    ((rq)->sector)
 #define blk_rq_bytes(rq)  ((rq)->nr_sectors << 9)
 #endif
 
 extern int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *bio);
-
-#if KFIOC_USE_IO_SCHED
-static void kfio_blk_complete_request(struct request *req, int error);
-static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
-                                       bool can_block);
-#endif /* KFIOC_USE_IO_SCHED */
-
 static int kfio_bio_cnt(const struct bio * const bio)
 {
     return
@@ -248,20 +202,13 @@ int kfio_platform_init_block_interface(void)
     bdev_sif.bdev_update_stats = linux_bdev_update_stats;
     fio_bdev_storage_interface_register(&bdev_sif);
 
-#if defined(__VMKLNX__)
-    return 0;
-#else
     fio_major = register_blkdev(0, "fio");
     return fio_major <= 0 ? -EBUSY : 0;
-#endif
 }
 
 
 int kfio_platform_teardown_block_interface(void)
 {
-#if defined(__VMKLNX__)
-    return 0;
-#else
     int rc = 0;
 
 #if KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
@@ -271,26 +218,7 @@ int kfio_platform_teardown_block_interface(void)
 #endif
 
     return rc;
-#endif
 }
-
-#if defined(__VMKLNX__)
-// "Real" ESX register functions
-static int kfio_register_esx_blkdev(const char *name)
-{
-    // vmklnx_register_blkdev() expects PCI slot information, which is
-    // unavailable/irrelevant/inappropriate with VSUs or dual-pipe.
-    // Our modified block layer module allows skipping this information
-    // by passing -1 and NULL instead.
-    // Side effect: device gets listed as "Unknown" instead of "Adapter for iomemory-vsl"
-    return vmklnx_register_blkdev(0, name, -1, -1, NULL);
-}
-
-static int kfio_unregister_esx_blkdev(unsigned int major, const char *name)
-{
-    return unregister_blkdev(major, name);
-}
-#endif
 
 /******************************************************************************
  *   Block device open, close and ioctl handlers                              *
@@ -416,12 +344,8 @@ static int kfio_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, 
     return fio_bdev_ioctl(bdev, cmd, arg);
 }
 
-#if KFIOC_HAS_COMPAT_IOCTL_METHOD
-#if KFIOC_COMPAT_IOCTL_RETURNS_LONG
+// I can see this callback going back to Linux Kernel 2.6. It has always returned long...
 static long kfio_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
-#else
-static int kfio_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
-#endif
 {
     struct fio_bdev *bdev;
     int rc;
@@ -446,8 +370,6 @@ static int kfio_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long 
 
     return rc;
  }
-#endif
-#endif
 
 static struct block_device_operations fio_bdev_ops =
 {
@@ -455,14 +377,10 @@ static struct block_device_operations fio_bdev_ops =
     .open =         kfio_open,
     .release =      kfio_release,
     .ioctl =        kfio_ioctl,
-#if KFIOC_HAS_COMPAT_IOCTL_METHOD
-    .compat_ioctl = kfio_compat_ioctl,
-#endif
+    .compat_ioctl = kfio_compat_ioctl
 };
 
 
-
-#if !defined(__VMKLNX__)
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
 #if KFIOC_MAKE_REQUEST_FN_VOID
 static void kfio_make_request(struct request_queue *queue, struct bio *bio);
@@ -472,7 +390,7 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
 static int kfio_make_request(struct request_queue *queue, struct bio *bio);
 #endif
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
-#endif
+
 
 #if KFIOC_USE_IO_SCHED
 static struct request_queue *kfio_init_queue(struct kfio_disk *dp, kfio_numa_node_t node);
@@ -491,127 +409,6 @@ static void kfio_prepare_flush(struct request_queue *q, struct request *rq);
 #endif
 
 static void kfio_invalidate_bdev(struct block_device *bdev);
-
-#if defined(__VMKLNX__)
-
-static kfio_bio_t *kfio_fetch_next_bio(struct kfio_disk *disk)
-{
-    struct request_queue *q;
-    struct request *creq;
-
-    q = disk->rq;
-
-    spin_lock_irq(q->queue_lock);
-    creq = kfio_blk_fetch_request(q);
-    spin_unlock_irq(q->queue_lock);
-
-    if (creq != NULL)
-    {
-        kfio_bio_t *fbio;
-
-        fbio = kfio_request_to_bio(disk, creq, true);
-        if (fbio == NULL)
-        {
-            kfio_blk_complete_request(creq, -EIO);
-        }
-        return fbio;
-    }
-    return NULL;
-}
-
-/// @brief single-threaded handler for kfio_bio requests.
-/// @param arg a pointer to the fio_bdev.
-static int bio_submit_thread(void *arg)
-{
-    struct kfio_disk *disk = arg;
-    kfio_bio_t *bio;
-
-    /*
-     * Set out thread state as Running, but only if caller
-     * did not tell us to stop already, before this function
-     * has got a chance to run.
-     */
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    if (disk->submit_thread_state != Stopping)
-        disk->submit_thread_state = Running;
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-
-    while (disk->submit_thread_state != Stopping)
-    {
-        /* Try to grab next bio to submit. */
-        bio = kfio_fetch_next_bio(disk);
-
-        if (bio != NULL)
-        {
-            kfio_bio_submit(bio);
-            fusion_cond_resched();
-
-            /* There was work to do, ask for more immediately, unless asked to stop. */
-            continue;
-        }
-
-        fusion_cv_lock_irq(&disk->submit_thread_lk);
-        if (disk->submit_thread_state != Stopping)
-        {
-            (void)fusion_condvar_timedwait_noload(&disk->submit_thread_cv,
-                                                  &disk->submit_thread_lk,
-                                                  100000);
-        }
-        fusion_cv_unlock_irq(&disk->submit_thread_lk);
-    }
-
-    /* Do a final handshake with whomever is stopping us. */
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    disk->submit_thread_state = Stopped;
-    fusion_condvar_broadcast(&disk->submit_thread_cv);
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-
-    return 0;
-}
-
-/// @brief start bio_submit_thread.
-static void fio_start_submit_thread(struct kfio_disk *disk)
-{
-    kassert(disk->use_workqueue == USE_QUEUE_RQ);
-
-    fusion_create_kthread(bio_submit_thread, disk, NULL, "submit", "");
-}
-
-/// @brief stop bio_submit_thread.
-static void fio_stop_submit_thread(struct kfio_disk *disk)
-{
-    kassert(disk->use_workqueue == USE_QUEUE_RQ);
-
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    if (disk->submit_thread_state != Stopped)
-    {
-        disk->submit_thread_state = Stopping;
-    }
-    fusion_condvar_broadcast(&disk->submit_thread_cv);
-
-    /* Wait for worker to check in. */
-    while (disk->submit_thread_state != Stopped)
-    {
-        fusion_condvar_wait(&disk->submit_thread_cv, &disk->submit_thread_lk);
-    }
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-}
-
-/// @brief process request by queueing it to submit thread
-static void kfio_do_request(struct request_queue *q)
-{
-    kfio_disk_t *disk = q->queuedata;
-
-    /*
-     * In this mode we do queueing, so all we need is to signal the queue
-     * handler to come back to us and start fetching newly added requests.
-     */
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    fusion_condvar_broadcast(&disk->submit_thread_cv);
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-}
-
-#endif /* defined(__VMKLNX__) */
 
 #if KFIOC_HAS_BLK_MQ
 static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
@@ -708,9 +505,6 @@ static struct blk_mq_ops fio_mq_ops = {
 
 #endif
 
-
-#if !defined(__VMKLNX__)
-
 /* @brief Parameter to the work queue call. */
 struct kfio_blk_add_disk_param
 {
@@ -735,7 +529,6 @@ static void kfio_blk_add_disk(fusion_work_struct_t *work)
     fusion_condvar_broadcast(&disk->state_cv);
     fusion_cv_unlock_irq(&disk->state_lk);
 }
-#endif /* defined(__VMKLNX__) */
 
 static void linux_bdev_name_disk(struct fio_bdev *bdev)
 {
@@ -769,20 +562,6 @@ static int linux_bdev_create_disk(struct fio_bdev *bdev)
     disk->sector_mask = bdev->bdev_block_size - 1;
     disk->use_workqueue = use_workqueue;
 
-#if defined(__VMKLNX__)
-    // FIXME: Need PCI device info here to avoid showing up as
-    // "Gammagraphx, Inc. (or missing ID) Unknown" in "esxcfg-scsidevs -a".
-    disk->major = kfio_register_esx_blkdev(bdev->bdev_name);
-    if (disk->major < 0)
-    {
-        kfio_free(disk, sizeof(*disk));
-        return -ENODEV;
-    }
-
-    disk->submit_thread_state = Stopped;
-    fusion_condvar_init(&disk->submit_thread_cv, "fio_submit_cv");
-    fusion_cv_lock_init(&disk->submit_thread_lk, "fio_submit_lk");
-#endif
     fusion_init_spin(&disk->queue_lock, "queue_lock");
 
     fusion_condvar_init(&disk->state_cv, "fio_disk_cv");
@@ -803,9 +582,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     struct kfio_disk     *disk;
     struct request_queue *rq;
     struct gendisk       *gd;
-#if !defined(__VMKLNX__)
     struct kfio_blk_add_disk_param *param;
-#endif
 
     disk = bdev->bdev_gd;
     if (disk == NULL)
@@ -842,16 +619,10 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     else
 #endif
     if (disk->use_workqueue != USE_QUEUE_RQ)
-    {
-#if !defined(__VMKLNX__)
         disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
-#endif
-    }
 # if KFIOC_USE_IO_SCHED
     else
-    {
         disk->rq = kfio_init_queue(disk, bdev->bdev_numa_node);
-    }
 # endif /* KFIOC_USE_IO_SCHED */
 
     if (disk->rq == NULL)
@@ -893,9 +664,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 // Linux from 5.0 > removed the limits.cluster: https://patchwork.kernel.org/patch/10716231/
 #else
-# ifndef __VMKLNX__
 #  error "Do not know how to disable request queue clustering for this kernel."
-# endif
 #endif
 
     blk_queue_max_segment_size(rq, PAGE_SIZE);
@@ -989,12 +758,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENOMEM;
     }
 
-#if defined(__VMKLNX__)
-    gd->major = disk->major;
-#else
     gd->major = fio_major;
-#endif
-
     gd->first_minor = FIO_NUM_MINORS * bdev->bdev_index;
     gd->minors = FIO_NUM_MINORS;
     gd->fops = &fio_bdev_ops;
@@ -1002,10 +766,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->private_data = bdev;
 #if defined GENHD_FL_EXT_DEVT
     gd->flags = GENHD_FL_EXT_DEVT;
-#endif
-
-#if defined(__VMKLNX__)
-    gd->maxXfer = 1024 * 1024; // 1M - matches BLK_DEF_MAX_SECTORS
 #endif
 
     fio_bdev_ops.owner = THIS_MODULE;
@@ -1019,7 +779,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
              fio_bdev_get_bus_name(bdev), gd->disk_name, gd->major,
              gd->first_minor, bdev->bdev_block_size);
 
-#if !defined(__VMKLNX__)
     /*
      * Offload device exposure to separate worker thread. On some kernels from
      * certain vendores add_disk is happy do do a lot of nested processing,
@@ -1068,7 +827,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
      * use the better interface.  Instead we must poll for the device creation.
      */
     coms_wait_for_dev(gd->disk_name);
-#else // __VMKLNX__
+
     /*
      * Submit thread should be started before we call add_disk
      * in case add_disk would want to make some nested IO
@@ -1080,7 +839,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     vmklnx_block_register_sglimit(gd->major, bdev->bdev_max_sg_entries);
     vmklnx_block_init_done(gd->major);
-#endif
+
 
     return 0;
 }
@@ -1158,7 +917,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
         {
             kfio_kill_requests(disk->rq);
         }
-#if !defined(__VMKLNX__)
+
         else if (disk->use_workqueue != USE_QUEUE_MQ)
         {
             /* Fail all bio's already on internal bio queue. */
@@ -1171,7 +930,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
             }
             disk->bio_tail = NULL;
         }
-#endif
 
         fusion_spin_unlock_irqrestore(&disk->queue_lock);
 
@@ -1180,11 +938,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
         /* Tell Linux that disk is gone. */
         del_gendisk(disk->gd);
-
-#if defined(__VMKLNX__)
-        /* Stop submit thread here, we do not need it anymore. */
-        fio_stop_submit_thread(disk);
-#endif
 
         /*
          * If we have block device for the whole disk, wait for all
@@ -1265,13 +1018,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 {
     struct kfio_disk *disk = bdev->bdev_gd;
-
-#if defined(__VMKLNX__)
-    kfio_unregister_esx_blkdev(disk->major, bdev->bdev_name);
-
-    fusion_condvar_destroy(&disk->submit_thread_cv);
-    fusion_cv_lock_destroy(&disk->submit_thread_lk);
-#endif
     fusion_destroy_spin(&disk->queue_lock);
 
     fusion_condvar_destroy(&disk->state_cv);
@@ -1283,20 +1029,15 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 
 static void kfio_invalidate_bdev(struct block_device *bdev)
 {
-#if !defined(__VMKLNX__)
-#if ! KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
+#if !KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
     invalidate_bdev(bdev, 0);
 #else
     invalidate_bdev(bdev);
 #endif /* KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS */
-#else
-    /* XXXesx missing API */
-#endif
 }
 
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
-#if !defined(__VMKLNX__)
     kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
 
     if (disk == NULL)
@@ -1418,10 +1159,9 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
 # endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
-#endif /* !defined(__VMKLNX__) */
 }
 
-#if !defined(__VMKLNX__) && !KFIOC_PARTITION_STATS
+#if !KFIOC_PARTITION_STATS
 static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw)
 {
     struct gendisk *gd = disk->gd;
@@ -1450,7 +1190,7 @@ static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw)
     return gd->in_flight;
 # endif
 }
-#endif /* !defined(__VMKLNX__) && !KFIOC_PARTITION_STATS */
+#endif /* !KFIOC_PARTITION_STATS */
 
 void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 {
@@ -1519,8 +1259,6 @@ static int kfio_bio_is_discard(struct bio *bio)
 }
 #endif
 
-// kfio_dump_bio not supported for ESX4
-#if !defined(__VMKLNX__)
 /// @brief   Dump an OS bio to the log
 /// @param   msg   prefix for message
 /// @param   bio   the bio to drop
@@ -1572,7 +1310,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
 #endif
 }
-#endif // !__VMKLNX__
 
 static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
 {
@@ -1588,8 +1325,6 @@ static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
 #endif
     kfio_bio_set_cpu(fbio, cpu);
 }
-
-#if !defined(__VMKLNX__)
 
 static unsigned long __kfio_bio_sync(struct bio *bio)
 {
@@ -2378,7 +2113,6 @@ static int should_holdoff_writes(struct kfio_disk *disk)
 {
     return fio_test_bit_atomic(KFIO_DISK_HOLDOFF_BIT, &disk->disk_state);
 }
-#endif /* !defined(__VMKLNX__) */
 
 static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
 {
@@ -2418,25 +2152,6 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
              * unplug handler, and also attempt to call it.  This badness is worked
              * around here and also in kfio_init_queue().
              */
-#if defined(__VMKLNX__)
-            if (q->unplug_work.work.pending & __WORK_OLD_COMPAT_BIT)
-            {
-                if (q->unplug_work.work.func.old == NULL)
-                {
-                    engprint("Null callback avoided; (__WORK_OLD_COMPAT_BIT)\n");
-                    return;
-                }
-            }
-            else
-            {
-                if (q->unplug_work.work.func.new == NULL)
-                {
-                    engprint("Null callback avoided; (!__WORK_OLD_COMPAT_BIT)\n");
-                    return;
-                }
-            }
-#endif /* defined(__VMKLNX__) */
-
             kfio_restart_queue(q);
         }
 #endif /* KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN */
@@ -2448,7 +2163,6 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
  */
 void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
 {
-#if !defined(__VMKLNX__)
     kfio_disk_t *disk = bdev->bdev_gd;
     struct gendisk *gd;
     struct request_queue *q;
@@ -2490,11 +2204,8 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
         }
     }
 #endif /* defined(KFIOC_REQUEST_QUEUE_HAS_REQUEST_FN) */
-#endif
 }
 
-
-#if !defined(__VMKLNX__)
 static int holdoff_writes_under_pressure(struct kfio_disk *disk)
 {
     int count = 0;
@@ -2736,8 +2447,7 @@ static int kfio_make_request(struct request_queue *queue, struct bio *bio)
     return FIO_MFN_RET;
 }
 
-#endif /* !defined(__VMKLNX__) */
-
+// TODO: why do we need an empty function??
 #if KFIOC_BARRIER == 1
 static void kfio_prepare_flush(struct request_queue *q, struct request *req)
 {
@@ -2759,10 +2469,6 @@ static unsigned long kfio_get_req_hard_nr_sectors(struct request *req)
 
 static int kfio_end_that_request_first(struct request *req, int error, int count)
 {
-# if defined(__VMKLNX__)
-    return 0;
-# else
-
     kassert(use_workqueue == USE_QUEUE_RQ);
 
 #  if KFIOC_HAS_END_REQUEST
@@ -2790,7 +2496,6 @@ static int kfio_end_that_request_first(struct request *req, int error, int count
         return __blk_end_request(req, bio_status, blk_rq_bytes(req));
     }
 #  endif /* KFIOC_HAS_END_REQUEST */
-# endif /* __VMKLNX__ */
 }
 
 static void kfio_end_that_request_last(struct request *req, int error)
@@ -2831,7 +2536,6 @@ static void kfio_restart_queue(struct request_queue *q)
 # endif /* KFIOC_HAS_BLK_DELAY_QUEUE */
 }
 
-# if !defined(__VMKLNX__)
 /*
  * Returns non-zero if we have pending requests, either at the OS level
  * or on our internal retry list
@@ -2965,28 +2669,6 @@ static void kfio_blk_complete_request(struct request *req, int error)
     fusion_spin_unlock_irqrestore(&dp->queue_lock);
 }
 
-# else // #if !defined(__VMKLNX__)
-
-static void kfio_blk_do_softirq(struct request *req)
-{
-    struct request_queue *rq;
-    struct kfio_disk     *dp;
-
-    rq = req->q;
-    dp = rq->queuedata;
-
-    fusion_spin_lock_irqsave(&dp->queue_lock);
-    kfio_end_request(req, error);
-    fusion_spin_unlock_irqrestore(&dp->queue_lock);
-}
-
-static void kfio_blk_complete_request(struct request *req, int error)
-{
-    // On ESX completions must be done through the softirq handler.
-    blk_complete_request(req);
-}
-#endif
-
 static void kfio_elevator_change(struct request_queue *q, char *name)
 {
     // Turns out that the kernel developers don't actually want drivers to change the I/O scheduler, and so
@@ -2994,11 +2676,10 @@ static void kfio_elevator_change(struct request_queue *q, char *name)
     // So now, if the noop scheduler isn't set by default for our driver (which it should be),
     //  then it must be set by an admin using either a udev rule or an init script, executing something like:
     //      echo noop > /sys/block/fioX/queue/scheduler
-#if KFIOC_HAS_ELEVATOR_INIT_EXIT == 1
 
+#if KFIOC_HAS_ELEVATOR_INIT_EXIT == 1
 // We don't use the real elevator_change since it isn't in the RedHat Whitelist
 // see FH-14626 for the gory details.
-# if !defined(__VMKLNX__)
 #  if KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM
     elevator_exit(q, q->elevator);
 #  else
@@ -3011,7 +2692,6 @@ static void kfio_elevator_change(struct request_queue *q, char *name)
     {
         errprint_all(ERRID_LINUX_KBLK_INIT_SCHED, "Failed to initialize noop io scheduler\n");
     }
-# endif
 #endif // KFIOC_HAS_ELEVATOR_INIT_EXIT
 }
 
@@ -3058,13 +2738,6 @@ static void kfio_set_queue_depth(struct request_queue *q, unsigned int depth)
     q->nr_congestion_off = cong;
 }
 
-#if defined(__VMKLNX__)
-static void dummy_unplug(struct work_struct *p)
-{
-    engprint("Null callback avoided in dummy_unplug()\n");
-}
-#endif /* #if defined(__VMKLNX__) */
-
 static struct request_queue *kfio_init_queue(struct kfio_disk *dp,
                                              kfio_numa_node_t node)
 {
@@ -3085,41 +2758,10 @@ static struct request_queue *kfio_init_queue(struct kfio_disk *dp,
 
         /* Change out the default io scheduler, and use noop instead */
         kfio_elevator_change(rq, elevator_name);
-#if defined(__VMKLNX__)
-        // ESX expects completions to be done in the softirq handler.
-        // Otherwise we get mysterious hangs with no error messages.
-        blk_queue_softirq_done(rq, kfio_blk_do_softirq);
-#endif
 
         /* Increase queue depth  */
         kfio_set_queue_depth(rq, DEFAULT_LINUX_MAX_NR_REQUESTS);
     }
-
-    /*
-     * The VMKernel initializes the request_queue in their implementation of
-     * blk_queue_init().  However, they both neglect to initialize the
-     * unplug handler, and also attempt to call it.  This badness is worked
-     * around here and also in linux_bdev_backpressure()
-     */
-#if defined(__VMKLNX__)
-    if (rq->unplug_work.work.pending & __WORK_OLD_COMPAT_BIT)
-    {
-        if (rq->unplug_work.work.func.old == NULL)
-        {
-            engprint("Null work func callback found & fixed (__WORK_OLD_COMPAT_BIT)\n");
-            rq->unplug_work.work.func.old = (old_work_func_t) dummy_unplug;
-        }
-    }
-    else
-    {
-        if (rq->unplug_work.work.func.new == NULL)
-        {
-            engprint("Null work func callback found & fixed (!__WORK_OLD_COMPAT_BIT)\n");
-            rq->unplug_work.work.func.new = (work_func_t) dummy_unplug;
-        }
-    }
-#endif /* #if defined(__VMKLNX__) */
-
     return rq;
 }
 
@@ -3150,9 +2792,7 @@ static void kfio_req_completor(kfio_bio_t *fbio, uint64_t bytes_done, int error)
     if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP))
     {
         kfio_dump_fbio(fbio);
-#if !defined(__VMKLNX__)
         blk_dump_rq_flags(req, FIO_DRIVER_NAME);
-#endif
     }
 
 #if KFIOC_HAS_BLK_MQ
@@ -3169,12 +2809,12 @@ static void kfio_req_completor(kfio_bio_t *fbio, uint64_t bytes_done, int error)
     }
 }
 
-#if defined(__VMKLNX__) || KFIOC_HAS_RQ_FOR_EACH_BIO == 0
+#if KFIOC_HAS_RQ_FOR_EACH_BIO == 0
 #  define __rq_for_each_bio(lbio, req) \
            if ((req->bio)) \
                for (lbio = (req)->bio; lbio; lbio = lbio->bi_next)
 #endif
-#if defined(__VMKLNX__) || KFIOC_HAS_RQ_IS_SYNC == 0
+#if KFIOC_HAS_RQ_IS_SYNC == 0
 # if KFIOC_HAS_REQ_RW_SYNC == 1
 #    define rq_is_sync(rq)  (((rq)->flags & REQ_RW_SYNC) != 0)
 # else
@@ -3362,8 +3002,6 @@ static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
 
     return fbio;
 }
-
-#if !defined(__VMKLNX__)
 
 /*
  * Pull off as many requests as we can from the IO scheduler, then
@@ -3574,10 +3212,11 @@ static void kfio_do_request(struct request_queue *q)
     }
     disk->in_do_request = 0;
 }
-#endif /* __VMKLNX__ */
+
 
 #endif /* KFIOC_USE_IO_SCHED */
 
+// TODO: Is this needed?
 // FIXME This interface is not implemented yet. It needs to be a callback for block/scsi interface co-existence.
 // void kfio_sq_item_cancel(struct bio *bio)
 // {

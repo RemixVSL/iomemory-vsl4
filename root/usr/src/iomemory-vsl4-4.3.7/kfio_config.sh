@@ -83,8 +83,6 @@ KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
 KFIOC_NEEDS_VIRT_TO_PHYS
 KFIOC_HAS_BLK_UNPLUG
 KFIOC_HAS_BLK_DELAY_QUEUE
-KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
-KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
 KFIOC_BACKING_DEV_INFO_HAS_UNPLUG_IO_FN
 KFIOC_HAS_KMEM_CACHE
 KFIOC_HAS_NOTIFIER_FROM_ERRNO
@@ -94,10 +92,8 @@ KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
 KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS
 KFIOC_PARTITION_STATS
 KFIOC_HAS_DISK_STATS_NSECS
-KFIOC_HAS_NEW_BLOCK_METHODS
 KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT
 KFIOC_HAS_NEW_BLKDEV_METHODS
-KFIOC_HAS_BLKDEV_OLD_BD_SEM
 KFIOC_HAS_COMPAT_IOCTL_METHOD
 KFIOC_COMPAT_IOCTL_RETURNS_LONG
 KFIOC_DISCARD
@@ -105,7 +101,6 @@ KFIOC_DISCARD_ZEROES_IN_LIMITS
 KFIOC_HAS_REQ_UNPLUG
 KFIOC_HAS_BIO_RW_SYNC
 KFIOC_HAS_BIO_RW_UNPLUG
-KFIOC_HAS_BIOVEC_ITERATORS
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_BARRIER
 KFIOC_USE_LINUX_UACCESS_H
@@ -116,7 +111,6 @@ KFIOC_CONFIG_PREEMPT_RT
 KFIOC_CONFIG_TREE_PREEMPT_RCU
 KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE
 KFIOC_HAS_END_REQUEST
-KFIOC_USE_IO_SCHED
 KFIOC_USE_NEW_IO_SCHED
 KFIOC_HAS_ELV_DEQUEUE_REQUEST
 KFIOC_HAS_BIO_RW_FLAGGED
@@ -125,7 +119,6 @@ KFIOC_HAS_INFLIGHT_RW_ATOMIC
 KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV
 KFIOC_HAS_BLK_LIMITS_IO_MIN
 KFIOC_HAS_BLK_LIMITS_IO_OPT
-KFIOC_HAS_BLK_QUEUE_MAX_SEGMENTS
 KFIOC_HAS_UNIFIED_BLKTYPES
 KFIOC_HAS_BIO_RW_DISCARD
 KFIOC_HAS_SEPARATE_OP_FLAGS
@@ -853,7 +846,7 @@ void kfioc_test_blk_delay_queue(void)
 #                 0     for older kernels that don't have unplug_fn member in struct request_queue.
 #                 1     for kernels that have unplug_fn member in struct request_queue.
 # git commit:     NA
-# comments:
+# comments: removed from Kernel 2.6.39
 KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN()
 {
     local test_flag="$1"
@@ -874,7 +867,7 @@ void kfioc_test_request_queue_unplug(void) {
 #                 0     for older kernels that don't have unplug_fn take extra boolean parameter
 #                 1     for newer kernels that do have unplug_fn take extra boolean parameter
 # git commit:     NA
-# comments:
+# comments: This was  introduced prior to 5.x. I don't think we need to test for this.
 KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM()
 {
     local test_flag="$1"
@@ -1100,7 +1093,7 @@ void kfioc_test_disk_stats_nsec(struct disk_stats* stats)
 #                 0     for old block open release ioctl methods
 #                 1     for new block open release ioctl methods
 # git commit:     d4430d62fa77208824a37fe6f85ab2831d274769
-# comments:
+# comments: I can see this going back to 2.6.39.4, with block_device* and fmode_t.
 KFIOC_HAS_NEW_BLOCK_METHODS()
 {
     local test_flag="$1"
