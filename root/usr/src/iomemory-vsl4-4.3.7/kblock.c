@@ -247,8 +247,6 @@ static void kfio_close_disk(struct fio_bdev *bdev)
     }
 }
 
-#if KFIOC_HAS_NEW_BLOCK_METHODS
-
 static int kfio_open(struct block_device *blk_dev, fmode_t mode)
 {
     struct fio_bdev *bdev = blk_dev->bd_disk->private_data;
@@ -283,66 +281,6 @@ static int kfio_compat_ioctl(struct block_device *blk_dev, fmode_t mode, unsigne
 
     return rc;
 }
-
-#else
-
-static void *kfio_inode_bd_disk_private_data(struct inode *ip)
-{
-    return ip->i_bdev->bd_disk->private_data;
-}
-
-static int kfio_open(struct inode *inode, struct file *filp)
-{
-    struct fio_bdev *bdev = kfio_inode_bd_disk_private_data(inode);
-
-    filp->private_data = bdev;
-
-    return kfio_open_disk(bdev);
-}
-
-static int kfio_release(struct inode *inode, struct file *filp)
-{
-    struct fio_bdev *bdev = kfio_inode_bd_disk_private_data(inode);
-
-    kfio_close_disk(bdev);
-
-    return 0;
-}
-
-static int kfio_ioctl(struct inode *inode, struct file *filp, unsigned int cmd, unsigned long arg)
-{
-    struct fio_bdev *bdev = kfio_inode_bd_disk_private_data(inode);
-
-    return fio_bdev_ioctl(bdev, cmd, arg);
-}
-
-// I can see this callback going back to Linux Kernel 2.6. It has always returned long...
-static long kfio_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
-{
-    struct fio_bdev *bdev;
-    int rc;
-
-    if (NULL == filp)
-    {
-        return -EBADF;
-    }
-    bdev = filp->private_data;
-
-    if (NULL == bdev)
-    {
-        return -EINVAL;
-    }
-
-    rc = fio_bdev_ioctl(bdev, cmd, arg);
-
-    if (rc == -ENOTTY)
-    {
-        return -ENOIOCTLCMD;
-    }
-
-    return rc;
- }
-#endif
 
 static struct block_device_operations fio_bdev_ops =
 {
