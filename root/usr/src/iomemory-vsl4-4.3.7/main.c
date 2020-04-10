@@ -136,11 +136,6 @@ static void fio_do_exit(void)
         iodrive_cleanup();
     }
 
-    if (fio_init_state & FIO_INIT_STATE_IFIOMEM)
-    {
-        ifio_cleanup_memory();
-    }
-
     fio_init_state = 0;
 }
 
