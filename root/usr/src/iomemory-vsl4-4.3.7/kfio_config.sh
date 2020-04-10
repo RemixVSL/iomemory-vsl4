@@ -80,7 +80,6 @@ KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
 KFIOC_HAS_KMEM_CACHE
 KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
-KFIOC_PARTITION_STATS
 KFIOC_DISCARD
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_USE_LINUX_UACCESS_H
@@ -729,27 +728,6 @@ int kfioc_test_unregister_blkdev(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 0
-}
-
-# flag:           KFIOC_PARTITION_STATS
-# values:
-#                 0     for kernels that the driver updates stats
-#                 1     for kernels where the block layer updates stats
-# git commit:     074a7aca7afa6f230104e8e65eba3420263714a5
-# comments:       genhd struct no longer tracks stats.  Stats are tracked
-#                 automatically when updating the partition stats by the
-#                 block layer.
-KFIOC_PARTITION_STATS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/genhd.h>
-#ifndef part_stat_lock
-#error part_stat_lock not defined
-#endif
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
 }
 
 # flag:           KFIOC_DISCARD
