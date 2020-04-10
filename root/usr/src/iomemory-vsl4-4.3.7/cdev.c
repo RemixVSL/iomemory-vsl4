@@ -32,18 +32,12 @@
 #include <fio/port/cdev.h>
 #include <fio/port/message_ids.h>
 
-#if !defined (__linux__)
-#error This file supports linux only
-#endif
-
 #include <linux/miscdevice.h>
 #include <linux/poll.h>
 
-#if !defined(__VMKLNX__)
 #include <linux/namei.h>
 #include <linux/delay.h>
 #include <linux/sched.h>
-#endif
 
 /**
  * @ingroup PORT_COMMON_LINUX

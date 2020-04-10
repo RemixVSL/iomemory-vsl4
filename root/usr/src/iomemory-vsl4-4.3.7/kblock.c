@@ -72,19 +72,10 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on);
 static void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending);
 static void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration);
 static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight);
-#if !KFIOC_PARTITION_STATS
-static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw);
-#endif
 
-#if KFIOC_HAS_BIOVEC_ITERATORS
 #define BI_SIZE(bio) (bio->bi_iter.bi_size)
 #define BI_SECTOR(bio) (bio->bi_iter.bi_sector)
 #define BI_IDX(bio) (bio->bi_iter.bi_idx)
-#else
-#define BI_SIZE(bio) (bio->bi_size)
-#define BI_SECTOR(bio) (bio->bi_sector)
-#define BI_IDX(bio) (bio->bi_idx)
-#endif
 
 /******************************************************************************
  *   Block request and bio processing methods.                                *
@@ -269,22 +260,12 @@ static int kfio_open(struct block_device *blk_dev, fmode_t mode)
     return kfio_open_disk(bdev);
 }
 
-#if KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT
-static int kfio_release(struct gendisk *gd, fmode_t mode)
-{
-    struct fio_bdev *bdev = gd->private_data;
-
-    kfio_close_disk(bdev);
-    return 0;
-}
-#else
 static void kfio_release(struct gendisk *gd, fmode_t mode)
 {
     struct fio_bdev *bdev = gd->private_data;
 
     kfio_close_disk(bdev);
 }
-#endif
 
 static int kfio_ioctl(struct block_device *blk_dev, fmode_t mode, unsigned int cmd, unsigned long arg)
 {
@@ -861,9 +842,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
             blk_mq_stop_hw_queues(disk->rq);
         }
 #endif
-#if KFIOC_X_HAS_BLK_STOP_QUEUE
-        blk_stop_queue(disk->rq);
-#endif
         /*
          * The queue is stopped and dead and no new user requests will be
          * coming to it anymore. Fetch remaining already queued requests
@@ -1117,37 +1095,6 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
     }
 }
 
-#if !KFIOC_PARTITION_STATS
-static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw)
-{
-    struct gendisk *gd = disk->gd;
-# if KFIOC_PARTITION_STATS
-#  if KFIOC_HAS_INFLIGHT_RW || KFIOC_HAS_INFLIGHT_RW_ATOMIC
-    int dir = 0;
-
-    // In the Linux kernel the direction isn't explicitly defined, however
-    // in linux/bio.h, you'll notice that its referenced as 1 for write and 0
-    // for read.
-
-    if (rw == BIO_DIR_WRITE)
-        dir = 1;
-
-#   if KFIOC_HAS_INFLIGHT_RW_ATOMIC
-    return atomic_read(&gd->part0.in_flight[dir]);
-#   else
-    return gd->part0.in_flight[dir];
-#   endif /* KFIOC_HAS_INFLIGHT_RW_ATOMIC */
-#  elif KFIOC_X_PART0_HAS_IN_FLIGHT
-    return gd->part0.in_flight;
-#  else
-    return part_stat_read(&gd->part0, ios[STAT_WRITE]);
-#  endif /* KFIOC_HAS_INFLIGHT_RW */
-# else
-    return gd->in_flight;
-# endif
-}
-#endif /* !KFIOC_PARTITION_STATS */
-
 void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 {
     kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
@@ -1194,24 +1141,9 @@ void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 #if KFIOC_DISCARD == 1
 static int kfio_bio_is_discard(struct bio *bio)
 {
-#if !KFIOC_HAS_SEPARATE_OP_FLAGS
-#if KFIOC_HAS_UNIFIED_BLKTYPES
-    /*
-     * RHEL6.1 backported a partial set of the unified blktypes, but
-     * still has separate bio and req DISCARD flags. If BIO_RW_DISCARD
-     * exists, then that is used on the bio.
-     */
-#if KFIOC_HAS_BIO_RW_DISCARD
-    return bio->bi_rw & (1 << BIO_RW_DISCARD);
-#else
-    return bio->bi_rw & REQ_DISCARD;
-#endif
-#else
-    return bio_rw_flagged(bio, BIO_RW_DISCARD);
-#endif
-#else
+// # if !KFIOC_HAS_SEPARATE_OP_FLAGS
+// #  if KFIOC_HAS_UNIFIED_BLKTYPES
     return bio_op(bio) == REQ_OP_DISCARD;
-#endif
 }
 #endif
 
@@ -1225,13 +1157,9 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
 
     // Use a local conversion to avoid printf format warnings on some platforms
     sector = (uint64_t)BI_SECTOR(bio);
-#if KFIOC_HAS_SEPARATE_OP_FLAGS
+// #if KFIOC_HAS_SEPARATE_OP_FLAGS
     infprint("%s: sector: %llx: flags: %lx : op: %x : op_flags: %x : vcnt: %x", msg,
              sector, (unsigned long)bio->bi_flags, bio_op(bio), bio_flags(bio), bio->bi_vcnt);
-#else
-    infprint("%s: sector: %llx: flags: %lx : rw: %lx : vcnt: %x", msg,
-             sector, (unsigned long)bio->bi_flags, bio->bi_rw, bio->bi_vcnt);
-#endif
 #if KFIOC_X_BIO_HAS_BIO_SEGMENTS
     // need to put our own segment count here...
     infprint("%s : idx: %x : phys_segments: %x : size: %x",
@@ -1239,10 +1167,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
 #else
     infprint("%s : idx: %x : phys_segments: %x : size: %x",
              msg, BI_IDX(bio), bio->bi_phys_segments, BI_SIZE(bio));
-#endif
-#if KFIOC_BIO_HAS_HW_SEGMENTS
-    infprint("%s: hw_segments: %x : hw_front_size: %x : hw_back_size %x", msg,
-             bio->bi_hw_segments, bio->bi_hw_front_size, bio->bi_hw_back_size);
 #endif
 #if KFIOC_BIO_HAS_SEG_SIZE
     infprint("%s: seg_front_size %x : seg_back_size %x", msg,
@@ -1262,7 +1186,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
     infprint("%s: destructor: %p", msg, bio->bi_destructor);
 #endif
 #if KFIOC_BIO_HAS_INTEGRITY
-    // Note that we don't use KFIOC_BIO_HAS_SPECIAL as yet.
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
 #endif
 }
@@ -1289,10 +1212,6 @@ static unsigned long __kfio_bio_sync(struct bio *bio)
 # else
 #  if KFIOC_HAS_UNIFIED_BLKTYPES
     return bio->bi_rw & REQ_SYNC;
-#  elif KFIOC_HAS_BIO_RW_FLAGGED
-    return bio_rw_flagged(bio, BIO_RW_SYNCIO);
-#  else
-    return bio_sync(bio);
 #  endif
 # endif
 }
@@ -1857,12 +1776,6 @@ static int kfio_bio_should_submit_now(struct bio *bio)
     }
 #endif
 
-#if KFIOC_HAS_REQ_UNPLUG == 1
-    if (bio->bi_rw & REQ_UNPLUG)
-    {
-        return 1;
-    }
-#endif
 #if KFIOC_DISCARD == 1
     return kfio_bio_is_discard(bio);
 #else
@@ -1931,18 +1844,11 @@ static void kfio_unplug_do_cb(struct work_struct *work)
 static void kfio_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
 {
     struct kfio_plug *plug = container_of(cb, struct kfio_plug, cb);
-#if KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG
-    struct kfio_disk *disk = plug->disk;
-#endif /* KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG */
 
     if (from_schedule)
     {
         INIT_WORK(&plug->work, kfio_unplug_do_cb);
-#if KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG
-        kblockd_schedule_work(disk->rq, &plug->work);
-#else
         kblockd_schedule_work(&plug->work);
-#endif /* KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG */
         return;
     }
 
@@ -2053,11 +1959,8 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
     {
         rq->queuedata = dp;
         blk_queue_make_request(rq, kfio_make_request);
-#if KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER
-        rq->queue_lock = (spinlock_t *)&dp->queue_lock;
-#else
+        // rq->queue_lock = (spinlock_t *)&dp->queue_lock;
         memcpy(&dp->queue_lock, &rq->queue_lock, sizeof(dp->queue_lock));
-#endif
 #if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
         rq->unplug_fn = kfio_unplug;
 #endif
@@ -2269,10 +2172,7 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
 }
 # endif
 
-#if KFIOC_MAKE_REQUEST_FN_VOID
-static void kfio_make_request(struct request_queue *queue, struct bio *bio)
-#define FIO_MFN_RET
-#elif KFIOC_MAKE_REQUEST_FN_UINT
+#if KFIOC_MAKE_REQUEST_FN_UINT
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio)
 #define FIO_MFN_RET 0
 #else
