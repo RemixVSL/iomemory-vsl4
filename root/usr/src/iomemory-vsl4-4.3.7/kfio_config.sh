@@ -1038,26 +1038,6 @@ void kfioc_test_bio_rw_sync_flag(void) {
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_HAS_BIO_RW_UNPLUG
-# values:
-#                 0     for kernel doesn't support BIO_RW_UNPLUG flag
-#                 1     for kernel supports the flag
-# comments:       2.6.32
-KFIOC_HAS_BIO_RW_UNPLUG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_rw_unplug_flag(void) {
-	struct bio bio;
-	bio.bi_rw = 1 << BIO_RW_UNPLUG;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 # flag:           KFIOC_HAS_BIOVEC_ITERATORS
 # values:
 #                 0     for kernel doesn't support biovec_iter and immuatable biovecs
