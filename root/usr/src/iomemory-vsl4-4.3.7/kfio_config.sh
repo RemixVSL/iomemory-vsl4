@@ -120,7 +120,6 @@ KFIOC_HAS_PROC_CREATE_DATA
 KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
-KFIOC_BIO_HAS_ATOMIC_REMAINING
 KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_HAS_CPUMASK_WEIGHT
 KFIOC_BIO_HAS_USCORE_BI_CNT
@@ -1724,25 +1723,6 @@ void kfioc_test_bio_seg_size(void) {
 	struct bio bio;
 	bio.bi_seg_front_size=0;
 	bio.bi_seg_back_size=0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_BIO_HAS_ATOMIC_REMAINING
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio bi_remaining
-#                 1     if the kernel has structure element
-# kernel version: < 4.20.17, member was made private prior to 5.0.
-KFIOC_BIO_HAS_ATOMIC_REMAINING()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_remaining(void) {
-	struct bio bio;
-	atomic_set(&(bio.bi_remaining),0);
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
