@@ -95,10 +95,10 @@ configure-stamp: debian/control
 build: build-arch
 
 build-arch: build-arch-stamp
-build-arch-stamp: configure-stamp  
+build-arch-stamp: configure-stamp
 
 	# Add here commands to compile the arch part of the package.
-	rsync -a --delete ./root$(fio_sourcedir)/$(fio_driver_name)-$(fio_short_version)/ driver_source/
+	rsync -a --delete ./root/$(fio_sourcedir)/$(fio_driver_name)-$(fio_short_version)/ driver_source/
 	if ! $(MAKE) \
 		-C driver_source \
 		KERNELVER=$(deb_kernel_version) \
@@ -110,7 +110,7 @@ build-arch-stamp: configure-stamp
 	fi
 	touch $@
 
-clean: 
+clean:
 	dh_testdir
 	dh_testroot
 	rm -f build-arch-stamp configure-stamp
@@ -118,10 +118,10 @@ clean:
 	# Add here commands to clean up after the build process.
 	#$(MAKE) clean
 	-rm -rf \
-		"$(CURDIR)driver_source" \
+		"$(CURDIR)/driver_source" \
 		"$(CURDIR)/debian/fio" \
-		"$(CURDIR)/debian/$(fio_driver_name)-"2.6* \
-		"$(CURDIR)/debian/$(fio_driver_name)-config-"2.6*
+		"$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)"* \
+		"$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)"*
 
 	sed -r -i -e 's/^Package: $(fio_driver_name)(-config)?(-[.0-9]+.*)*$$/Package: $(fio_driver_name)\1/;' debian/control
 
@@ -133,21 +133,23 @@ install-arch: $(install.files)
 	dh_testdir
 	dh_testroot
 	dh_prep
-	dh_installdirs -s
+	dh_installdirs -a
 
 	# Add here commands to install the arch part of the package into
-	# debian/tmp.
+	# debian/tmp.0
+  # dh_missing --sourcedir=root --fail-missing -X$(fio_docdir)/$(fio_driver_name)
+	# dh_missing --sourcedir=root --fail-missing $(fio_docdir)/$(fio_driver_name) \
+	#                           								 $(fio_docdir)/$(fio_driver_name)-$(deb_kernel_version)
+	dh_install --sourcedir=root -X$(fio_docdir)/$(fio_driver_name)
+	dh_install --sourcedir=root $(fio_docdir)/$(fio_driver_name) \
+	                            $(fio_docdir)/$(fio_driver_name)-$(deb_kernel_version)
 
-	dh_install --sourcedir=root --fail-missing -X$(fio_docdir)/$(fio_driver_name)
-	dh_install --sourcedir=root --fail-missing $(fio_docdir)/$(fio_driver_name) \
-	                                           $(fio_docdir)/$(fio_driver_name)-$(deb_kernel_version)
-
-	mkdir -p $(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)//usr/lib/fio
-	mkdir -p $(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)//usr/share/doc
-	mkdir -p $(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)//etc
-	cp -r root//usr/lib/fio/* "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)//usr/lib/fio/"
-	cp -r root//usr/share/doc/* "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)//usr/share/doc/"
-	cp -r root//etc/* "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)//etc/"
+	mkdir -p $(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/usr/lib/fio
+	mkdir -p $(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/usr/share/doc
+	mkdir -p $(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/etc
+	cp -r root/usr/lib/fio/* "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/usr/lib/fio/"
+	cp -r root/usr/share/doc/* "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/usr/share/doc/"
+	cp -r root/etc/* "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/etc/"
 	mkdir -p "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/lib/modules/$(deb_kernel_version)/extra/$(fio_oem_name_short)"
 	cp driver_source/$(fio_driver_name).ko \
 		"$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version)/lib/modules/$(deb_kernel_version)/extra/$(fio_oem_name_short)"
@@ -175,12 +177,12 @@ install-arch: $(install.files)
 binary-common:
 	dh_testdir
 	dh_testroot
-	dh_installchangelogs 
+	dh_installchangelogs
 	dh_installdocs
 	dh_installexamples
 #	dh_installmenu
-#	dh_installdebconf	
-#	dh_installlogrotate	
+#	dh_installdebconf
+#	dh_installlogrotate
 #	dh_installemacsen
 #	dh_installpam
 #	dh_installmime
@@ -205,7 +207,7 @@ binary-common:
 
 # Build architecture dependant packages using the common target.
 binary-arch: build-arch install-arch
-	$(MAKE) -f debian/rules DH_OPTIONS=-s binary-common
+	$(MAKE) -f debian/rules DH_OPTIONS=-a binary-common
 
 binary: binary-arch
 .PHONY: FORCE build clean binary-arch binary install install-arch configure
