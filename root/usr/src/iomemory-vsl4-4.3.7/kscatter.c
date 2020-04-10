@@ -797,24 +797,13 @@ int kfio_sgl_copy_data(kfio_sg_list_t *dst, kfio_sg_list_t *src, uint32_t length
 
         preempt_disable();
 
-#if KFIOC_KMAP_ATOMIC_NEEDS_TYPE
-        pdst = kmap_atomic(sg_page(ldst_sl), KM_USER0);
-        psrc = kmap_atomic(sg_page(lsrc_sl), KM_USER1);
-#else
-        // newer linux kernels do not require kmem_type_t argument
         pdst = kmap_atomic(sg_page(ldst_sl));
         psrc = kmap_atomic(sg_page(lsrc_sl));
-#endif
 
         kfio_memcpy(pdst + ldst_sge_off, psrc + lsrc_sge_off, sub_length);
 
-#if KFIOC_KMAP_ATOMIC_NEEDS_TYPE
-        kunmap_atomic(psrc, KM_USER1);
-        kunmap_atomic(pdst, KM_USER0);
-#else
         kunmap_atomic(psrc);
         kunmap_atomic(pdst);
-#endif
 
         preempt_enable();
 
