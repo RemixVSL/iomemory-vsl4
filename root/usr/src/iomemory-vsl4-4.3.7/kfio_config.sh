@@ -86,8 +86,6 @@ KFIOC_USE_LINUX_UACCESS_H
 KFIOC_MODULE_PARAM_ARRAY_NUMP
 KFIOC_HAS_BLK_LIMITS_IO_MIN
 KFIOC_HAS_BLK_LIMITS_IO_OPT
-KFIOC_HAS_UNIFIED_BLKTYPES
-KFIOC_HAS_SEPARATE_OP_FLAGS
 KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 KFIOC_FOPS_USE_LOCKED_IOCTL
 KFIOC_HAS_RQ_POS_BYTES
@@ -869,42 +867,6 @@ void kfioc_has_blk_limits_io_opt(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_UNIFIED_BLKTYPES
-#                 1     if the kernel supports unified bio/rq flags
-#                 0     if the kernel does not
-# git commit:     7cc015811ef8992dfcce314d0ed9642bc18143d1
-#                 Change introduced in 2.6.36
-KFIOC_HAS_UNIFIED_BLKTYPES()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blk_types.h>
-void foo(void)
-{
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_HAS_SEPARATE_OP_FLAGS
-#                 1     if the kernel has blkg_rwstat seperate op from flags
-#                 0     if the kernel does not
-# https://github.com/torvalds/linux/commit/63a4cc24867de73626e16767ce616c50dc5438d3
-KFIOC_HAS_SEPARATE_OP_FLAGS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blk_types.h>
-void foo(void)
-{
-    struct bio bio;
-    bio.bi_opf = 42;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
 }
 
 # flag:           KFIOC_FOPS_USE_LOCKED_IOCTL
