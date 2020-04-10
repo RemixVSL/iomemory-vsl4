@@ -796,49 +796,28 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
     {
         if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
-// TODO: Check if this can go as KFIOC_PARTITION_STATS is a thing...
-# if !(KFIOC_PARTITION_STATS && \
-      (defined(CONFIG_PREEMPT_RT) || defined(CONFIG_TREE_PREEMPT_RCU) || defined(CONFIG_PREEMPT_RCU)))
             struct gendisk *gd = disk->gd;
-# endif
-# if KFIOC_PARTITION_STATS
-#  if !defined(CONFIG_PREEMPT_RT) && !defined(CONFIG_TREE_PREEMPT_RCU) && !defined(CONFIG_PREEMPT_RCU)
             int cpu;
 
-            /*
-             * part_stat_lock() with defined(CONFIG_PREEMPT_RT) can't be used! It ends up calling
-             * rcu_read_update which is GPL in the RT patch set.
-             */
             cpu = part_stat_lock();
             part_stat_inc(&gd->part0, ios[1]);
             part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
             part_stat_add(&gd->part0, nsecs[1],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
             part_stat_unlock();
-#  endif /* defined(CONFIG_PREEMPT_RT) */
-# endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
     else if (dir == BIO_DIR_READ)
     {
         if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
-#if !(KFIOC_PARTITION_STATS && \
-      (defined(CONFIG_PREEMPT_RT) || defined(CONFIG_TREE_PREEMPT_RCU) || defined(CONFIG_PREEMPT_RCU)))
             struct gendisk *gd = disk->gd;
-#endif
-# if KFIOC_PARTITION_STATS
-#  if !defined(CONFIG_PREEMPT_RT) && !defined(CONFIG_TREE_PREEMPT_RCU) && !defined(CONFIG_PREEMPT_RCU)
             int cpu;
 
-            /* part_stat_lock() with defined(CONFIG_PREEMPT_RT) can't be used!
-               It ends up calling rcu_read_update which is GPL in the RT patch set */
             cpu = part_stat_lock();
             part_stat_inc(&gd->part0, ios[0]);
             part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
             part_stat_add(&gd->part0, nsecs[0],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
             part_stat_unlock();
-#  endif /* defined(CONFIG_PREEMPT_RT) */
-# endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
 }
