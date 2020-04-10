@@ -447,11 +447,7 @@ static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_da
     return BLK_MQ_RQ_QUEUE_OK;
 #endif
 busy:
-#if KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
-    blk_mq_delay_queue(hctx, 1);
-else
     blk_mq_delay_run_hw_queue(hctx, 1);
-#endif
 #if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
     return BLK_STS_RESOURCE;
 #else
@@ -1797,7 +1793,6 @@ struct kfio_plug {
     struct work_struct work;
 };
 
-# if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
 static void kfio_unplug_do_cb(struct work_struct *work)
 {
     struct kfio_plug *plug = container_of(work, struct kfio_plug, work);
@@ -1826,12 +1821,6 @@ static void kfio_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
 
     kfio_unplug_do_cb(&plug->work);
 }
-# else
-static void kfio_unplug_cb(struct blk_plug_cb *cb)
-{
-    BUG();
-}
-# endif
 
 /*
  * this is used once while we create the block device,
@@ -1844,11 +1833,7 @@ struct test_plug
 };
 
 
-# if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
 static void safe_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
-# else
-static void safe_unplug_cb(struct blk_plug_cb *cb)
-# endif
 {
     struct test_plug *test_plug = container_of(cb, struct test_plug, cb);
 
@@ -1873,15 +1858,6 @@ static void test_safe_plugging(void)
     /* we only need to do this probe once */
     if (dangerous_plugging_callback != -1)
         return;
-
-# if !KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
-    /* plug callback should not sleep if called in scheduler. We need this
-     * parameter to avoid sleep in the callback
-     */
-    dangerous_plugging_callback = 1;
-    infprint("Unplug callbacks are run without from_schedule parameter.  Plugging disabled\n");
-    return;
-# endif
 
     /* setup a plug.  We don't need to worry about
      * the block device being ready because we won't do any IO
@@ -2127,8 +2103,6 @@ static int kfio_make_request(struct request_queue *queue, struct bio *bio)
 
 # if KFIOC_X_BIO_HAS_BIO_SEGMENTS
     if (bio_segments(bio) >= queue_max_segments(queue))
-# elif KFIOC_X_BIO_HAS_BI_PHYS_SEGMENTS
-    if (bio->bi_phys_segments >= queue_max_segments(queue))
 # else
     if (bio_phys_segments(queue, bio) >= queue_max_segments(queue))
 # endif
