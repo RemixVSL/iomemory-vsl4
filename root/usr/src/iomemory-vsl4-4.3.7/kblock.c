@@ -1020,10 +1020,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
 #if KFIOC_BIO_HAS_ATOMIC_REMAINING
     infprint("%s: remaining %x", msg, atomic_read(&bio->bi_remaining));
 #endif
-#if KFIOC_HAS_BIO_COMP_CPU
-    infprint("%s: comp_cpu %u", msg, bio->bi_comp_cpu);
-#endif
-
     infprint("%s: max_vecs: %x : cnt %x : io_vec %p : end_io: %p : private: %p",
              msg, bio->bi_max_vecs, kfio_bio_cnt(bio), bio->bi_io_vec,
              bio->bi_end_io, bio->bi_private);
@@ -1035,15 +1031,7 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
 static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
 {
     int cpu;
-#if KFIOC_HAS_BIO_COMP_CPU
-    cpu = bio->bi_comp_cpu;
-    if (cpu == -1)
-    {
-        cpu = kfio_current_cpu();
-    }
-#else
     cpu = kfio_current_cpu();
-#endif
     kfio_bio_set_cpu(fbio, cpu);
 }
 
@@ -1941,13 +1929,6 @@ static int kfio_make_request(struct request_queue *queue, struct bio *bio)
 # endif
     {
         blk_queue_split(queue, &bio);
-    }
-#endif
-
-#if KFIOC_HAS_BIO_COMP_CPU
-    if (bio->bi_comp_cpu == -1)
-    {
-        bio_set_completion_cpu(bio, kfio_current_cpu());
     }
 #endif
 
