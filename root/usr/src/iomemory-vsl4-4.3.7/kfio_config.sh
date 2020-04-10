@@ -113,7 +113,6 @@ KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_NEW_BARRIER_SCHEME
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
-KFIOC_HAS_QUEUE_LIMITS_CLUSTER
 KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED
 KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
 KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
@@ -126,7 +125,6 @@ KFIOC_HAS_PROCFS_PDE_DATA
 KFIOC_HAS_PROC_CREATE_DATA
 KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
-KFIOC_BIO_HAS_HW_SEGMENTS
 KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_BIO_HAS_ATOMIC_REMAINING
 KFIOC_BIO_HAS_INTEGRITY
@@ -779,26 +777,6 @@ void kfioc_test_blk_unplug(void) {
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_HAS_BLK_DELAY_QUEUE
-# values:
-#                 1     for kernels that have the blk_delay_device() helper
-#                 0     for kernels that do not
-# git commit:     2ad8b1ef11c98c5603580878aebf9f1bc74129e4
-# comments:
-KFIOC_HAS_BLK_DELAY_QUEUE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_blk_delay_queue(void)
-{
-    blk_delay_queue(NULL, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
 
 # flag:           KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
 # values:
@@ -1589,35 +1567,6 @@ void kfioc_has_end_request(void){
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_USE_IO_SCHED
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel version is between 2.5.24 and 2.6.31
-#                           OR the blk_complete_request() function does not exist exactly as specified below.
-#                 1     if the kernel has the function
-# git commit:
-# kernel version: > 2.6.24 and < 2.6.31
-KFIOC_USE_IO_SCHED()
-{
-    local test_flag="$1"
-    # FIXME - this is a poor way to test for a GPL symbol since there is no guarantee
-    # that a patch, either way, isn't pulled into a vendor-specific kernel.
-    local test_code='
-#include <linux/version.h>
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,24)
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,31)
-#error Cant use elevator due to required GPL symbol
-#endif
-#endif
-
-#include <linux/blkdev.h>
-void kfioc_use_io_sched(void) {
-    blk_complete_request(NULL);
-}
-'
-
-    kfioc_test "$test_code" KFIOC_USE_IO_SCHED 1 -Werror-implicit-function-declaration
-}
-
 
 # flag:           KFIOC_HAS_ELEVATOR_INIT_EXIT
 # usage:          undef for automatic selection by kernel version
@@ -2167,24 +2116,6 @@ int has_queue_flag_cluster(void)
     kfioc_test "$test_code" KFIOC_HAS_QUEUE_FLAG_CLUSTER 1 -Werror
 }
 
-# flag:          KFIOC_HAS_QUEUE_LIMITS_CLUSTER
-# usage:         1   request queue limits structure has 'cluster' member.
-#                0   It does not
-KFIOC_HAS_QUEUE_LIMITS_CLUSTER()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void has_queue_limits_cluster(void)
-{
-     struct request_queue q;
-     q.limits.cluster = 0;
-     printk("%d", q.limits.cluster);
-}
-'
-    kfioc_test "$test_code" KFIOC_HAS_QUEUE_LIMITS_CLUSTER 1 -Werror
-}
-
 # flag:          KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED
 # usage:         1   request queue limits structure has 'queue_flag_clear_unlocked' function.
 #                0   It does not
@@ -2588,24 +2519,6 @@ KFIOC_BIO_HAS_INTEGRITY()
 void kfioc_test_bio_remaining(void) {
 	struct bio bio;
 	bio_integrity(bio) = NULL;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_BIO_HAS_SPECIAL
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio bi_special union
-#                 1     if the kernel has structure element
-KFIOC_BIO_HAS_SPECIAL()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_remaining(void) {
-	struct bio bio;
-	void *test = &(bio.bi_special);
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration

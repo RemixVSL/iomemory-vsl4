@@ -515,8 +515,6 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 # else
     rq->queue_flags &= ~(1 << QUEUE_FLAG_CLUSTER);
 # endif
-#elif KFIOC_HAS_QUEUE_LIMITS_CLUSTER
-    rq->limits.cluster = 0;
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 // Linux from 5.0 > removed the limits.cluster: https://patchwork.kernel.org/patch/10716231/
 #else
