@@ -701,27 +701,6 @@ void kfioc_test_invalidate_bdev(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_HAS_BLK_UNPLUG
-# values:
-#                 0     for older kernels that don't have blk_unplug()
-#                 1     for kernels that provide blk_unplug()
-# git commit:     2ad8b1ef11c98c5603580878aebf9f1bc74129e4
-# comments:
-KFIOC_HAS_BLK_UNPLUG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_blk_unplug(void) {
-    blk_unplug(NULL);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
 # flag:           KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
 # values:
 #                 0     for older kernels that don't have unplug_fn member in struct request_queue.
@@ -762,29 +741,6 @@ void kfioc_test_request_queue_unplug_param(blk_plug_cb_fn cb) {
 
     kfioc_test "$test_code" "$test_flag" 1
 }
-
-
-# flag:           KFIOC_BACKING_DEV_INFO_HAS_UNPLUG_IO_FN
-# values:
-#                 0     for kernels that don't have unplug_io_fn member in struct backing_dev_info.
-#                 1     for kernels that have unplug_io_fn member in struct backing_dev_info.
-# git commit:     NA
-# comments:
-KFIOC_BACKING_DEV_INFO_HAS_UNPLUG_IO_FN()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_backing_dev_info_unplug(void) {
-    struct backing_dev_info q = { .unplug_io_fn = NULL };
-    (void)q;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 
 # flag:           KFIOC_HAS_KMEM_CACHE
 # values:
@@ -850,25 +806,6 @@ KFIOC_STRUCT_FILE_HAS_PATH()
 void kfioc_test_file_path(void) {
     struct file f = { .f_path = { [0] = 0, [1] = 0 } };
     (void)f;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_HAS_PATH_LOOKUP
-# values:
-#                 1 If the kernel still has the path_lookup() helper
-#                 0 If it does not (use kern_path_parent())
-KFIOC_HAS_PATH_LOOKUP()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-#include <linux/namei.h>
-void kfioc_has_path_lookup(void)
-{
-    (void) path_lookup("foo", 0, NULL);
 }
 '
 
@@ -1011,27 +948,6 @@ void kfioc_has_new_blkdev_methods(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
-# flag:           KFIOC_HAS_BLKDEV_OLD_BD_SEM
-# values:
-#                 0     for new block open release protected by bd_mutex
-#                 1     for old block open release protected by bd_sem
-# git commit:     c039e3134ae62863bbc8e8429b29e3c43cf21b2a
-# comments:
-KFIOC_HAS_BLKDEV_OLD_BD_SEM()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-
-void *myfunc(struct block_device *bdev)
-{
-    return &bdev->bd_sem;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
 }
 
 # flag:           KFIOC_HAS_COMPAT_IOCTL_METHOD
@@ -1265,24 +1181,6 @@ void kfioc_barrier_uses_queue_flags(void)
     kfioc_test "$test_code" KFIOC_BARRIER_USES_QUEUE_FLAGS 1 -Werror
 }
 
-
-# flag:          KFIOC_HAS_BLK_FS_REQUEST
-# usage:         1   Kernel has obsolete blk_fs_request macro
-#                0   It does not
-# kernel version 2.6.36 removed macro.
-KFIOC_HAS_BLK_FS_REQUEST()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int kfioc_has_blk_fs_request(struct request *req)
-{
-    return blk_fs_request(req);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 # flag:           KFIOC_USE_LINUX_UACCESS_H
 # values:
 #                 0     for kernels that use asm/uaccess.h
@@ -1329,68 +1227,6 @@ module_param_array(test, charp, NULL, 0);
 '
 
     kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_OWNER_IN_STRUCT_PROC_DIR_ENTRY
-# values:
-#                 0     if the kernel has an "owner" data member in "struct proc_dir_entry"
-#                 1     if the kernel does not have an "owner" data member in "struct proc_dir_entry"
-# git commit:     99b76233803beab302123d243eea9e41149804f3
-# kernel version: < 2.6.30
-KFIOC_OWNER_IN_STRUCT_PROC_DIR_ENTRY()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/proc_fs.h>
-
-void kfioc_owner_in_struct_proc_dir_entry(void) {
-    struct proc_dir_entry dentry = { .owner = NULL };
-    (void)dentry;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_HAS_END_REQUEST
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the end_that_request() function
-#                 1     if the kernel has the function
-# git commit: f0f0052069989b80d2a3e50c9cd2f2a650bc1aea
-#             This interface was changed and no longer exists on 2.6.25 or later
-# kernel version: < 2.6.25
-KFIOC_HAS_END_REQUEST()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_has_end_request(void){
-    end_that_request_first(NULL, 0, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_USE_NEW_IO_SCHED
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the blk_fetch_request() function
-#                 1     if the kernel has the function
-# git commit:     2e46e8b27aa57c6bd34b3102b40ee4d0144b4fab
-# kernel version: > 2.6.24 and < 2.6.31
-KFIOC_USE_NEW_IO_SCHED()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_new_sched(void) {
-    blk_fetch_request(NULL);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
 # flag:           KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV
@@ -1596,22 +1432,6 @@ void foo(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
-# flag:           KFIOC_HAS_REQ_RW_SYNC
-#                 1     if the environment has this defined
-#                 0     if the environment does not have this defined
-KFIOC_HAS_REQ_RW_SYNC()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int foo(void)
-{
-    return (REQ_RW_SYNC);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 # flag:          KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 # usage:         1   pci_request_regions(..) has a const second parameter.
 #                0   pci_request_regions() has no const second parameter.
@@ -1764,21 +1584,6 @@ void bvec_kmap_irq_has_long_flags(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
-# flag:          KFIOC_KMAP_ATOMIC_NEEDS_TYPE
-# usage:         1   kmap_atomic requires km_type_t
-#                0   It does not requires km_type_t as the second argument
-KFIOC_KMAP_ATOMIC_NEEDS_TYPE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/highmem.h>
-void kmap_atomic_needs_type(void)
-{
-    kmap_atomic(NULL, 0);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
 # flag:           KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have the blk_alloc_queue_node function
@@ -1822,25 +1627,6 @@ struct scsi_host_template testtemplate = {
 '
 
     kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
-
-# flag:           KFIOC_HAS_SCSI_LUNID_UINT
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the SCSI lun id as unsigned int
-#                 1     if the kernel has the functions
-KFIOC_HAS_SCSI_LUNID_UINT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_device.h>
-struct scsi_device sdev;
-
-void kfioc_has_scsi_lunid(void)
-{
-    printk("%u",sdev.lun);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:           KFIOC_HAS_SCSI_QD_CHANGE_FN
@@ -2208,24 +1994,6 @@ void test_make_request_fn(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
-# flag:           KFIOC_uGET_USER_PAGES_REQUIRES_TASK
-# usage:          1   get_user_pages has `struct task_struct *tsk, struct mm_struct *mm` params
-#                 0   these params are removed.
-# git commit:     c12d2da56d0e07d230968ee2305aaa86b93a6832 <- removed "old" API
-#                 cde70140fed8429acf7a14e2e2cbd3e329036653 <- started the API switch
-# kernel version: v4.6-rc2
-KFIOC_GET_USER_PAGES_REQUIRES_TASK()
-{
-    local test_flag="$1"
-    local result=0
-
-    grep -E "(long|int) get_user_pages\(" "$KERNELSOURCEDIR/include/linux/mm.h" | grep "struct task_struct" || result=$?
-    result=$((! $result))
-
-    set_kfioc_status "$test_flag" 0 exit
-    set_kfioc_status "$test_flag" "$result" result
-}
-
 # flag:            KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
 # usage:           1 get_user_pages has a combined gup_flags parameter
 #                  0 get_user_pages has separate write and force parameters
@@ -2380,27 +2148,6 @@ void test_pcie_enable_msix_exact(struct pci_dev* pdev, struct msix_entry* msi)
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
-
-
-# flag:            KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM
-# usage:           1 elevator_exit() has both struct request_queue* and struct elevator_queue parameters
-#                  0 elevator_exit() is older and only has request_queue parameter.
-# kernel version:  kernel 4.12 added new parameter.
-KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-#include <linux/elevator.h>
-
-void test_elevator_exit_params(struct request_queue* rq)
-{
-    elevator_exit(rq, rq->elevator);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 
 # flag:            KFIOC_HAS_BLK_RQ_IS_PASSTHROUGH
 # usage:           1 blk_rq_is_passthrough() function exists

@@ -1,3 +1,3 @@
 #include "linux/module.h"
 MODULE_LICENSE("GPL");
-MODULE_VERSION("4c2e8c2");
+MODULE_VERSION("255bde0");
