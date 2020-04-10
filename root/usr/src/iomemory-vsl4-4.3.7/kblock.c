@@ -1757,8 +1757,6 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
     // It appears the kernel quit honoring the blk_queue_max_segments() in about 4.13.
     if (bio_segments(bio) >= queue_max_segments(queue))
         blk_queue_split(queue, &bio);
- 
-    blk_queue_bounce(queue, &bio);
 
     /*
      * The atomic chains have more overhead (using atomic contexts etc) so
