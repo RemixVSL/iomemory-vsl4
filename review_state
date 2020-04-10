@@ -10,41 +10,20 @@ When the list is done ./include/fio/port/linux/kfio_config.h can be cleaned
 > review: kfio_config/KFIOC_HAS_QUEUE_FLAG_CLUSTER/result:0
 
 > review: kfio_config/KFIOC_MISSING_WORK_FUNC_T/result:0
-# kfio_config/KFIOC_CONFIG_TREE_PREEMPT_RCU/result:0
-# kfio_config/KFIOC_HAS_ELEVATOR_INIT_EXIT/result:0
-# kfio_config/KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG/result:0
-# kfio_config/KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT/result:0
-# kfio_config/KFIOC_NEEDS_VIRT_TO_PHYS/result:0
 
 >   8     fops.compat_ioctl = NULL;
 >  https://elixir.bootlin.com/linux/v5.0/source/include/linux/fs.h#L1783
 > review: kfio_config/KFIOC_FOPS_USE_LOCKED_IOCTL/result:0
+
 #> Review: kfio_config/KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN/result:0
-# kfio_config/KFIOC_REQUEST_HAS_CMD_TYPE/result:0
-# kfio_config/KFIOC_X_BOUNCE_H/result:0
-# kfio_config/KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE/result:0
 
 > Remove asm/scatterlist works
 > what does it need it for?
 > review: kfio_config/KFIOC_HAS_LINUX_SCATTERLIST_H/result:0
-# kfio_config/KFIOC_HAS_BIO_RW_FLAGGED/result:0
-# kfio_config/KFIOC_X_BIO_HAS_BI_PHYS_SEGMENTS/result:0
 
 > Something wrong with the C check here
 > review: kfio_config/KFIOC_STRUCT_FILE_HAS_PATH/result:0
 > review: kfio_config/KFIOC_HAS_BIO_RW_SYNC/result:0
-# kfio_config/KFIOC_HAS_INFLIGHT_RW/result:0
-# kfio_config/KFIOC_HAS_INFLIGHT_RW_ATOMIC/result:0
-# kfio_config/KFIOC_BIO_ENDIO_HAS_BYTES_DONE/result:0
-# kfio_config/KFIOC_X_REQ_HAS_ERRORS/result:0
-# kfio_config/KFIOC_BIO_HAS_DESTRUCTOR/result:0
-# kfio_config/KFIOC_TASK_HAS_NR_CPUS_ALLOWED_RT/result:0
-# kfio_config/KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE/result:0
-# kfio_config/KFIOC_DISCARD_ZEROES_IN_LIMITS/result:0
-# kfio_config/KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT/result:0
-# kfio_config/KFIOC_HAS_BIO_COMP_CPU/result:0
-# kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN/result:0
-# kfio_config/KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED/result:0
 
 > Related to KFIOC_NEW_BARRIER_SCHEME which needs investigating
 > review: kfio_config/KFIOC_BARRIER/result:0

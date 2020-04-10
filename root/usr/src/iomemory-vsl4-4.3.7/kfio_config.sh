@@ -112,7 +112,6 @@ KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_NEW_BARRIER_SCHEME
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
-KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED
 KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
 KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
 KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
@@ -682,28 +681,6 @@ void kfioc_test_kmem_cache_create(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-
-# flag:           KFIOC_BIO_ENDIO_HAS_BYTES_DONE
-# values:
-#                 1     for older kernels that have the bytes_done argument to bio_endio
-#                 0     for kernels that removed the bytes_done argument to bio_endio
-# git commit:     6712ecf8f648118c3363c142196418f89a510b90
-# comments:       API and ABI incompatible.
-KFIOC_BIO_ENDIO_HAS_BYTES_DONE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_endio(void) {
-    bio_endio(NULL, 0, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
 # flag:           KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
 # values:
 #                 0     for older kernels that have the destroy_dirty_buffers argument to invalidate_bdev()
@@ -723,38 +700,6 @@ void kfioc_test_invalidate_bdev(void) {
 
     kfioc_test "$test_code" "$test_flag" 1
 }
-
-
-# flag:           KFIOC_NEEDS_VIRT_TO_PHYS
-# values:
-#                 0     for kernels that provide correct virt_to_phys()
-#                 1     for older kernels that incorrectly define virt_to_phys() as extern.
-# git commit:
-# comments:       There was an error defining virt_to_phys() as "extern inline" and only in
-#                 x86_64.  It was later corrected.
-KFIOC_NEEDS_VIRT_TO_PHYS()
-{
-    local test_flag="$1"
-    local result=0
-
-    case $FIOARCH in
-    "x86_64")
-        if [ -d "$KERNELDIR/include/asm-x86_64" ]; then
-                grep -q "extern inline unsigned long virt_to_phys(" "$KERNELSOURCEDIR/include/asm-x86_64/io.h" 2>/dev/null || result=$?
-                result=$((! $result))
-        fi
-        ;;
-    "mips64")
-        if [ -d "$KERNELDIR/include/asm-mips" ]; then
-                grep -q "unsigned long virt_to_phys(" "$KERNELSOURCEDIR/include/asm-mips/io.h" 2>/dev/null || result=$?
-                result=$((! $result))
-        fi
-        ;;
-    esac
-    set_kfioc_status "$test_flag" 0 exit
-    set_kfioc_status "$test_flag" "$result" result
-}
-
 
 # flag:           KFIOC_HAS_BLK_UNPLUG
 # values:
@@ -1049,26 +994,6 @@ struct block_device_operations testops = {
     kfioc_test "$test_code" "$test_flag" 1 "-Werror"
 }
 
-# flag:           KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT
-# values:
-#                 0     block device release() method returns int
-#                 1     block device release() method returns void
-# git commit:     db2a144bedd58b3dcf19950c2f476c58c9f39d18
-# comments:
-KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-#include <linux/blkdev.h>
-
-int myfunc(struct block_device_operations *testops){
-    return testops->release(NULL, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
 # flag:           KFIOC_HAS_NEW_BLKDEV_METHODS
 # values:
 #                 1 If the kernel has the blkdev_get_by_path() function
@@ -1176,26 +1101,6 @@ int kfioc_test_blk_queue_set_discard(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_DISCARD_ZEROES_IN_LIMITS
-# values:
-#                 0     for request_queue has q.limits.discard_zeroes_data
-#                 1     for member does not exist
-# comments:       added in 98262f2762f0067375f83824d81ea929e37e6bfe kernel commit
-KFIOC_DISCARD_ZEROES_IN_LIMITS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_test_blk_request_queue_discard_zeroes_data(void) {
-    struct request_queue q;
-    q.limits.discard_zeroes_data = 1;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-
 }
 
 # flag:           KFIOC_HAS_BIO_RW_SYNC
@@ -1378,25 +1283,6 @@ int kfioc_has_blk_fs_request(struct request *req)
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
-
-# flag:          KFIOC_REQUEST_HAS_CMD_TYPE
-# usage:         1   Kernel has older cmd_type element (and REQ_TYPE_FS)
-#                0   It does not but must use newer blk_rq_is_passthrough() function.
-# kernel version 2.6.36 removed macro.
-KFIOC_REQUEST_HAS_CMD_TYPE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-bool kfioc_request_has_cmd_type(struct request *req)
-{
-    return req->cmd_type == REQ_TYPE_FS;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-
 # flag:           KFIOC_USE_LINUX_UACCESS_H
 # values:
 #                 0     for kernels that use asm/uaccess.h
@@ -1467,27 +1353,6 @@ void kfioc_owner_in_struct_proc_dir_entry(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the blk_queue_hardsect_size function
-#                 1     if the kernel has the function
-# git commit:
-# kernel version: < 2.6.31
-KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_has_blk_queue_hardsect_size(void){
-    struct request_queue *rq = NULL;
-    blk_queue_hardsect_size(rq, 512);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 # flag:           KFIOC_HAS_END_REQUEST
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have the end_that_request() function
@@ -1526,61 +1391,6 @@ void kfioc_has_new_sched(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_BIO_RW_FLAGGED
-#                 0     if the kernel does not have the bio_rw_flagged
-#                 1     if the kernel has the function
-KFIOC_HAS_BIO_RW_FLAGGED()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_bio_rw_flagged(void)
-{
-    (void)bio_rw_flagged(NULL, BIO_RW_SYNCIO);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
-# flag:           KFIOC_HAS_INFLIGHT_RW
-#                 1     if the kernel has part0.in_flight[rw]
-#                 0     if the kernel does not
-KFIOC_HAS_INFLIGHT_RW()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_inflight_rw_stats(void)
-{
-    struct gendisk gd;
-    gd.part0.in_flight[0] = 0;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_HAS_INFLIGHT_RW_ATOMIC
-#                 1     if the kernel has part0.in_flight[rw] as atomics
-#                 0     if not
-KFIOC_HAS_INFLIGHT_RW_ATOMIC()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-#include <linux/atomic.h>
-struct gendisk gd;
-void kfioc_has_inflight_rw_atomic(void)
-{
-    atomic_set(&gd.part0.in_flight[0], 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:           KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV
@@ -1705,24 +1515,6 @@ void foo(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT
-# usage:          undef for automatic selection by kernel version
-#                 0     if the sysrq handler functions take a tty_struct argument.
-#                 1     if the kernel has the function
-# kernel version: < 2.6.36
-KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/version.h>
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
-#error "sysrq handlers do not need tty_struct."
-#endif
-'
-    kfioc_test "$test_code" KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT 1 -Werror
 }
 
 # flag:           KFIOC_FOPS_USE_LOCKED_IOCTL
@@ -1868,40 +1660,6 @@ int kfioc_check_random_flag(void)
     kfioc_test "$test_code" KFIOC_QUEUE_HAS_RANDOM_FLAG 1 -Werror
 }
 
-# flag:          KFIOC_TASK_HAS_NR_CPUS_ALLOWED_DIRECT
-# usage:         1   Task struct has a member for CPUs allowed count
-#                0   It does not
-KFIOC_TASK_HAS_NR_CPUS_ALLOWED_DIRECT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/sched.h>
-void kfioc_check_task_has_nr_cpus_allowed(void)
-{
-    struct task_struct *tsk = NULL;
-    tsk->nr_cpus_allowed = 0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_TASK_HAS_NR_CPUS_ALLOWED
-# usage:         1   Task struct has a member for CPUs allowed count in rt member
-#                0   It does not
-KFIOC_TASK_HAS_NR_CPUS_ALLOWED_RT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/sched.h>
-void kfioc_check_task_has_nr_cpus_allowed(void)
-{
-    struct task_struct *tsk = NULL;
-    tsk->rt.nr_cpus_allowed = 0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 # flag:          KFIOC_NUMA_MAPS
 # usage:         1   Kernel exports enough NUMA knowledge for us to bind
 #                0   It does not
@@ -1968,41 +1726,6 @@ int has_queue_flag_cluster(void)
 }
 '
     kfioc_test "$test_code" KFIOC_HAS_QUEUE_FLAG_CLUSTER 1 -Werror
-}
-
-# flag:          KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED
-# usage:         1   request queue limits structure has 'queue_flag_clear_unlocked' function.
-#                0   It does not
-KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void has_queue_flag_clear_unlocked(void)
-{
-     struct request_queue q;
-     queue_flag_clear_unlocked(0, &q);
-}
-'
-    kfioc_test "$test_code" KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED 1 -Werror
-}
-
-# flag:          KFIOC_HAS_BIO_COMP_CPU
-# usage:         1   struct bio has a bi_comp_cpu member
-#                0   It does not
-KFIOC_HAS_BIO_COMP_CPU()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void has_bio_comp_cpu(void)
-{
-    struct bio bio;
-
-    bio.bi_comp_cpu = 0;
-}
-'
-    kfioc_test "$test_code" KFIOC_HAS_BIO_COMP_CPU 1 -Werror
 }
 
 # flag:          KFIOC_SGLIST_NEW_API
@@ -2280,24 +2003,6 @@ void kfioc_test_bio_seg_size(void) {
 	struct bio bio;
 	bio.bi_seg_front_size=0;
 	bio.bi_seg_back_size=0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_BIO_HAS_DESTRUCTOR
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio bi_destructor
-#                 1     if the kernel has structure element
-KFIOC_BIO_HAS_DESTRUCTOR()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_destructor(void) {
-	struct bio bio;
-	bio.bi_destructor=NULL;
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration

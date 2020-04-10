@@ -62,29 +62,6 @@ start_tests()
     update_timeout
 }
 
-# flag:           KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
-# values:
-#                 1     for kernels that have the blk_mq_delay_device() helper
-#                 0     for kernels that do not
-# git commit:
-# comments:
-KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-#include <linux/blk-mq.h>
-
-void kfioc_test_blk_mq_delay_queue(void)
-{
-    blk_mq_delay_queue(NULL, 0)
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
 # flag:           KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
 # values:
 #                 0
