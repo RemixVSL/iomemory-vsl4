@@ -534,12 +534,7 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 #endif
 
     blk_queue_max_segment_size(rq, PAGE_SIZE);
-
-#if KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE
-    blk_queue_hardsect_size(rq, bdev->bdev_block_size);
-#else
     blk_queue_logical_block_size(rq, bdev->bdev_block_size);
-#endif
 #if KFIOC_DISCARD == 1
     if (enable_discard)
     {
