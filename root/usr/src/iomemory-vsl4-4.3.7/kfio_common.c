@@ -98,21 +98,7 @@ int kfio_print(const char *format, ...)
 
 int kfio_vprint(const char *format, va_list ap)
 {
-#if !defined(__VMKLNX__)
     return vprintk(format, ap);
-#else
-    va_list argsCopy;
-    int printedLen;
-
-    va_copy(argsCopy, ap);
-
-    vmk_vLogNoLevel(VMK_LOG_URGENCY_NORMAL, format, ap);
-    printedLen = vmk_Vsnprintf(NULL, 0, format, argsCopy);
-
-    va_end(argsCopy);
-
-    return printedLen;
-#endif
 }
 
 int kfio_snprintf(char *buffer, fio_size_t n, const char *format, ...)
@@ -213,14 +199,14 @@ void fusion_rwspin_destroy(fusion_rwspin_t *s)
 
 void fusion_rwspin_read_lock(fusion_rwspin_t *s)
 {
-#if FUSION_DEBUG && !defined(CONFIG_PREEMPT_RT) && !defined(__VMKLNX__)
+#if FUSION_DEBUG && !defined(CONFIG_PREEMPT_RT)
     kassert(!irqs_disabled());
 #endif
     read_lock((rwlock_t *)s);
 }
 void fusion_rwspin_write_lock(fusion_rwspin_t *s)
 {
-#if FUSION_DEBUG && !defined(CONFIG_PREEMPT_RT) && !defined(__VMKLNX__)
+#if FUSION_DEBUG && !defined(CONFIG_PREEMPT_RT)
     kassert(!irqs_disabled());
 #endif
     write_lock((rwlock_t *)s);
