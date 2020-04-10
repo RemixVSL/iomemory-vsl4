@@ -387,11 +387,7 @@ static void kfio_invalidate_bdev(struct block_device *bdev);
 #if KFIOC_HAS_BLK_MQ
 static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
                                        bool can_block);
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
-#else
-static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
-#endif
 {
     struct kfio_disk *disk = hctx->driver_data;
 #if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
@@ -441,25 +437,13 @@ static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_da
          */
     }
 
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
     return BLK_STS_OK;
-#else
-    return BLK_MQ_RQ_QUEUE_OK;
-#endif
 busy:
     blk_mq_delay_run_hw_queue(hctx, 1);
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
     return BLK_STS_RESOURCE;
-#else
-    return BLK_MQ_RQ_QUEUE_BUSY;
-#endif
 retry:
     blk_mq_run_hw_queues(hctx->queue, true);
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
     return BLK_STS_RESOURCE;
-#else
-    return BLK_MQ_RQ_QUEUE_BUSY;
-#endif
 }
 
 static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
@@ -1201,7 +1185,6 @@ static unsigned long __kfio_bio_atomic(struct bio *bio)
 # endif
 }
 
-# if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t kfio_errno_to_blk_status(int error)
 {
     // We would use the kernel function of the same name, but they decided to impede us by making it GPL.
@@ -1252,7 +1235,6 @@ static blk_status_t kfio_errno_to_blk_status(int error)
 
     return blk_status;
 }
-# endif /* KFIOC_BIO_ERROR_CHANGED_TO_STATUS */
 
 # if KFIOC_HAS_END_REQUEST
 static int errno_to_uptodate(int error)
@@ -1266,7 +1248,6 @@ static int errno_to_uptodate(int error)
 
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error)
 {
-// #if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
     // bi_status is type blk_status_t, not an int errno, so must translate as necessary.
     blk_status_t bio_status = BLK_STS_OK;
 
