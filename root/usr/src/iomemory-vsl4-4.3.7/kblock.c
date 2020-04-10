@@ -520,8 +520,6 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 #if KFIOC_HAS_QUEUE_FLAG_CLUSTER
 # if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_clear(QUEUE_FLAG_CLUSTER, rq);
-# elif KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED
-    queue_flag_clear_unlocked(QUEUE_FLAG_CLUSTER, rq);
 # else
     rq->queue_flags &= ~(1 << QUEUE_FLAG_CLUSTER);
 # endif

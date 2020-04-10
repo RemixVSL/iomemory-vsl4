@@ -51,8 +51,8 @@
 # kfio_config/KFIOC_DISCARD_ZEROES_IN_LIMITS/result:0
 # kfio_config/KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT/result:0
 # kfio_config/KFIOC_HAS_BIO_COMP_CPU/result:0
-kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN/result:0
-kfio_config/KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED/result:0
+# kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN/result:0
+# kfio_config/KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED/result:0
 kfio_config/KFIOC_BARRIER/result:0
 kfio_config/KFIOC_HAS_END_REQUEST/result:0
 kfio_config/KFIOC_OWNER_IN_STRUCT_PROC_DIR_ENTRY/result:0
