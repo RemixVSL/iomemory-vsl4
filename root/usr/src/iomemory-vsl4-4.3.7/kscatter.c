@@ -109,7 +109,6 @@ static inline struct page *sg_page(struct scatterlist *sg)
     return sg->page;
 }
 
-#if !defined(__VMKLNX__)
 /* ESX4 doesn't define above two APIs but this one */
 static inline void sg_set_page(struct scatterlist *sg, struct page *page,
                                unsigned int len, unsigned int offset)
@@ -118,7 +117,6 @@ static inline void sg_set_page(struct scatterlist *sg, struct page *page,
     sg->offset = offset;
     sg->length = len;
 }
-#endif
 #endif
 
 int kfio_dma_cookie_create(kfio_dma_cookie_t *_cookie, kfio_pci_dev_t *pcidev, int nvecs)
@@ -147,12 +145,7 @@ int kfio_sgl_alloc_nvec(kfio_numa_node_t node, kfio_sg_list_t **sgl, int nvecs)
     uint32_t sgl_bytes = kfio_sgl_size_bytes(nvecs);
     struct linux_sgl *lsg;
 
-#if defined(__VMKLNX__)
-    // kmalloc pool is very limited on ESX and gets depleted with more than 7 or so cards.
-    lsg = kfio_vmalloc(sgl_bytes);
-#else
     lsg = kfio_malloc_node(sgl_bytes, node);
-#endif
 
     if (NULL == lsg)
     {
@@ -270,10 +263,6 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
         sl = &lsg->sl[lsg->num_entries];
 
         sge->flags     = 0;
-#if defined(__VMKLNX__)
-        sge->orig_page = NULL;
-        sge->orig_off  = 0;
-#endif
         if (lsg->num_entries >= lsg->max_entries)
         {
             engprint("%s: too few sg entries (cnt: %d nvec: %d size: %d)\n",
@@ -288,7 +277,6 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
 
         if  (seg == kfio_mem_seg_system)
         {
-#if !defined(__VMKLNX__)
             if (vmalloc_buffer)
             {
                 /*
@@ -298,14 +286,12 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
                 page = (fusion_page_t) vmalloc_to_page((void *)(fio_uintptr_t)bp);
             }
             else
-#endif
             {
                 page = (fusion_page_t) virt_to_page((void *)(fio_uintptr_t)bp);
             }
         }
         else
         {
-#if !defined(__VMKLNX__)
             int retval;
 
             // XXX Do we need to widen the interface to allow non-writable here?
@@ -327,7 +313,6 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
             }
             sge->flags |= SGE_USER;
             sge->this_current = current;
-#endif
         }
 
         kassert_release(page != NULL);
