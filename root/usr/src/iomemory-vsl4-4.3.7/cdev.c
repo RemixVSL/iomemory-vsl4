@@ -204,15 +204,9 @@ void coms_port_cdev_destroy(void *port_cdev)
 
 static int coms_path_lookup(const char *filename)
 {
-#if KFIOC_HAS_PATH_LOOKUP
-    struct nameidata nd;
-
-    return path_lookup(filename, 0, &nd);
-#else
     struct path path;
 
     return kern_path(filename, LOOKUP_PARENT, &path);
-#endif /* KFIOC_HAS_PATH_LOOKUP */
 }
 
 /**

@@ -70,8 +70,8 @@ When the list is done ./include/fio/port/linux/kfio_config.h can be cleaned
 > Seems to have gone from bio.bi_remaining to bio.__bi_remaining
 > review: kfio_config/KFIOC_BIO_HAS_ATOMIC_REMAINING/result:0
 # kfio_config/KFIOC_GET_USER_PAGES_REQUIRES_TASK/result:0
-kfio_config/KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM/result:0
-kfio_config/KFIOC_HAS_PATH_LOOKUP/result:0
+# kfio_config/KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM/result:0
+# kfio_config/KFIOC_HAS_PATH_LOOKUP/result:0
 kfio_config/KFIOC_HAS_BIO_RW_ATOMIC/result:0
 kfio_config/KFIOC_HAS_SCSI_LUNID_UINT/result:0
 kfio_config/KFIOC_BIO_HAS_INTEGRITY/result:0
