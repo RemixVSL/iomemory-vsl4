@@ -1140,9 +1140,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
     infprint("%s: max_vecs: %x : cnt %x : io_vec %p : end_io: %p : private: %p",
              msg, bio->bi_max_vecs, kfio_bio_cnt(bio), bio->bi_io_vec,
              bio->bi_end_io, bio->bi_private);
-#if KFIOC_BIO_HAS_DESTRUCTOR
-    infprint("%s: destructor: %p", msg, bio->bi_destructor);
-#endif
 #if KFIOC_BIO_HAS_INTEGRITY
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
 #endif
