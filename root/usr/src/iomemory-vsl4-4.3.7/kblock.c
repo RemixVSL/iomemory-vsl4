@@ -496,11 +496,7 @@ blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
 blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 
 #if KFIOC_HAS_QUEUE_FLAG_CLUSTER
-# if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_clear(QUEUE_FLAG_CLUSTER, rq);
-# else
-    rq->queue_flags &= ~(1 << QUEUE_FLAG_CLUSTER);
-# endif
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 // Linux from 5.0 > removed the limits.cluster: https://patchwork.kernel.org/patch/10716231/
 #else
@@ -512,12 +508,7 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 #if KFIOC_DISCARD == 1
     if (enable_discard)
     {
-
-#if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS == 1
         blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
-#else
-        queue_flag_set_unlocked(QUEUE_FLAG_DISCARD, rq);
-#endif
         // XXXXXXX !!! WARNING - power of two sector sizes only !!! (always true in standard linux)
         blk_queue_max_discard_sectors(rq, (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9);
 #if KFIOC_DISCARD_GRANULARITY_IN_LIMITS
@@ -532,15 +523,7 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
     }
 #endif  /* KFIOC_DISCARD */
 
-#if KFIOC_NEW_BARRIER_SCHEME == 1
-    /*
-     * Do this manually, as blk_queue_flush() is a GPL only export.
-     *
-     * We set REQ_FUA and REQ_FLUSH to ensure ordering (barriers) and to flush (on non-powercut cards).
-     */
-    rq->flush_flags = REQ_FUA | REQ_FLUSH;
-
-#elif KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
+#if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
 #elif KFIOC_BARRIER_USES_QUEUE_FLAGS
     queue_flag_set(QUEUE_FLAG_WC, rq);
@@ -1453,12 +1436,6 @@ static int kfio_bio_should_submit_now(struct bio *bio)
     {
         return 1;
     }
-#if KFIOC_HAS_BIO_RW_SYNC == 1
-    if (bio->bi_rw & (1 << BIO_RW_SYNC))
-    {
-        return 1;
-    }
-#endif
 
 #if KFIOC_DISCARD == 1
     return kfio_bio_is_discard(bio);
@@ -1584,11 +1561,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
 
     test_safe_plugging();
 
-#if KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
     rq = blk_alloc_queue_node(GFP_NOIO, node);
-#else
-    rq = blk_alloc_queue(GFP_NOIO);
-#endif
     if (rq != NULL)
     {
         rq->queuedata = dp;

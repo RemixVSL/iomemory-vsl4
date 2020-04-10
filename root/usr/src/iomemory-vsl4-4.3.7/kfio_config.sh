@@ -87,9 +87,7 @@ KFIOC_PARTITION_STATS
 KFIOC_HAS_NEW_BLKDEV_METHODS
 KFIOC_COMPAT_IOCTL_RETURNS_LONG
 KFIOC_DISCARD
-KFIOC_HAS_BIO_RW_SYNC
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
-KFIOC_BARRIER
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_HAS_SPIN_LOCK_IRQSAVE_NESTED
 KFIOC_MODULE_PARAM_ARRAY_NUMP
@@ -108,10 +106,8 @@ KFIOC_QUEUE_HAS_RANDOM_FLAG
 KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
-KFIOC_NEW_BARRIER_SCHEME
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
 KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
-KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
 KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
@@ -122,7 +118,6 @@ KFIOC_HAS_PROC_CREATE_DATA
 KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
-KFIOC_BIO_HAS_ATOMIC_REMAINING
 KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_HAS_CPUMASK_WEIGHT
 KFIOC_BIO_HAS_USCORE_BI_CNT
@@ -1016,25 +1011,6 @@ int kfioc_test_blk_queue_set_discard(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_HAS_BIO_RW_SYNC
-# values:
-#                 0     for kernel doesn't support BIO_RW_SYNC flag
-#                 1     for kernel supports the flag
-# comments:       2.6.18
-KFIOC_HAS_BIO_RW_SYNC()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_rw_sync_flag(void) {
-	struct bio bio;
-	bio.bi_rw = 1 << BIO_RW_SYNC;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
 
 # flag:           KFIOC_HAS_BIOVEC_ITERATORS
 # values:
@@ -1076,46 +1052,6 @@ void kfioc_test_blk_queue_discard_granularity(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_BARRIER
-# values:
-#                 0     for kernel doesn't support our way to do barriers
-#                 1     for kernel support it
-# comments:
-KFIOC_BARRIER()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-
-void kfioc_test_blk_queue_set_discard(void) {
-	(void) blk_queue_ordered(NULL,QUEUE_ORDERED_NONE, NULL);
-	(void) blk_queue_ordered(NULL,QUEUE_ORDERED_TAG, NULL);
-	(void) blk_queue_ordered(NULL,QUEUE_ORDERED_TAG_FLUSH, NULL);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:          KFIOC_NEW_BARRIER_SCHEME
-# usage:         1   Kernel uses the new barrier scheme
-#                0   It does not
-KFIOC_NEW_BARRIER_SCHEME()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_hew_barrier_scheme(void)
-{
-    struct request_queue q;
-
-    q.flush_flags = REQ_FLUSH | REQ_FUA;
-}
-'
-    kfioc_test "$test_code" KFIOC_NEW_BARRIER_SCHEME 1 -Werror
 }
 
 # flag:          KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
@@ -1561,27 +1497,6 @@ void bvec_kmap_irq_has_long_flags(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
-# flag:           KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the blk_alloc_queue_node function
-#                 1     if the kernel has the function
-KFIOC_HAS_BLK_ALLOC_QUEUE_NODE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_has_blk_alloc_queue_node(void)
-{
-    struct request_queue *rq = NULL;
-    rq = blk_alloc_queue_node(GFP_NOIO, -1);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
 # flag:           KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 # values:
 #                 0     for old one with the done function pointer argument
@@ -1767,25 +1682,6 @@ void kfioc_test_bio_seg_size(void) {
 	struct bio bio;
 	bio.bi_seg_front_size=0;
 	bio.bi_seg_back_size=0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_BIO_HAS_ATOMIC_REMAINING
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio bi_remaining
-#                 1     if the kernel has structure element
-# kernel version: < 4.20.17, member was made private prior to 5.0.
-KFIOC_BIO_HAS_ATOMIC_REMAINING()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_remaining(void) {
-	struct bio bio;
-	atomic_set(&(bio.bi_remaining),0);
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
