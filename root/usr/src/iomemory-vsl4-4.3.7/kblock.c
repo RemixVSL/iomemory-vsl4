@@ -298,9 +298,8 @@ static void kfio_invalidate_bdev(struct block_device *bdev);
 
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 {
+# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     struct kfio_disk *disk = hctx->driver_data;
-# if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
-    struct fio_bdev  *bdev = disk->bdev;
 # endif
     struct request *req = bd->rq;
     kfio_bio_t *fbio;
