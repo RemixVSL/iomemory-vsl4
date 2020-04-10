@@ -1593,7 +1593,6 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
     {
         rq->queuedata = dp;
         blk_queue_make_request(rq, kfio_make_request);
-        // rq->queue_lock = (spinlock_t *)&dp->queue_lock;
         memcpy(&dp->queue_lock, &rq->queue_lock, sizeof(dp->queue_lock));
     }
     return rq;
@@ -1780,24 +1779,13 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
         return FIO_MFN_RET;
     }
 
-#if KFIOC_HAS_BLK_QUEUE_SPLIT2
     // Split the incomming bio if it has more segments than we have scatter-gather DMA vectors,
     //   and re-submit the remainder to the request queue. blk_queue_split() does all that for us.
     // It appears the kernel quit honoring the blk_queue_max_segments() in about 4.13.
-
-# if KFIOC_X_BIO_HAS_BIO_SEGMENTS
     if (bio_segments(bio) >= queue_max_segments(queue))
-# else
-    if (bio_phys_segments(queue, bio) >= queue_max_segments(queue))
-# endif
-    {
         blk_queue_split(queue, &bio);
-    }
-#endif
-
-#if KFIOC_HAS_BLK_QUEUE_BOUNCE
+ 
     blk_queue_bounce(queue, &bio);
-#endif /* KFIOC_HAS_BLK_QUEUE_BOUNCE */
 
     /*
      * The atomic chains have more overhead (using atomic contexts etc) so
