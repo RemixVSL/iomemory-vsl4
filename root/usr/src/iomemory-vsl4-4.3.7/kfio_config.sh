@@ -88,7 +88,6 @@ KFIOC_HAS_NEW_BLKDEV_METHODS
 KFIOC_COMPAT_IOCTL_RETURNS_LONG
 KFIOC_DISCARD
 KFIOC_HAS_BIO_RW_SYNC
-KFIOC_HAS_BIO_RW_UNPLUG
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_BARRIER
 KFIOC_USE_LINUX_UACCESS_H
@@ -1823,7 +1822,7 @@ KFIOC_BIO_HAS_INTEGRITY()
 #include <linux/bio.h>
 
 void kfioc_test_bio_remaining(void) {
-	struct bio bio;
+	struct bio *bio = NULL;
 	bio_integrity(bio) = NULL;
 }
 '

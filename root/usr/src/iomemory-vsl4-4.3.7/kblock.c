@@ -26,10 +26,6 @@
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //-----------------------------------------------------------------------------
-#if !defined (__linux__)
-#error "This file supports Linux only"
-#endif
-
 // Provides linux/types.h
 #include <fio/port/port_config.h>
 #include <fio/port/message_ids.h>
@@ -57,10 +53,10 @@
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
 
-
 #if KFIOC_HAS_BLK_MQ
 #include <linux/blk-mq.h>
 #endif
+
 extern int use_workqueue;
 static int fio_major;
 
@@ -115,16 +111,6 @@ enum {
     KFIO_DISK_HOLDOFF_BIT   = 0,
     KFIO_DISK_COMPLETION    = 1,
 };
-
-/*
- * RHEL6.1 will trigger both old and new scheme due to their backport,
- * whereas new kernels will trigger only the new scheme. So for the RHEL6.1
- * case, just disable the old scheme to avoid to much ifdef hackery.
- */
-#if KFIOC_NEW_BARRIER_SCHEME == 1
-#undef KFIOC_BARRIER
-#define KFIOC_BARRIER   0
-#endif
 
 /*
  * Enable tag flush barriers by default, and default to safer mode of
@@ -1493,13 +1479,6 @@ static int kfio_bio_should_submit_now(struct bio *bio)
     }
 #if KFIOC_HAS_BIO_RW_SYNC == 1
     if (bio->bi_rw & (1 << BIO_RW_SYNC))
-    {
-        return 1;
-    }
-#endif
-
-#if KFIOC_HAS_BIO_RW_UNPLUG == 1
-    if (bio->bi_rw & (1 << BIO_RW_UNPLUG))
     {
         return 1;
     }
