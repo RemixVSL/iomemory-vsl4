@@ -292,11 +292,7 @@ static struct block_device_operations fio_bdev_ops =
 };
 
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-# if KFIOC_MAKE_REQUEST_FN_UINT
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
-# else
-static int kfio_make_request(struct request_queue *queue, struct bio *bio);
-# endif
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
 static void kfio_invalidate_bdev(struct block_device *bdev);
 
@@ -315,8 +311,7 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
     if (!fbio)
     {
 # else
-    // fbio = kfio_request_to_bio(disk, req, false);
-    fbio = kfio_bio_try_alloc(bdev);
+    // fbio = kfio_request_to_bio(disk, req, false);;
 # endif
 # if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     }
@@ -1820,13 +1815,8 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
     return ret;
 }
 
-#if KFIOC_MAKE_REQUEST_FN_UINT
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio)
 #define FIO_MFN_RET 0
-#else
-static int kfio_make_request(struct request_queue *queue, struct bio *bio)
-#define FIO_MFN_RET 0
-#endif
 {
     struct kfio_disk *disk = queue->queuedata;
     void *plug_data;
