@@ -522,6 +522,7 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 #if KFIOC_QUEUE_HAS_RANDOM_FLAG
     /* Disable device global entropy contribution */
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
+#endif
 
     disk->gd = gd = alloc_disk(FIO_NUM_MINORS);
     if (disk->gd == NULL)
