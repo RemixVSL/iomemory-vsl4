@@ -84,22 +84,6 @@ void kfioc_test_blk_mq_delay_queue(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:          KFIOC_X_HAS_BLK_FS_REQUEST
-# usage:         1   Kernel has obsolete blk_fs_request macro
-#                0   It does not
-# kernel version 2.6.36 removed macro.
-KFIOC_X_HAS_BLK_STOP_QUEUE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int kfioc_has_blk_stop_queue(struct request_queue *rq)
-{
-    return blk_stop_queue(rq);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
 
 # flag:           KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
 # values:

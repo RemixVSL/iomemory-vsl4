@@ -98,7 +98,6 @@ KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV
 KFIOC_HAS_BLK_LIMITS_IO_MIN
 KFIOC_HAS_BLK_LIMITS_IO_OPT
 KFIOC_HAS_UNIFIED_BLKTYPES
-KFIOC_HAS_BIO_RW_DISCARD
 KFIOC_HAS_SEPARATE_OP_FLAGS
 KFIOC_HAS_BIO_RW_ATOMIC
 KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
@@ -1199,26 +1198,6 @@ void kfioc_test_blk_request_queue_discard_zeroes_data(void) {
 
 }
 
-# flag:           KFIOC_HAS_REQ_UNPLUG
-# values:
-#                 0     for kernel doesn't support REQ_UNPLUG flag
-#                 1     for kernel supports the flag
-# comments:
-KFIOC_HAS_REQ_UNPLUG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-
-void kfioc_test_req_unplug_flag(void) {
-	struct bio bio;
-	bio.bi_rw = REQ_UNPLUG;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
 # flag:           KFIOC_HAS_BIO_RW_SYNC
 # values:
 #                 0     for kernel doesn't support BIO_RW_SYNC flag
@@ -1488,43 +1467,6 @@ void kfioc_owner_in_struct_proc_dir_entry(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-
-# flag:           KFIOC_CONFIG_PREEMPT_RT
-# usage:          undef for automatic selection by kernel version
-#                 0     if using a non realtime patched kernel
-#                 1     if we found the CONFIG_PREEMPT_RT kernel
-# kernel version: patched RT kernels
-KFIOC_CONFIG_PREEMPT_RT()
-{
-    local test_flag="$1"
-    local test_code='
-#ifndef CONFIG_PREEMPT_RT
-#error Not running a PREEMPT_RT kernel
-#endif
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_CONFIG_TREE_PREEMPT_RCU
-# usage:          undef for automatic selection by kernel version
-#                 0     if using kernel with undefined CONFIG_TREE_PREEMPT_RCU
-#                 1     if using kernel with defined CONFIG_TREE_PREEMPT_RCU
-# kernel version:
-KFIOC_CONFIG_TREE_PREEMPT_RCU()
-{
-    local test_flag="$1"
-    local test_code='
-#ifndef CONFIG_TREE_PREEMPT_RCU
-#error Not running a PREEMPT_TREE_RCU kernel
-#endif
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
 # flag:           KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have the blk_queue_hardsect_size function
@@ -1567,27 +1509,6 @@ void kfioc_has_end_request(void){
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-
-# flag:           KFIOC_HAS_ELEVATOR_INIT_EXIT
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not export elevator_init/elevator_exit
-#                 1     if the kernel has the functions
-# git commit:     a8a275c9c2fb6bc9b45ad3e4187469726e2af7d1
-KFIOC_HAS_ELEVATOR_INIT_EXIT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_elevator_init_exit(void) {
-    struct request_queue *q;
-    elevator_init(q, "scheduler");
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
 # flag:           KFIOC_USE_NEW_IO_SCHED
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have the blk_fetch_request() function
@@ -1606,25 +1527,6 @@ void kfioc_has_new_sched(void) {
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
-
-# flag:           KFIOC_HAS_ELV_DEQUEUE_REQUEST
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel version is greater than 2.6.24,
-#                           ostensibly because it doesn't have elv_dequeue_request(), or it is GPL.
-#                 1     if the kernel has the function
-KFIOC_HAS_ELV_DEQUEUE_REQUEST()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/version.h>
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,24)
-#error elv_dequeue_request is either GPL or doesnt exist
-#endif
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 
 # flag:           KFIOC_HAS_BIO_RW_FLAGGED
 #                 0     if the kernel does not have the bio_rw_flagged
@@ -1768,23 +1670,6 @@ void foo(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_HAS_BIO_RW_DISCARD
-#                 1     if the kernel supports has a bio DISCARD flag
-#                 0     if the kernel does not
-KFIOC_HAS_BIO_RW_DISCARD()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-void foo(void)
-{
-    unsigned long flags = 1 << BIO_RW_DISCARD;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
 }
 
 # flag:           KFIOC_HAS_SEPARATE_OP_FLAGS
@@ -1934,21 +1819,6 @@ int foo(void)
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
-# flag:           KFIOC_BIOSET_CREATE_HAS_THIRD_ARG
-#                 1     if the driver should use
-#                 0     if the driver should use
-KFIOC_BIOSET_CREATE_HAS_THIRD_ARG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-void foo(void)
-{
-    bioset_create(0,0,0);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
 
 # flag:          KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 # usage:         1   pci_request_regions(..) has a const second parameter.
@@ -1996,22 +1866,6 @@ int kfioc_check_random_flag(void)
 }
 '
     kfioc_test "$test_code" KFIOC_QUEUE_HAS_RANDOM_FLAG 1 -Werror
-}
-
-# flag:          KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG
-# usage:         1   kblockd_schedule_work() takes queue as argument too
-#                0   It does not
-KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_check_kblockd_queue_arg(void)
-{
-    kblockd_schedule_work(NULL, NULL);
-}
-'
-    kfioc_test "$test_code" KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG 1 -Werror
 }
 
 # flag:          KFIOC_TASK_HAS_NR_CPUS_ALLOWED_DIRECT
@@ -2185,25 +2039,6 @@ void bvec_kmap_irq_has_long_flags(void)
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_MAKE_REQUEST_FN_VOID
-# usage:         1   make_request_fn returns void
-#                0   It returns 0/1 for done/remap
-KFIOC_MAKE_REQUEST_FN_VOID()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-static void my_make_request_fn(struct request_queue *q, struct bio *bio)
-{
-}
-void test_make_request_fn(void)
-{
-    blk_queue_make_request(NULL, my_make_request_fn);
-}
-'
-    kfioc_test "$test_code" KFIOC_MAKE_REQUEST_FN_VOID 1 -Werror
 }
 
 # flag:          KFIOC_KMAP_ATOMIC_NEEDS_TYPE
@@ -2429,26 +2264,6 @@ void kfioc_acpi_eval_int_takes_unsigned_long_long(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_BIO_HAS_HW_SEGMENTS
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio hw_segments
-#                 1     if the kernel has structure elements
-KFIOC_BIO_HAS_HW_SEGMENTS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_hw_segments(void) {
-	struct bio bio;
-	bio.bi_hw_segments=0;
-	bio.bi_hw_front_size=0;
-	bio.bi_hw_back_size=0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
 # flag:           KFIOC_BIO_HAS_SEG_SIZE
