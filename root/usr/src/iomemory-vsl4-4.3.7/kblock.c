@@ -1105,29 +1105,7 @@ void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 
     if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
     {
-#if KFIOC_PARTITION_STATS
-#if KFIOC_HAS_INFLIGHT_RW || KFIOC_HAS_INFLIGHT_RW_ATOMIC
-        // In the Linux kernel the direction isn't explicitly defined, however
-        // in linux/bio.h, you'll notice that its referenced as 1 for write and 0
-        // for read.
-        int dir = 0;
-
-        if (rw == BIO_DIR_WRITE)
-            dir = 1;
-
-#if KFIOC_HAS_INFLIGHT_RW_ATOMIC
-        atomic_set(&gd->part0.in_flight[dir], in_flight);
-#else
-        gd->part0.in_flight[dir] = in_flight;
-#endif
-#elif KFIOC_X_PART0_HAS_IN_FLIGHT
-        gd->part0.in_flight = in_flight;
-#else
         part_stat_set_all(&gd->part0, in_flight);
-#endif
-#else
-        gd->in_flight = in_flight;
-#endif
     }
 }
 
@@ -1288,8 +1266,7 @@ static int errno_to_uptodate(int error)
 
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error)
 {
-#if KFIOC_BIO_ENDIO_REMOVED_ERROR
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
+// #if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
     // bi_status is type blk_status_t, not an int errno, so must translate as necessary.
     blk_status_t bio_status = BLK_STS_OK;
 
@@ -1298,19 +1275,8 @@ static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int er
         bio_status = kfio_errno_to_blk_status(error);
     }
     bio->bi_status = bio_status;            /* bi_error was changed to bi_status <sigh> */
-#else
-    bio->bi_error = error;                  /* now a member of the bio struct */
-#endif /* KFIOC_BIO_ERROR_CHANGED_TO_STATUS */
-#endif /* !KFIOC_BIO_ENDIO_HAS_ERROR */
 
-    bio_endio(bio
-#if KFIOC_BIO_ENDIO_HAS_BYTES_DONE
-              , bytes_complete
-#endif /* KFIOC_BIO_ENDIO_HAS_BYTES_DONE */
-#if !KFIOC_BIO_ENDIO_REMOVED_ERROR
-              , error
-#endif /* KFIOC_BIO_ENDIO_HAS_ERROR */
-              );
+    bio_endio(bio);
 }
 
 static void kfio_bio_completor(kfio_bio_t *fbio, uint64_t bytes_complete, int error)
