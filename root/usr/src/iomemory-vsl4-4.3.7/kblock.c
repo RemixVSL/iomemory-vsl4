@@ -1107,16 +1107,6 @@ static blk_status_t kfio_errno_to_blk_status(int error)
     return blk_status;
 }
 
-# if KFIOC_HAS_END_REQUEST
-static int errno_to_uptodate(int error)
-{
-    // Convert an errno value to an uptodate value.
-    // uptodate defines 1=success, 0=general error (EIO) and <0=specific error.
-    // In this case we'll never have the general error returned, only success (0) or specific errno values.
-    return error == 0? 1 : error;
-}
-# endif  /* KFIOC_HAS_END_REQUEST */
-
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error)
 {
     // bi_status is type blk_status_t, not an int errno, so must translate as necessary.

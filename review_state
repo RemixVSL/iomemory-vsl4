@@ -1,10 +1,9 @@
 # = removed
 > = needs review
-#> = partial removed, needs review for rest remove
+#> = partial removed, needs review before removing the rest
 
 # kfio_config/KFIOC_BIO_HAS_SPECIAL/result:0
 # kfio_config/KFIOC_HAS_BLK_DELAY_QUEUE/result:0
-> review: kfio_config/KFIOC_NEW_BARRIER_SCHEME/result:0
 # kfio_config/KFIOC_USE_IO_SCHED/result:0
 # kfio_config/KFIOC_X_TASK_HAS_CPUS_ALLOWED/result:0
 > review: kfio_config/KFIOC_HAS_QUEUE_LIMITS_CLUSTER/result:0
@@ -53,8 +52,10 @@
 # kfio_config/KFIOC_HAS_BIO_COMP_CPU/result:0
 # kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN/result:0
 # kfio_config/KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED/result:0
-kfio_config/KFIOC_BARRIER/result:0
-kfio_config/KFIOC_HAS_END_REQUEST/result:0
+> Related to KFIOC_NEW_BARRIER_SCHEME which needs investigating
+> review: kfio_config/KFIOC_BARRIER/result:0
+> review: kfio_config/KFIOC_NEW_BARRIER_SCHEME/result:0
+# kfio_config/KFIOC_HAS_END_REQUEST/result:0
 kfio_config/KFIOC_OWNER_IN_STRUCT_PROC_DIR_ENTRY/result:0
 kfio_config/KFIOC_BIO_HAS_SEG_SIZE/result:0
 kfio_config/KFIOC_HAS_BLK_UNPLUG/result:0
