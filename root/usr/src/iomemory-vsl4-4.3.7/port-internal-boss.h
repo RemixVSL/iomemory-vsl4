@@ -61,9 +61,6 @@
 #include <fio/port/common-linux/commontypes.h>
 #include <fio/port/kfio_config.h>
 #include <linux/module.h>
-#if !defined(__VMKLNX__)
-  #include <linux/file.h>
-#endif
+#include <linux/file.h>
 #include <fio/port/ktypes.h>
 #include <fio/port/kfio.h>
-
