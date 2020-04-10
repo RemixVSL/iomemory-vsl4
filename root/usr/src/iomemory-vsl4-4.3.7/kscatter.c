@@ -84,12 +84,7 @@ struct linux_dma_cookie
 
 C_ASSERT(sizeof(struct linux_dma_cookie) < sizeof(kfio_dma_cookie_t));
 
-// Newer kernels eliminate the task parameters from calls to get_user_pages()
-#if KFIOC_GET_USER_PAGES_REQUIRES_TASK
-    #define GET_USER_PAGES_TASK current, current->mm,
-#else
-    #define GET_USER_PAGES_TASK
-#endif
+#define GET_USER_PAGES_TASK
 
 /* Newer kernels combine the write and force flags into a single parameter */
 #if KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS

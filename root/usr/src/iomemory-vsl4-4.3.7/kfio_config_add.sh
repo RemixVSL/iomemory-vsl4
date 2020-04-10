@@ -72,10 +72,21 @@ KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT
 KFIOC_HAS_BIO_COMP_CPU
 KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED
 KFIOC_HAS_END_REQUEST
+KFIOC_OWNER_IN_STRUCT_PROC_DIR_ENTRY
+KFIOC_HAS_BLK_UNPLUG
+KFIOC_HAS_BLK_QUEUE_BOUNCE
+KFIOC_HAS_BLK_FS_REQUEST
+KFIOC_USE_NEW_IO_SCHED
+KFIOC_BACKING_DEV_INFO_HAS_UNPLUG_IO_FN
+KFIOC_GET_USER_PAGES_REQUIRES_TASK
 "
 
-for remove in KFIOC_REMOVE_TESTS; do
-    echo "remove $remove"
+for remove in $KFIOC_REMOVE_TESTS; do
+    echo "Hardcode $remove result to 0"
+    eval "${remove}() {
+      set_kfioc_status $remove 0 exit
+      set_kfioc_status $remove 0 result
+    }"
 done
 
 ##
@@ -103,7 +114,7 @@ start_tests()
         KFIOC_COUNT=$( pgrep -fc "kfio_config.sh -a" )
         while [ $KFIOC_COUNT -gt $TEST_RATE ]
         do
-            sleep .1
+            sleep .01
             KFIOC_COUNT=$( pgrep -fc "kfio_config.sh -a" )
         done
     done
