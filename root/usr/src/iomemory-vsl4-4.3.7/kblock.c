@@ -292,9 +292,7 @@ static struct block_device_operations fio_bdev_ops =
 };
 
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-# if KFIOC_MAKE_REQUEST_FN_VOID
-static void kfio_make_request(struct request_queue *queue, struct bio *bio);
-# elif KFIOC_MAKE_REQUEST_FN_UINT
+# if KFIOC_MAKE_REQUEST_FN_UINT
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
 # else
 static int kfio_make_request(struct request_queue *queue, struct bio *bio);
