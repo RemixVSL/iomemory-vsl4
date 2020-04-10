@@ -117,7 +117,6 @@ static long coms_control_ioctl_internal(struct file *file, unsigned int cmd, fio
     return coms_cdev_ioctl( cdev, cmd, arg );
 }
 
-#if KFIOC_HAS_COMPAT_IOCTL_METHOD
 /*
  *  Needed for 32 bit apps to be able to ioctl a 64 bit driver
  */
@@ -127,7 +126,6 @@ static long coms_control_compat_ioctl_internal(struct file *file, unsigned int c
 
     return coms_cdev_ioctl( cdev, cmd, arg );
 }
-#endif
 
 static struct file_operations coms_control_ops =
 {
@@ -138,9 +136,7 @@ static struct file_operations coms_control_ops =
 #else
     unlocked_ioctl: coms_control_ioctl_internal,
 #endif
-#if KFIOC_HAS_COMPAT_IOCTL_METHOD
     compat_ioctl: coms_control_compat_ioctl_internal,
-#endif
     poll:    coms_control_ioctl_poll,
 };
 
