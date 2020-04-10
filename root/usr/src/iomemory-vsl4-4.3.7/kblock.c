@@ -385,31 +385,9 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
 static int kfio_make_request(struct request_queue *queue, struct bio *bio);
 #endif
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
-
-
-#if KFIOC_USE_IO_SCHED
-static struct request_queue *kfio_init_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-static void kfio_do_request(struct request_queue *queue);
-static struct request *kfio_blk_fetch_request(struct request_queue *q);
-static void kfio_restart_queue(struct request_queue *q);
-static void kfio_end_request(struct request *req, int error);
-#else
-static void kfio_restart_queue(struct request_queue *q)
-{
-}
-#endif
-
-static void kfio_prepare_flush(struct request_queue *q, struct request *rq);
 static void kfio_invalidate_bdev(struct block_device *bdev);
 
-#if KFIOC_HAS_BLK_MQ
-static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
-                                       bool can_block);
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
-#else
-static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
-#endif
 {
     struct kfio_disk *disk = hctx->driver_data;
     struct request *req = bd->rq;
@@ -1341,6 +1319,7 @@ static unsigned long __kfio_bio_atomic(struct bio *bio)
 #endif
 }
 
+// TODO: We should probably switch to using the Kernel GPL module.
 #if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t kfio_errno_to_blk_status(int error)
 {
@@ -1945,7 +1924,7 @@ struct kfio_plug {
     struct work_struct work;
 };
 
-#if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
+
 static void kfio_unplug_do_cb(struct work_struct *work)
 {
     struct kfio_plug *plug = container_of(work, struct kfio_plug, work);
@@ -1981,12 +1960,6 @@ static void kfio_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
 
     kfio_unplug_do_cb(&plug->work);
 }
-#else
-static void kfio_unplug_cb(struct blk_plug_cb *cb)
-{
-    BUG();
-}
-#endif
 
 /*
  * this is used once while we create the block device,
@@ -1998,12 +1971,7 @@ struct test_plug
     int safe;
 };
 
-
-#if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
 static void safe_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
-#else
-static void safe_unplug_cb(struct blk_plug_cb *cb)
-#endif
 {
     struct test_plug *test_plug = container_of(cb, struct test_plug, cb);
 
@@ -2028,15 +1996,6 @@ static void test_safe_plugging(void)
     /* we only need to do this probe once */
     if (dangerous_plugging_callback != -1)
         return;
-
-#if !KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
-    /* plug callback should not sleep if called in scheduler. We need this
-     * parameter to avoid sleep in the callback
-     */
-    dangerous_plugging_callback = 1;
-    infprint("Unplug callbacks are run without from_schedule parameter.  Plugging disabled\n");
-    return;
-#endif
 
     /* setup a plug.  We don't need to worry about
      * the block device being ready because we won't do any IO
@@ -2068,7 +2027,6 @@ static void test_safe_plugging(void)
         dangerous_plugging_callback = 0;
     }
 }
-#endif
 
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
                                               kfio_numa_node_t node)
@@ -2103,6 +2061,7 @@ static int should_holdoff_writes(struct kfio_disk *disk)
     return fio_test_bit_atomic(KFIO_DISK_HOLDOFF_BIT, &disk->disk_state);
 }
 
+//TODO: We need to revisit this and do some cleanup.
 static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
 {
     struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
@@ -2141,7 +2100,7 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
              * unplug handler, and also attempt to call it.  This badness is worked
              * around here and also in kfio_init_queue().
              */
-            kfio_restart_queue(q);
+            //kfio_restart_queue(q); function does nothing. 
         }
 #endif /* KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN */
     }
@@ -2189,7 +2148,7 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
         if (atomic_dec_return(&disk->lock_pending) > 0)
         {
             atomic_set(&disk->lock_pending, 0);
-            kfio_restart_queue(q);
+            //kfio_restart_queue(q); function does nothing.
         }
     }
 #endif /* defined(KFIOC_REQUEST_QUEUE_HAS_REQUEST_FN) */
@@ -2233,43 +2192,6 @@ static int holdoff_writes_under_pressure(struct kfio_disk *disk)
     return 1;
 }
 
-#if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
-static inline void *kfio_should_plug(struct request_queue *q)
-{
-    if (use_workqueue == USE_QUEUE_NONE)
-    {
-        return q;
-    }
-
-    return NULL;
-}
-static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
-{
-    struct request_queue *q = data;
-    struct kfio_disk *disk = q->queuedata;
-    struct bio *ret = NULL;
-
-    spin_lock_irq(q->queue_lock);
-    if (disk->bio_tail)
-    {
-        disk->bio_tail->bi_next = bio;
-    }
-    else
-    {
-        disk->bio_head = bio;
-    }
-    disk->bio_tail = bio;
-    if (kfio_bio_should_submit_now(bio) && use_workqueue == USE_QUEUE_NONE)
-    {
-        ret = disk->bio_head;
-        disk->bio_head = disk->bio_tail = NULL;
-    }
-    blk_plug_device(q);
-    spin_unlock_irq(q->queue_lock);
-
-    return ret;
-}
-#else
 static void *kfio_should_plug(struct request_queue *q)
 {
     struct kfio_disk *disk = q->queuedata;
