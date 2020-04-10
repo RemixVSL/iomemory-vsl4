@@ -1,0 +1,78 @@
+# = removed
+> = needs review
+#> = partial removed, needs review for rest remove
+
+# kfio_config/KFIOC_BIO_HAS_SPECIAL/result:0
+# kfio_config/KFIOC_HAS_BLK_DELAY_QUEUE/result:0
+> review: kfio_config/KFIOC_NEW_BARRIER_SCHEME/result:0
+# kfio_config/KFIOC_USE_IO_SCHED/result:0
+# kfio_config/KFIOC_X_TASK_HAS_CPUS_ALLOWED/result:0
+> review: kfio_config/KFIOC_HAS_QUEUE_LIMITS_CLUSTER/result:0
+# kfio_config/KFIOC_X_HAS_BLK_STOP_QUEUE/result:0
+# kfio_config/KFIOC_MAKE_REQUEST_FN_VOID/result:0
+# kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER/result:0
+# kfio_config/KFIOC_BIOSET_CREATE_HAS_THIRD_ARG/result:0
+> review: kfio_config/KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG/result:0
+# kfio_config/KFIOC_HAS_REQ_UNPLUG/result:0
+# kfio_config/KFIOC_X_HAS_ELEVATOR_INIT/result:0
+# kfio_config/KFIOC_CONFIG_PREEMPT_RT/result:0
+## kfio_config/KFIOC_BIO_HAS_HW_SEGMENTS/result:0
+> review: kfio_config/KFIOC_HAS_QUEUE_FLAG_CLUSTER/result:0
+# kfio_config/KFIOC_HAS_BIO_RW_DISCARD/result:0
+# kfio_config/KFIOC_HAS_ELV_DEQUEUE_REQUEST/result:0
+# kfio_config/KFIOC_MISSING_WORK_FUNC_T/result:0
+# kfio_config/KFIOC_CONFIG_TREE_PREEMPT_RCU/result:0
+# kfio_config/KFIOC_HAS_ELEVATOR_INIT_EXIT/result:0
+# kfio_config/KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG/result:0
+# kfio_config/KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT/result:0
+# kfio_config/KFIOC_NEEDS_VIRT_TO_PHYS/result:0
+>   8     fops.compat_ioctl = NULL;
+>  https://elixir.bootlin.com/linux/v5.0/source/include/linux/fs.h#L1783
+> review: kfio_config/KFIOC_FOPS_USE_LOCKED_IOCTL/result:0
+#> Review: kfio_config/KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN/result:0
+# kfio_config/KFIOC_REQUEST_HAS_CMD_TYPE/result:0
+# kfio_config/KFIOC_X_BOUNCE_H/result:0
+# kfio_config/KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE/result:0
+> Remove asm/scatterlist works
+> what does it need it for?
+> review: kfio_config/KFIOC_HAS_LINUX_SCATTERLIST_H/result:0
+# kfio_config/KFIOC_HAS_BIO_RW_FLAGGED/result:0
+# kfio_config/KFIOC_X_BIO_HAS_BI_PHYS_SEGMENTS/result:0
+> Something wrong with the C check here
+> review: kfio_config/KFIOC_STRUCT_FILE_HAS_PATH/result:0
+> review: kfio_config/KFIOC_HAS_BIO_RW_SYNC/result:0
+# kfio_config/KFIOC_HAS_INFLIGHT_RW/result:0
+# kfio_config/KFIOC_HAS_INFLIGHT_RW_ATOMIC/result:0
+# kfio_config/KFIOC_BIO_ENDIO_HAS_BYTES_DONE/result:0
+# kfio_config/KFIOC_X_REQ_HAS_ERRORS/result:0
+# kfio_config/KFIOC_BIO_HAS_DESTRUCTOR/result:0
+# kfio_config/KFIOC_TASK_HAS_NR_CPUS_ALLOWED_RT/result:0
+kfio_config/KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE/result:0
+kfio_config/KFIOC_DISCARD_ZEROES_IN_LIMITS/result:0
+kfio_config/KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT/result:0
+kfio_config/KFIOC_HAS_BIO_COMP_CPU/result:0
+kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN/result:0
+kfio_config/KFIOC_HAS_QUEUE_FLAG_CLEAR_UNLOCKED/result:0
+kfio_config/KFIOC_BARRIER/result:0
+kfio_config/KFIOC_HAS_END_REQUEST/result:0
+kfio_config/KFIOC_OWNER_IN_STRUCT_PROC_DIR_ENTRY/result:0
+kfio_config/KFIOC_BIO_HAS_SEG_SIZE/result:0
+kfio_config/KFIOC_HAS_BLK_UNPLUG/result:0
+kfio_config/KFIOC_HAS_BLK_QUEUE_BOUNCE/result:0
+kfio_config/KFIOC_HAS_BLK_FS_REQUEST/result:0
+kfio_config/KFIOC_USE_NEW_IO_SCHED/result:0
+kfio_config/KFIOC_BACKING_DEV_INFO_HAS_UNPLUG_IO_FN/result:0
+kfio_config/KFIOC_BIO_HAS_ATOMIC_REMAINING/result:0
+kfio_config/KFIOC_GET_USER_PAGES_REQUIRES_TASK/result:0
+kfio_config/KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM/result:0
+kfio_config/KFIOC_HAS_PATH_LOOKUP/result:0
+kfio_config/KFIOC_HAS_BIO_RW_ATOMIC/result:0
+kfio_config/KFIOC_HAS_SCSI_LUNID_UINT/result:0
+kfio_config/KFIOC_BIO_HAS_INTEGRITY/result:0
+kfio_config/KFIOC_HAS_BLKDEV_OLD_BD_SEM/result:0
+kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL/result:0
+kfio_config/KFIOC_KMAP_ATOMIC_NEEDS_TYPE/result:0
+kfio_config/KFIOC_X_PART0_HAS_IN_FLIGHT/result:0
+kfio_config/KFIOC_X_PART_STAT_REQUIRES_CPU/result:0
+kfio_config/KFIOC_HAS_REQ_RW_SYNC/result:0
+kfio_config/KFIOC_HAS_BIO_RW_UNPLUG/result:0

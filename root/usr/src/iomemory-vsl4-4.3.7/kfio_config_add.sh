@@ -13,6 +13,7 @@ KFIOC_TEST_LIST="${KFIOC_TEST_LIST}
 KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
 KFIOC_X_HAS_BLK_STOP_QUEUE
 KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
 KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER
 KFIOC_X_PART_STAT_REQUIRES_CPU
 KFIOC_X_TASK_HAS_CPUS_ALLOWED
@@ -29,6 +30,46 @@ KFIOC_X_HAS_COARSE_REAL_TS
 KFIOC_X_HAS_ELEVATOR_INIT
 KFIOC_X_PART0_HAS_IN_FLIGHT
 "
+KFIOC_REMOVE_TESTS="KFIOC_BIO_HAS_SPECIAL
+KFIOC_HAS_BLK_DELAY_QUEUE
+KFIOC_USE_IO_SCHED
+KFIOC_X_TASK_HAS_CPUS_ALLOWED
+KFIOC_X_HAS_BLK_STOP_QUEUE
+KFIOC_MAKE_REQUEST_FN_VOID
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUE_LOCK_POINTER
+KFIOC_BIOSET_CREATE_HAS_THIRD_ARG
+KFIOC_HAS_REQ_UNPLUG
+KFIOC_X_HAS_ELEVATOR_INIT
+KFIOC_CONFIG_PREEMPT_RT
+KFIOC_HAS_BIO_RW_FLAGGED
+KFIOC_HAS_ELV_DEQUEUE_REQUEST
+KFIOC_MISSING_WORK_FUNC_T
+KFIOC_CONFIG_TREE_PREEMPT_RCU
+KFIOC_HAS_ELEVATOR_INIT_EXIT
+KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG
+KFIOC_BLOCK_DEVICE_RELEASE_RETURNS_INT
+KFIOC_NEEDS_VIRT_TO_PHYS
+#IS_IMPLICIT_FROM_4_20
+KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
+KFIOC_REQUEST_HAS_CMD_TYPE
+KFIOC_X_BOUNCE_H
+KFIOC_X_HAS_BLK_MQ_DELAY_QUEUE
+KFIOC_X_BIO_HAS_BI_PHYS_SEGMENTS
+KFIOC_HAS_INFLIGHT_RW
+KFIOC_HAS_INFLIGHT_RW_ATOMIC
+KFIOC_BIO_ENDIO_HAS_BYTES_DONE
+#NO_SUCH_THING_DUDE
+KFIOC_BIO_ENDIO_REMOVED_ERROR
+KFIOC_BIO_ERROR_CHANGED_TO_STATUS
+KFIOC_X_REQ_HAS_ERRORS
+KFIOC_BIO_HAS_DESTRUCTOR
+KFIOC_TASK_HAS_NR_CPUS_ALLOWED_RT
+KFIOC_TASK_HAS_NR_CPUS_ALLOWED_DIRECT
+"
+
+for remove in KFIOC_REMOVE_TESTS; do
+
+done
 
 ##
 # Override start_tests with out more efficient
@@ -108,8 +149,8 @@ int kfioc_has_blk_stop_queue(struct request_queue *rq)
 
 # flag:           KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
 # values:
-#                 0     starting 5.0 the request_queue has a spinlock_t for queue_lock
-#                 1     pre 5.0 kernels have a spinlock_t *queue_lock in request_queue.
+#                 0
+#                 1    pre 5.3 kernels have special as part of the "do what you want"
 # git commit:     NA
 # comments:
 # iomemory-vsl:   4
@@ -121,14 +162,37 @@ KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL()
 
 void kfioc_test_request_queue_has_queue_lock_pointer(void) {
     struct request_queue *q;
-    void *x
-    x = q->special
+    void *x;
+    x = q->special;
 }
 '
 
     kfioc_test "$test_code" "$test_flag" 1
 }
 
+
+# flag:           KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
+# values:
+#                 0
+#                 1     5.3 kernels have queuedata as part of the "do what you want"
+# git commit:     NA
+# comments:
+# iomemory-vsl:   4
+KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+
+void kfioc_test_request_queue_has_queue_lock_pointer(void) {
+    struct request_queue *q;
+    void *x;
+    x = q->queuedata;
+}
+'
+
+    kfioc_test "$test_code" "$test_flag" 1
+}
 
 # flag:           KFIOC_HAS_BLK_MQ
 # usage:          undef for automatic selection by kernel version
