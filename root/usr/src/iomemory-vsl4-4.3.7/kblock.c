@@ -118,14 +118,8 @@ int iodrive_barrier_sync = 0;
 extern int enable_discard;
 #endif
 
-#if KFIOC_HAS_SEPARATE_OP_FLAGS && !defined(bio_flags)
-/* bi_opf defined in kernel 4.8, but bio_flags not defined until 4.9
-   (and then disappeared in v4.10) */
-#if defined(BIO_OP_SHIFT)
-#define bio_flags(bio) ((bio)->bi_opf & ((1 << BIO_OP_SHIFT) - 1))
-#else
+#ifndef bio_flags
 #define bio_flags(bio) ((bio)->bi_opf & REQ_OP_MASK)
-#endif
 #endif
 
 #if KFIOC_HAS_RQ_POS_BYTES == 0
@@ -821,8 +815,6 @@ void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 #if KFIOC_DISCARD == 1
 static int kfio_bio_is_discard(struct bio *bio)
 {
-// # if !KFIOC_HAS_SEPARATE_OP_FLAGS
-// #  if KFIOC_HAS_UNIFIED_BLKTYPES
     return bio_op(bio) == REQ_OP_DISCARD;
 }
 #endif
@@ -865,13 +857,7 @@ static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
 
 static unsigned long __kfio_bio_sync(struct bio *bio)
 {
-# if KFIOC_HAS_SEPARATE_OP_FLAGS
     return bio_flags(bio) == REQ_SYNC;
-# else
-#  if KFIOC_HAS_UNIFIED_BLKTYPES
-    return bio->bi_rw & REQ_SYNC;
-#  endif
-# endif
 }
 
 static unsigned long __kfio_bio_atomic(struct bio *bio)
@@ -1251,13 +1237,8 @@ static kfio_bio_t *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio
     if ((BI_SECTOR(bio) * KERNEL_SECTOR_SIZE % bdev->bdev_block_size != 0) ||
         (BI_SIZE(bio) % bdev->bdev_block_size != 0))
     {
-#if KFIOC_HAS_SEPARATE_OP_FLAGS
         engprint("Rejecting malformed bio %p sector %lu size 0x%08x flags 0x%08lx op 0x%08x op_flags 0x%04x\n", bio,
                  (unsigned long)BI_SECTOR(bio), BI_SIZE(bio), (unsigned long) bio->bi_flags, bio_op(bio), bio_flags(bio));
-#else
-        engprint("Rejecting malformed bio %p sector %lu size 0x%08x flags 0x%08lx rw 0x%08lx\n", bio,
-                 (unsigned long)BI_SECTOR(bio), BI_SIZE(bio), (unsigned long) bio->bi_flags, bio->bi_rw);
-#endif
         return NULL;
     }
 
