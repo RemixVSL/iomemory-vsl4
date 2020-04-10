@@ -77,21 +77,13 @@ KFIOC_HAS_GLOBAL_REGS_POINTER
 KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
 KFIOC_HAS_LINUX_SCATTERLIST_H
 KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
-KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
 KFIOC_HAS_KMEM_CACHE
-KFIOC_HAS_NOTIFIER_FROM_ERRNO
 KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
-KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS
-KFIOC_PARTITION_STATS
-KFIOC_HAS_NEW_BLKDEV_METHODS
-KFIOC_COMPAT_IOCTL_RETURNS_LONG
 KFIOC_DISCARD
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_USE_LINUX_UACCESS_H
-KFIOC_HAS_SPIN_LOCK_IRQSAVE_NESTED
 KFIOC_MODULE_PARAM_ARRAY_NUMP
-KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV
 KFIOC_HAS_BLK_LIMITS_IO_MIN
 KFIOC_HAS_BLK_LIMITS_IO_OPT
 KFIOC_HAS_UNIFIED_BLKTYPES
@@ -99,15 +91,12 @@ KFIOC_HAS_SEPARATE_OP_FLAGS
 KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 KFIOC_FOPS_USE_LOCKED_IOCTL
 KFIOC_HAS_RQ_POS_BYTES
-KFIOC_HAS_RQ_IS_SYNC
-KFIOC_HAS_RQ_FOR_EACH_BIO
 KFIOC_QUEUE_HAS_NONROT_FLAG
 KFIOC_QUEUE_HAS_RANDOM_FLAG
 KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
-KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
 KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
@@ -120,20 +109,16 @@ KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_HAS_CPUMASK_WEIGHT
-KFIOC_BIO_HAS_USCORE_BI_CNT
-KFIOC_BLKMQ_COMPLETE_NO_ERROR
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
-KFIOC_BARRIER_USES_QUEUE_FLAGS
 KFIOC_HAS_HOTPLUG_STATE_MACHINE
 KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
 KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
 KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG
 KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
-KFIOC_HAS_BLK_RQ_IS_PASSTHROUGH
 KFIOC_HAS_BLK_QUEUE_SPLIT2
-KFIOC_HAS_BLK_QUEUE_BOUNCE
 KFIOC_MISSING_WORK_FUNC_T
+KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
 "
 
 
@@ -671,67 +656,6 @@ void kfioc_test_kmem_cache_create(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
-# values:
-#                 0     for older kernels that have the destroy_dirty_buffers argument to invalidate_bdev()
-#                 1     for kernels that removed the destroy_dirty_buffers argument to invalidate_bdev()
-# git commit:     f98393a64ca1392130724c3acb4e3f325801d2b6
-# comments:       API and ABI incompatible.
-KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/buffer_head.h>
-
-void kfioc_test_invalidate_bdev(void) {
-    invalidate_bdev(NULL);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
-# values:
-#                 0     for older kernels that don't have unplug_fn member in struct request_queue.
-#                 1     for kernels that have unplug_fn member in struct request_queue.
-# git commit:     NA
-# comments: removed from Kernel 2.6.39
-KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_request_queue_unplug(void) {
-    struct request_queue q = { .unplug_fn = NULL };
-    (void)q;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
-# values:
-#                 0     for older kernels that don't have unplug_fn take extra boolean parameter
-#                 1     for newer kernels that do have unplug_fn take extra boolean parameter
-# git commit:     NA
-# comments: This was  introduced prior to 5.x. I don't think we need to test for this.
-KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_request_queue_unplug_param(blk_plug_cb_fn cb) {
-    cb(NULL, false);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 # flag:           KFIOC_HAS_KMEM_CACHE
 # values:
 #                 0     for older kernels that use kmem_cache_s
@@ -756,27 +680,6 @@ void kfioc_test_kmem_cache(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
-
-
-# flag:           KFIOC_HAS_NOTIFIER_FROM_ERRNO
-# values:
-#                 0     for olders kernels that don't pass errnos in notifiers.
-#                 1     for kernels that pass errnos in notifiers.
-# git commit:     fcc5a03ac42564e9e255c1134dda47442289e466
-# comments:
-KFIOC_HAS_NOTIFIER_FROM_ERRNO()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/types.h>
-
-int kfioc_test_notifier_from_errno(void) {
-    return notifier_from_errno(0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
 # flag:           KFIOC_STRUCT_FILE_HAS_PATH
@@ -823,172 +726,6 @@ int kfioc_test_unregister_blkdev(void) {
 
     kfioc_test "$test_code" "$test_flag" 0
 }
-
-
-# flag:           KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS
-# values:
-#                 0     for older kernels that have read and write data members in disk stats
-#                 1     for kernels that have arrays for disk ops
-#                 rather than individual structures for read/write ops.
-# git commit:     a362357b6cd62643d4dda3b152639303d78473da
-# kernel version: >= 2.6.15
-# comments:       While this is an API change, it doesn't appear to be an ABI
-#                 incompatibility in the structure.
-#                 This changed disk_stats from independent read/write members to arrays length two.
-KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/genhd.h>
-
-void kfioc_test_disk_stats(void) {
-    struct disk_stats stat = { .sectors = { [0] = 0, [1] = 0 } };
-    (void)stat;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_PARTITION_STATS
-# values:
-#                 0     for kernels that the driver updates stats
-#                 1     for kernels where the block layer updates stats
-# git commit:     074a7aca7afa6f230104e8e65eba3420263714a5
-# comments:       genhd struct no longer tracks stats.  Stats are tracked
-#                 automatically when updating the partition stats by the
-#                 block layer.
-KFIOC_PARTITION_STATS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/genhd.h>
-#ifndef part_stat_lock
-#error part_stat_lock not defined
-#endif
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_HAS_DISK_STATS_NSECS
-# values:
-#                 0     For older kernels with ticks array member in disk_stats
-#                 1     For kernels with newer nsecs array member in disk_stats
-# git commit      b57e99b4b8b0ebdf9707424e7ddc0c392bdc5fe6
-# kernel version: >= 4.19
-# comments:       'ticks' was in jiffies, and new 'nsecs' is in, well, nano seconds.
-#                 We were converting our 'duration' usec's to jiffies, so now we convert usec to nsec.
-KFIOC_HAS_DISK_STATS_NSECS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/genhd.h>
-
-void kfioc_test_disk_stats_nsec(struct disk_stats* stats)
-{
-    stats->nsecs[0] = 0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_HAS_NEW_BLOCK_METHODS
-# values:
-#                 0     for old block open release ioctl methods
-#                 1     for new block open release ioctl methods
-# git commit:     d4430d62fa77208824a37fe6f85ab2831d274769
-# comments: I can see this going back to 2.6.39.4, with block_device* and fmode_t.
-KFIOC_HAS_NEW_BLOCK_METHODS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-#include <linux/blkdev.h>
-
-int myfunc(struct block_device *bdev, fmode_t mode){
-    return 0;
-}
-
-struct block_device_operations testops = {
-    .open = myfunc
-};
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
-
-# flag:           KFIOC_HAS_NEW_BLKDEV_METHODS
-# values:
-#                 1 If the kernel has the blkdev_get_by_path() function
-#                 0 If it does not
-# comments:       Implemented in 2.3.38 and later
-KFIOC_HAS_NEW_BLKDEV_METHODS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-void kfioc_has_new_blkdev_methods(void)
-{
-    (void)blkdev_get_by_path("foo", 0, NULL);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_COMPAT_IOCTL_METHOD
-# values:
-#                 0     for old file_operations without compat_ioctl
-#                 1     for new file_operations with compat_ioctl
-# comments:
-KFIOC_HAS_COMPAT_IOCTL_METHOD()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-#include <linux/blkdev.h>
-
-long myfunc(struct file *file, unsigned cmd, unsigned long arg){
-    return 0L;
-}
-
-struct file_operations testops = {
-    .compat_ioctl = myfunc
-};
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_COMPAT_IOCTL_RETURNS_LONG
-# values:
-#                 1     for compat_ioctl returning long
-#                 0     for compat_ioctl returning int
-# comments:
-KFIOC_COMPAT_IOCTL_RETURNS_LONG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-#include <linux/blkdev.h>
-
-long myfunc(struct file *file, unsigned cmd, unsigned long arg){
-    return 0L;
-}
-
-struct file_operations testops = {
-    .compat_ioctl = myfunc
-};
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
-
 
 # flag:           KFIOC_DISCARD
 # values:
@@ -1071,27 +808,6 @@ void kfioc_use_blk_queue_functions(void)
     kfioc_test "$test_code" KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS 1 -Werror
 }
 
-# flag:          KFIOC_BARRIER_USES_QUEUE_FLAGS
-# usage:         1   Kernel uses queue_flags field
-#                0   It does not
-# What?? Should this test be testing for the queue_flags field, use of queue_flags_xxx() functions, or existance of QUEUE_FLAG_WC???
-KFIOC_BARRIER_USES_QUEUE_FLAGS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_barrier_uses_queue_flags(void)
-{
-    struct request_queue *q = NULL;
-
-    if (test_bit(QUEUE_FLAG_WC, &q->queue_flags))
-    {
-    }
-}
-'
-    kfioc_test "$test_code" KFIOC_BARRIER_USES_QUEUE_FLAGS 1 -Werror
-}
-
 # flag:           KFIOC_USE_LINUX_UACCESS_H
 # values:
 #                 0     for kernels that use asm/uaccess.h
@@ -1101,25 +817,6 @@ KFIOC_USE_LINUX_UACCESS_H()
     local test_flag="$1"
     kfioc_has_include "linux/uaccess.h" "$test_flag"
 }
-
-
-# flag:           KFIOC_HAS_SPIN_LOCK_IRQSAVE_NESTED
-# values:
-#                 0     for kernels that use asm/uaccess.h
-#                 1     for kernels that use linux/uaccess.h
-KFIOC_HAS_SPIN_LOCK_IRQSAVE_NESTED()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/spinlock.h>
-#ifndef spin_lock_irqsave_nested
-#error spin_lock_irqsave_nested is missing
-#endif
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 
 # flag:           KFIOC_MODULE_PARAM_ARRAY_NUMP
 # values:
@@ -1138,23 +835,6 @@ module_param_array(test, charp, NULL, 0);
 '
 
     kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV
-#                 1     if pci_dma_mapping_error() takes the device as the first parameter.
-#                 0     if not
-KFIOC_PCI_DMA_MAPPING_ERROR_TAKES_DEV()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/pci.h>
-int kfioc_pci_dma_mapping_error_takes_dev(void)
-{
-    return pci_dma_mapping_error(NULL, (dma_addr_t)0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:           KFIOC_HAS_BLK_LIMITS_IO_MIN
@@ -1185,26 +865,6 @@ KFIOC_HAS_BLK_LIMITS_IO_OPT()
 void kfioc_has_blk_limits_io_opt(void)
 {
     blk_limits_io_opt(NULL, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_BLK_QUEUE_MAX_SEGMENTS
-#                 1     if the kernel defines blk_queue_max_segments
-#                 0     if the kernel does not
-# git commit:     8a78362c4eefc1deddbefe2c7f38aabbc2429d6b
-#                 086fa5ff0854c676ec333760f4c0154b3b242616
-#                 Changed introduced in 2.6.34
-KFIOC_HAS_BLK_QUEUE_MAX_SEGMENTS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_blk_queue_max_segments(void)
-{
-    blk_queue_max_segments(NULL, 0);
 }
 '
 
@@ -1247,23 +907,6 @@ void foo(void)
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_HAS_BIO_RW_ATOMIC
-#                 1     if the kernel supports has a bio ATOMIC flag
-#                 0     if the kernel does not
-KFIOC_HAS_BIO_RW_ATOMIC()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-void foo(void)
-{
-    unsigned long flags = 1 << BIO_RW_ATOMIC;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 # flag:           KFIOC_FOPS_USE_LOCKED_IOCTL
 #                 1     if the driver should use fops->ioctl()
 #                 0     if the driver should use fops->unlocked_ioctl()
@@ -1300,47 +943,6 @@ void foo(void)
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_RQ_IS_SYNC
-#                 1     if the driver should use
-#                 0     if the driver should use
-#                 Change introduced in 1faa16d22877f4839bd433547d770c676d1d964c
-KFIOC_HAS_RQ_IS_SYNC()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void foo(void)
-{
-    struct request *req = NULL;
-
-    rq_is_sync(req);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_RQ_FOR_EACH_BIO
-#                 1     if the driver should use
-#                 0     if the driver should use
-#                 Change introduced in 5705f7021748a69d84d6567e68e8851dab551464
-KFIOC_HAS_RQ_FOR_EACH_BIO()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void foo(void)
-{
-    struct bio *lbio;
-    struct request *req = NULL;
-
-    __rq_for_each_bio(lbio, req)
-    {
-    }
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:          KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
@@ -1475,24 +1077,6 @@ void support_sglist_new_api(void)
 }
 '
     kfioc_test "$test_code" KFIOC_SGLIST_NEW_API 1 -Werror
-}
-
-# flag:          KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
-# usage:         1   bvec_kmap_irq takes unsigned long instead of unsigned int for flags param
-#                0   It does not
-KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-void bvec_kmap_irq_has_long_flags(void)
-{
-    unsigned long flags;
-
-    bvec_kmap_irq(NULL, &flags);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:           KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
@@ -1685,24 +1269,6 @@ void kfioc_test_bio_seg_size(void) {
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_BIO_HAS_INTEGRITY
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio bi_integrity
-#                 1     if the kernel has structure element
-KFIOC_BIO_HAS_INTEGRITY()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_remaining(void) {
-	struct bio *bio = NULL;
-	bio_integrity(bio) == NULL;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
 # flag:           KFIOC_HAS_FILE_INODE_HELPER
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have file_inode() helper
@@ -1738,133 +1304,6 @@ void kfioc_has_cpumask_weight(void) {
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
-# flag:           KFIOC_BIO_HAS_USCORE_BI_CNT
-# usage:          1 if bio.__bi_cnt, 0 if bio.bi_cnt
-# git commit:     dac56212e8127dbc0bff7be35c508bc280213309
-# kernel version: v4.2-rc1
-KFIOC_BIO_HAS_USCORE_BI_CNT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_bio_has_uscore_bi_cnt(void) {
-    struct bio test_bio;
-    (void) test_bio.__bi_cnt;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_BIO_ENDIO_REMOVED_ERROR
-# usage:          1 if bio.bi_error exists, 0 if instead bio_endio has error parameter
-#                 assumes KFIOC_BIO_ENDIO_HAS_BYTES_DONE == 0 as bytes_done arg removed prior to error arg
-# git commit:     4246a0b63bd8f56a1469b12eafeb875b1041a451
-# kernel version: v4.3-rc1
-KFIOC_BIO_ENDIO_REMOVED_ERROR()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_bio_endio_removed_error(void) {
-    bio_endio(NULL);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_BIO_ERROR_CHANGED_TO_STATUS
-# usage:          1 if bio.bi_error was removed and replaced with bi_status. 0 otherwise.
-#                 Note that bi_status is type blk_status_t, not int with errno's.
-# kernel version: v4.13
-KFIOC_BIO_ERROR_CHANGED_TO_STATUS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blk_types.h>
-
-void kfioc_bio_error_changed_to_status(struct bio* bi)
-{
-    bi->bi_status = BLK_STS_OK;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_BLKMQ_COMPLETE_NO_ERROR
-# usage:          1 if error argument does not exists, 0 if has error parameter
-# kernel version: v4.1-rc1
-# enb: Removed between kernel 3.13.11 and 3.14 (in one of the 3.14.rcX versions).
-KFIOC_BLKMQ_COMPLETE_NO_ERROR()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blk-mq.h>
-
-void kfioc_blkmq_complete_no_error(void) {
-    blk_mq_complete_request(NULL);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_HAS_BLK_MQ
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel doesn't support blk-mq
-#                 1     if the kernel has blk-mq
-# kernel version: v4.1-rc1
-# A popular distro has backported blk-mq.h into 3.10.0 kernel in a way that does
-# not work with the driver
-KFIOC_HAS_BLK_MQ()
-{
-    local test_flag="$1"
-    local test_code='
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)
-#include <linux/blk-mq.h>
-
-int kfioc_has_blk_mq(void)
-{
-    struct blk_mq_tag_set tag_set;
-    tag_set.nr_hw_queues = 1;
-    tag_set.cmd_size = 0;
-    if (!blk_mq_alloc_tag_set(&tag_set))
-    {
-        blk_mq_init_queue(&tag_set);
-    }
-    blk_mq_run_hw_queues(NULL,0);
-    return 1;
-}
-#else
-#error blk-mq was added in 3.13.0 kernel
-#endif
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:          KFIOC_MAKE_REQUEST_FN_UINT
-# usage:         1   make_request_fn returns unsigned int
-#                0   It returns 0/1 for done/remap
-KFIOC_MAKE_REQUEST_FN_UINT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-static unsigned int my_make_request_fn(struct request_queue *q, struct bio *bio)
-{
-    return 1;
-}
-void test_make_request_fn(void)
-{
-    blk_queue_make_request(NULL, my_make_request_fn);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:            KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
@@ -2021,44 +1460,6 @@ void test_pcie_enable_msix_exact(struct pci_dev* pdev, struct msix_entry* msi)
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
-
-# flag:            KFIOC_HAS_BLK_RQ_IS_PASSTHROUGH
-# usage:           1 blk_rq_is_passthrough() function exists
-#                  0 function does not exist, must use rq->cmd_type field with REQ_TYPE_FS or blk_fs_request().
-# kernel version:  kernel 4.11 added this new macro.
-KFIOC_HAS_BLK_RQ_IS_PASSTHROUGH()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void test_has_blk_rq_is_passthrough(struct request* req)
-{
-    blk_rq_is_passthrough(req);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-
-# flag:            KFIOC_HAS_BLK_QUEUE_BOUNCE
-# usage:           1 blk_queue_bounce() function exists
-#                  0 function does not exist. No need to call it as it is called within the kernel.
-# kernel version:  kernel 4.13 removed the EXPORT_SYMBOL for blk_queue_bounce().
-KFIOC_HAS_BLK_QUEUE_BOUNCE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void test_has_blk_queue_bounce(struct request_queue *rq, struct bio **bio)
-{
-    blk_queue_bounce(rq, bio);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 
 # flag:            KFIOC_HAS_BLK_QUEUE_SPLIT2
 # usage:           1 blk_queue_split() with two parameters exists
