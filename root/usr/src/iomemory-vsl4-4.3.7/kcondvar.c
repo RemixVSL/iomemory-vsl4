@@ -34,9 +34,8 @@
 #include <fio/port/dbgset.h>
 #include <fio/port/kcondvar.h>
 #include <fio/port/ktime.h>
-#if !defined(__VMKLNX__)
 #include <linux/sched.h>    // for struct task_struct used in kassert
-#endif
+
 
 /**
  * @ingroup PORT_COMMON_LINUX

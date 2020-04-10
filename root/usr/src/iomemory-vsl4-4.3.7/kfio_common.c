@@ -33,11 +33,7 @@
 
 #include <linux/kernel.h>
 #include <linux/kthread.h>
-#if defined(__VMKLNX__) // Apparently ESXux doesn't have copy_to/from_user in the same place.
-#include <asm/uaccess.h>
-#else   // Everyone else
 #include <linux/uaccess.h>
-#endif
 #include <fio/port/dbgset.h>
 
 /**
@@ -183,31 +179,7 @@ void *kfio_memcpy(void *dst, const void *src, fio_size_t n)
 
 void *kfio_memmove(void *dst, const void *src, fio_size_t n)
 {
-#if !defined(__VMKLNX__)
     return memmove(dst, src, n);
-#else
-    // memmove is available in ESX but is not available for use by drivers.
-    // This code was yanked from the DDK.
-    char *tmp;
-    const char *s;
-    char *dest = dst;
-    size_t count = n;
-
-    if (dest <= (char *)src) {
-        tmp = dest;
-        s = src;
-        while (count--)
-            *tmp++ = *s++;
-    } else {
-        tmp = dest;
-        tmp += count;
-        s = src;
-        s += count;
-        while (count--)
-            *--tmp = *--s;
-    }
-    return dest;
-#endif
 }
 
 unsigned long long kfio_strtoull(const char *nptr, char **endptr, int base)
@@ -299,6 +271,8 @@ void kfio_dump_stack()
     dump_stack();
 }
 
+
+// TODO: don't think this is needed.
 #if FIO_BITS_PER_LONG == 32
 /* 64bit divisor, dividend and result. dynamic precision */
 uint64_t kfio_div64_64(uint64_t dividend, uint64_t divisor)

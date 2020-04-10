@@ -35,6 +35,7 @@
 #include <fio/port/common-linux/kblock.h>
 #endif
 
+// pretty sure we don't need a scsi interface for a PCIE card.
 #if KFIO_SCSI_DEVICE
 #include <fio/port/common-linux/kscsi_config.h>
 #include <fio/port/kscsi.h>

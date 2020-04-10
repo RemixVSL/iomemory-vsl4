@@ -41,25 +41,18 @@ char       *numa_node_override[MAX_PCI_DEVICES];
 int         num_numa_node_override;
 
 #if PORT_SUPPORTS_NUMA_NODE_OVERRIDE
-# if !defined(__VMKLNX__)
 MODULE_PARM_DESC(numa_node_override, "Override device to NUMA node binding");
 #  if KFIOC_MODULE_PARAM_ARRAY_NUMP
 module_param_array (numa_node_override, charp, &num_numa_node_override, S_IRUGO | S_IWUSR);
 #  else
 module_param_array (numa_node_override, charp, num_numa_node_override, S_IRUGO | S_IWUSR);
 #  endif
-# endif
 #endif
 
-#if defined(__VMKLNX__) || (!KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN && !KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM)
-int use_workqueue = USE_QUEUE_RQ;
-#else
 int use_workqueue = USE_QUEUE_NONE;
-#endif
-
 module_param (use_workqueue, int, S_IRUGO | S_IWUSR);
 
-
+// TODO: do we need any of this?
 #if FUSION_MEDIA_TEST_TOOL
 #if FUSION_INTERNAL || FUSION_DEBUG
 #error FUSION_MEDIA_TEST_TOOL must only be used only with a release build.
