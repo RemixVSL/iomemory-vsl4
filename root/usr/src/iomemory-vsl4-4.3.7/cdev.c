@@ -82,14 +82,12 @@ static int coms_control_open(struct inode *inode, struct file *file)
     struct coms_cdev *cdev;
     int minor = iminor(inode);
 
-#if !defined(__VMKLNX__)
     if (imajor(inode) != MISC_MAJOR)
     {
         errprint_all(ERRID_CMN_LINUX_CDEV_INVALID_INODE, "inode has major %d and is not a MISC_MAJOR device\n",
                 imajor(inode));
         return -ENODEV;
     }
-#endif
 
     cdev = coms_port_cdev_enumerate(coms_port_cdev_has_minor, 0, &minor);
     if (cdev == NULL)
@@ -170,9 +168,6 @@ int coms_port_cdev_create(struct coms_cdev *cdev, void *port_param, void **handl
 {
     struct miscdevice *md;
     int result;
-#if defined(__VMKLNX__)
-    int minor = 254;
-#endif
 
     init_waitqueue_head((wait_queue_head_t *) coms_cdev_get_poll_struct(cdev));
 
@@ -180,31 +175,7 @@ int coms_port_cdev_create(struct coms_cdev *cdev, void *port_param, void **handl
 
     misc_dev_init(md, coms_cdev_get_name(cdev));
 
-#if defined(__VMKLNX__)
-    do
-    {
-        md->minor = minor--;
-#endif
-        result = misc_register(md);
-#if defined(__VMKLNX__)
-        /*
-         * Yet another ugly hack for ESX: misc_register does not return 0 on success.
-         * From the comments in misc_register() in the ESX 4.0 DDK:
-         *  ESX Deviation Notes:
-         *  On ESX, misc_register returns the assigned character-device major
-         *  associated with the device (which is always MISC_MAJOR) upon a
-         *  successful registration. For failure, a negative error code is
-         *  returned.
-         *  ....
-         *  This is a deviation from Linux - should return 0 for success
-         */
-        if (result > 0)
-        {
-            result = 0;
-        }
-    }
-    while (result < 0 && minor > 0);
-#endif
+    result = misc_register(md);
     if (result < 0)
     {
         errprint_lbl(coms_cdev_get_bus_name(cdev), ERRID_CMN_LINUX_CDEV_INIT_FAIL,
@@ -214,7 +185,8 @@ int coms_port_cdev_create(struct coms_cdev *cdev, void *port_param, void **handl
     else
     {
         *handlep = md;
-#if !defined(__VMKLNX__) && !defined(__TENCENT_KERNEL__)
+// TODO: Whadawhadawhada!!!!!?
+#if !defined(__TENCENT_KERNEL__)
         coms_wait_for_dev(coms_cdev_get_name(cdev));
 #endif
     }
@@ -229,8 +201,6 @@ void coms_port_cdev_destroy(void *port_cdev)
     misc_deregister(md);
     kfio_free(md, sizeof(*md));
 }
-
-#if !defined(__VMKLNX__)
 
 static int coms_path_lookup(const char *filename)
 {
@@ -281,16 +251,6 @@ int coms_wait_for_dev(const char *devname)
 
     return 0;
 }
-
-#else /* !defined(__VMKLNX__) */
-
-int coms_wait_for_dev(const char *devname)
-{
-    // Unimplemented on ESX
-    return 0;
-}
-
-#endif /* !defined(__VMKLNX__) */
 
 /**
  * @}
