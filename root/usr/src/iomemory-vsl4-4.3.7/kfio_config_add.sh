@@ -68,7 +68,7 @@ KFIOC_TASK_HAS_NR_CPUS_ALLOWED_DIRECT
 "
 
 for remove in KFIOC_REMOVE_TESTS; do
-
+    echo "remove $remove"
 done
 
 ##
