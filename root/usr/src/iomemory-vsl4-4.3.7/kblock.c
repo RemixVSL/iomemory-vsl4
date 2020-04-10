@@ -37,32 +37,6 @@
 // Ignore this whole file, if the block device is not being included in the build.
 #if KFIO_BLOCK_DEVICE
 
-#if defined(__VMKLNX__)
-// ESX block layer code is buggy.
-// Map all block layer calls to our own block layer module (modified from the DDK version).
-#define bdget fio_esx_bdget
-#define bdput fio_esx_bdput
-#define add_disk fio_esx_add_disk
-#define vmklnx_block_register_sglimit fio_esx_vmklnx_block_register_sglimit
-#define vmklnx_register_blkdev fio_esx_vmklnx_register_blkdev
-#define unregister_blkdev fio_esx_unregister_blkdev
-#define put_disk fio_esx_put_disk
-#define vmklnx_block_init_done fio_esx_vmklnx_block_init_done
-#define blk_complete_request fio_esx_blk_complete_request
-#define end_that_request_last fio_esx_end_that_request_last
-#define blk_queue_max_sectors fio_esx_blk_queue_max_sectors
-#define blk_cleanup_queue fio_esx_blk_cleanup_queue
-#define blk_queue_max_hw_segments fio_esx_blk_queue_max_hw_segments
-#define blk_queue_softirq_done fio_esx_blk_queue_softirq_done
-#define blk_queue_hardsect_size fio_esx_blk_queue_hardsect_size
-#define blk_queue_max_phys_segments fio_esx_blk_queue_max_phys_segments
-#define alloc_disk fio_esx_alloc_disk
-#define blk_init_queue fio_esx_blk_init_queue
-#define elv_next_request fio_esx_elv_next_request
-#define blk_stop_queue fio_esx_blk_stop_queue
-#define bio_endio fio_esx_bio_endio
-#endif  /* __VMKLNX__ */
-
 #include "port-internal.h"
 #include <fio/port/dbgset.h>
 #include <fio/port/kfio.h>
@@ -80,23 +54,14 @@
 
 #include <linux/version.h>
 #include <linux/fs.h>
-#if !defined(__VMKLNX__)
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
-#endif
 
 #if KFIOC_HAS_BLK_MQ
 #include <linux/blk-mq.h>
 #endif
 extern int use_workqueue;
-#if !defined(__VMKLNX__)
 static int fio_major;
-#endif
-
-#if !KFIOC_HAS_BLK_QUEUE_MAX_SEGMENTS
-// About the same time blk_queue_max_segments() came to be, the inline to extract it appeared as well.
-#define queue_max_segments(q)   (q->limits.max_segments)
-#endif
 
 static void linux_bdev_name_disk(struct fio_bdev *bdev);
 static int  linux_bdev_create_disk(struct fio_bdev *bdev);
@@ -107,7 +72,7 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on);
 static void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending);
 static void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration);
 static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight);
-#if !defined(__VMKLNX__) && !KFIOC_PARTITION_STATS
+#if !KFIOC_PARTITION_STATS
 static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw);
 #endif
 
@@ -152,16 +117,6 @@ struct kfio_disk
 #if KFIOC_HAS_BLK_MQ
     struct blk_mq_tag_set tag_set;
 #endif
-#if defined(__VMKLNX__)
-    volatile enum
-    {
-        threadState_none, Running, Stopping, Stopped
-    } submit_thread_state;           ///< used if queuing requests via single thread: see use_workqueue
-
-    fusion_condvar_t      submit_thread_cv;
-    fusion_cv_lock_t      submit_thread_lk;
-    int                   major;
-#endif
 };
 
 enum {
@@ -205,18 +160,12 @@ extern int enable_discard;
 #endif
 #endif
 
-#if defined(__VMKLNX__) || KFIOC_HAS_RQ_POS_BYTES == 0
+#if KFIOC_HAS_RQ_POS_BYTES == 0
 #define blk_rq_pos(rq)    ((rq)->sector)
 #define blk_rq_bytes(rq)  ((rq)->nr_sectors << 9)
 #endif
 
 extern int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *bio);
-
-#if KFIOC_USE_IO_SCHED
-static void kfio_blk_complete_request(struct request *req, int error);
-static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
-                                       bool can_block);
-#endif /* KFIOC_USE_IO_SCHED */
 
 static int kfio_bio_cnt(const struct bio * const bio)
 {
@@ -248,20 +197,13 @@ int kfio_platform_init_block_interface(void)
     bdev_sif.bdev_update_stats = linux_bdev_update_stats;
     fio_bdev_storage_interface_register(&bdev_sif);
 
-#if defined(__VMKLNX__)
-    return 0;
-#else
     fio_major = register_blkdev(0, "fio");
     return fio_major <= 0 ? -EBUSY : 0;
-#endif
 }
 
 
 int kfio_platform_teardown_block_interface(void)
 {
-#if defined(__VMKLNX__)
-    return 0;
-#else
     int rc = 0;
 
 #if KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
@@ -271,26 +213,7 @@ int kfio_platform_teardown_block_interface(void)
 #endif
 
     return rc;
-#endif
 }
-
-#if defined(__VMKLNX__)
-// "Real" ESX register functions
-static int kfio_register_esx_blkdev(const char *name)
-{
-    // vmklnx_register_blkdev() expects PCI slot information, which is
-    // unavailable/irrelevant/inappropriate with VSUs or dual-pipe.
-    // Our modified block layer module allows skipping this information
-    // by passing -1 and NULL instead.
-    // Side effect: device gets listed as "Unknown" instead of "Adapter for iomemory-vsl"
-    return vmklnx_register_blkdev(0, name, -1, -1, NULL);
-}
-
-static int kfio_unregister_esx_blkdev(unsigned int major, const char *name)
-{
-    return unregister_blkdev(major, name);
-}
-#endif
 
 /******************************************************************************
  *   Block device open, close and ioctl handlers                              *
@@ -460,158 +383,25 @@ static struct block_device_operations fio_bdev_ops =
 #endif
 };
 
-
-
-#if !defined(__VMKLNX__)
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-#if KFIOC_MAKE_REQUEST_FN_VOID
+# if KFIOC_MAKE_REQUEST_FN_VOID
 static void kfio_make_request(struct request_queue *queue, struct bio *bio);
-#elif KFIOC_MAKE_REQUEST_FN_UINT
+# elif KFIOC_MAKE_REQUEST_FN_UINT
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
-#else
+# else
 static int kfio_make_request(struct request_queue *queue, struct bio *bio);
-#endif
+# endif
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
-#endif
 
-#if KFIOC_USE_IO_SCHED
-static struct request_queue *kfio_init_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-static void kfio_do_request(struct request_queue *queue);
-static struct request *kfio_blk_fetch_request(struct request_queue *q);
-static void kfio_restart_queue(struct request_queue *q);
-static void kfio_end_request(struct request *req, int error);
-#else
 static void kfio_restart_queue(struct request_queue *q)
 {
 }
-#endif
 
 #if KFIOC_BARRIER == 1
 static void kfio_prepare_flush(struct request_queue *q, struct request *rq);
 #endif
 
 static void kfio_invalidate_bdev(struct block_device *bdev);
-
-#if defined(__VMKLNX__)
-
-static kfio_bio_t *kfio_fetch_next_bio(struct kfio_disk *disk)
-{
-    struct request_queue *q;
-    struct request *creq;
-
-    q = disk->rq;
-
-    spin_lock_irq(q->queue_lock);
-    creq = kfio_blk_fetch_request(q);
-    spin_unlock_irq(q->queue_lock);
-
-    if (creq != NULL)
-    {
-        kfio_bio_t *fbio;
-
-        fbio = kfio_request_to_bio(disk, creq, true);
-        if (fbio == NULL)
-        {
-            kfio_blk_complete_request(creq, -EIO);
-        }
-        return fbio;
-    }
-    return NULL;
-}
-
-/// @brief single-threaded handler for kfio_bio requests.
-/// @param arg a pointer to the fio_bdev.
-static int bio_submit_thread(void *arg)
-{
-    struct kfio_disk *disk = arg;
-    kfio_bio_t *bio;
-
-    /*
-     * Set out thread state as Running, but only if caller
-     * did not tell us to stop already, before this function
-     * has got a chance to run.
-     */
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    if (disk->submit_thread_state != Stopping)
-        disk->submit_thread_state = Running;
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-
-    while (disk->submit_thread_state != Stopping)
-    {
-        /* Try to grab next bio to submit. */
-        bio = kfio_fetch_next_bio(disk);
-
-        if (bio != NULL)
-        {
-            kfio_bio_submit(bio);
-            fusion_cond_resched();
-
-            /* There was work to do, ask for more immediately, unless asked to stop. */
-            continue;
-        }
-
-        fusion_cv_lock_irq(&disk->submit_thread_lk);
-        if (disk->submit_thread_state != Stopping)
-        {
-            (void)fusion_condvar_timedwait_noload(&disk->submit_thread_cv,
-                                                  &disk->submit_thread_lk,
-                                                  100000);
-        }
-        fusion_cv_unlock_irq(&disk->submit_thread_lk);
-    }
-
-    /* Do a final handshake with whomever is stopping us. */
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    disk->submit_thread_state = Stopped;
-    fusion_condvar_broadcast(&disk->submit_thread_cv);
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-
-    return 0;
-}
-
-/// @brief start bio_submit_thread.
-static void fio_start_submit_thread(struct kfio_disk *disk)
-{
-    kassert(disk->use_workqueue == USE_QUEUE_RQ);
-
-    fusion_create_kthread(bio_submit_thread, disk, NULL, "submit", "");
-}
-
-/// @brief stop bio_submit_thread.
-static void fio_stop_submit_thread(struct kfio_disk *disk)
-{
-    kassert(disk->use_workqueue == USE_QUEUE_RQ);
-
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    if (disk->submit_thread_state != Stopped)
-    {
-        disk->submit_thread_state = Stopping;
-    }
-    fusion_condvar_broadcast(&disk->submit_thread_cv);
-
-    /* Wait for worker to check in. */
-    while (disk->submit_thread_state != Stopped)
-    {
-        fusion_condvar_wait(&disk->submit_thread_cv, &disk->submit_thread_lk);
-    }
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-}
-
-/// @brief process request by queueing it to submit thread
-static void kfio_do_request(struct request_queue *q)
-{
-    kfio_disk_t *disk = q->queuedata;
-
-    /*
-     * In this mode we do queueing, so all we need is to signal the queue
-     * handler to come back to us and start fetching newly added requests.
-     */
-    fusion_cv_lock_irq(&disk->submit_thread_lk);
-    fusion_condvar_broadcast(&disk->submit_thread_cv);
-    fusion_cv_unlock_irq(&disk->submit_thread_lk);
-}
-
-#endif /* defined(__VMKLNX__) */
 
 #if KFIOC_HAS_BLK_MQ
 static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
@@ -622,22 +412,24 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
 static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 #endif
 {
-#if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL && ! KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
     struct kfio_disk *disk = hctx->driver_data;
+#if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+    struct fio_bdev  *bdev = disk->bdev;
 #endif
     struct request *req = bd->rq;
-#if KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
-    struct request_queue *q = req->q;
-#endif
     kfio_bio_t *fbio;
     int rc;
 
 #if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     fbio = req->special;
-#elif KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
-    fbio = q->queuedata;
+    if (!fbio)
+    {
 #else
-    fbio = kfio_request_to_bio(disk, req, false);
+    // fbio = kfio_request_to_bio(disk, req, false);
+    fbio = kfio_bio_try_alloc(bdev);
+#endif
+#if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+    }
 #endif
     if (!fbio)
     {
@@ -659,8 +451,6 @@ static int fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_da
              */
 #if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
             req->special = fbio;
-#elif KFIOC_X_REQUEST_QUEUE_HAS_QUEUEDATA
-            q->queuedata = fbio;
 #endif
             goto retry;
         }
@@ -717,9 +507,6 @@ static struct blk_mq_ops fio_mq_ops = {
 
 #endif
 
-
-#if !defined(__VMKLNX__)
-
 /* @brief Parameter to the work queue call. */
 struct kfio_blk_add_disk_param
 {
@@ -744,7 +531,6 @@ static void kfio_blk_add_disk(fusion_work_struct_t *work)
     fusion_condvar_broadcast(&disk->state_cv);
     fusion_cv_unlock_irq(&disk->state_lk);
 }
-#endif /* defined(__VMKLNX__) */
 
 static void linux_bdev_name_disk(struct fio_bdev *bdev)
 {
@@ -778,20 +564,6 @@ static int linux_bdev_create_disk(struct fio_bdev *bdev)
     disk->sector_mask = bdev->bdev_block_size - 1;
     disk->use_workqueue = use_workqueue;
 
-#if defined(__VMKLNX__)
-    // FIXME: Need PCI device info here to avoid showing up as
-    // "Gammagraphx, Inc. (or missing ID) Unknown" in "esxcfg-scsidevs -a".
-    disk->major = kfio_register_esx_blkdev(bdev->bdev_name);
-    if (disk->major < 0)
-    {
-        kfio_free(disk, sizeof(*disk));
-        return -ENODEV;
-    }
-
-    disk->submit_thread_state = Stopped;
-    fusion_condvar_init(&disk->submit_thread_cv, "fio_submit_cv");
-    fusion_cv_lock_init(&disk->submit_thread_lk, "fio_submit_lk");
-#endif
     fusion_init_spin(&disk->queue_lock, "queue_lock");
 
     fusion_condvar_init(&disk->state_cv, "fio_disk_cv");
@@ -812,9 +584,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     struct kfio_disk     *disk;
     struct request_queue *rq;
     struct gendisk       *gd;
-#if !defined(__VMKLNX__)
     struct kfio_blk_add_disk_param *param;
-#endif
 
     disk = bdev->bdev_gd;
     if (disk == NULL)
@@ -852,16 +622,8 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 #endif
     if (disk->use_workqueue != USE_QUEUE_RQ)
     {
-#if !defined(__VMKLNX__)
         disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
-#endif
     }
-# if KFIOC_USE_IO_SCHED
-    else
-    {
-        disk->rq = kfio_init_queue(disk, bdev->bdev_numa_node);
-    }
-# endif /* KFIOC_USE_IO_SCHED */
 
     if (disk->rq == NULL)
     {
@@ -879,15 +641,8 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
 #endif
 
-#if KFIOC_HAS_BLK_QUEUE_MAX_SEGMENTS
-    // As of kernel v4.14 it appears that the kernel does not honor these requested limits. Hopefully that will change.
-    blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
-    blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
-#else
-    blk_queue_max_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
-    blk_queue_max_phys_segments(rq, bdev->bdev_max_sg_entries);
-    blk_queue_max_hw_segments  (rq, bdev->bdev_max_sg_entries);
-#endif
+blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
+blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 
 #if KFIOC_HAS_QUEUE_FLAG_CLUSTER
 # if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
@@ -902,9 +657,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 #elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 // Linux from 5.0 > removed the limits.cluster: https://patchwork.kernel.org/patch/10716231/
 #else
-# ifndef __VMKLNX__
 #  error "Do not know how to disable request queue clustering for this kernel."
-# endif
 #endif
 
     blk_queue_max_segment_size(rq, PAGE_SIZE);
@@ -998,12 +751,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENOMEM;
     }
 
-#if defined(__VMKLNX__)
-    gd->major = disk->major;
-#else
     gd->major = fio_major;
-#endif
-
     gd->first_minor = FIO_NUM_MINORS * bdev->bdev_index;
     gd->minors = FIO_NUM_MINORS;
     gd->fops = &fio_bdev_ops;
@@ -1011,10 +759,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->private_data = bdev;
 #if defined GENHD_FL_EXT_DEVT
     gd->flags = GENHD_FL_EXT_DEVT;
-#endif
-
-#if defined(__VMKLNX__)
-    gd->maxXfer = 1024 * 1024; // 1M - matches BLK_DEF_MAX_SECTORS
 #endif
 
     fio_bdev_ops.owner = THIS_MODULE;
@@ -1028,7 +772,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
              fio_bdev_get_bus_name(bdev), gd->disk_name, gd->major,
              gd->first_minor, bdev->bdev_block_size);
 
-#if !defined(__VMKLNX__)
     /*
      * Offload device exposure to separate worker thread. On some kernels from
      * certain vendores add_disk is happy do do a lot of nested processing,
@@ -1077,48 +820,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
      * use the better interface.  Instead we must poll for the device creation.
      */
     coms_wait_for_dev(gd->disk_name);
-#else // __VMKLNX__
-    /*
-     * Submit thread should be started before we call add_disk
-     * in case add_disk would want to make some nested IO
-     * for partition table probing.
-     */
-    fio_start_submit_thread(disk);
-
-    add_disk(gd);
-
-    vmklnx_block_register_sglimit(gd->major, bdev->bdev_max_sg_entries);
-    vmklnx_block_init_done(gd->major);
-#endif
-
     return 0;
 }
 
 static void kfio_kill_requests(struct request_queue *q)
 {
-#if KFIOC_USE_IO_SCHED
-    struct kfio_disk *disk = q->queuedata;
-    struct request *req;
-
-    while ((req = kfio_blk_fetch_request(disk->rq)) != NULL)
-    {
-        kfio_end_request(req, -EIO);
-    }
-
-    while (!list_empty(&disk->retry_list))
-    {
-        req = list_entry(disk->retry_list.next, struct request, queuelist);
-        list_del_init(&req->queuelist);
-
-        // If special is Not NULL this request was retried and hence the bio associated
-        // with the request stored in special might not be freed.
-        if (req->special != NULL)
-        {
-            kfio_bio_free(req->special);
-        }
-        kfio_end_request(req, -EIO);
-    }
-#endif
 }
 
 static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
@@ -1167,7 +873,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
         {
             kfio_kill_requests(disk->rq);
         }
-#if !defined(__VMKLNX__)
         else if (disk->use_workqueue != USE_QUEUE_MQ)
         {
             /* Fail all bio's already on internal bio queue. */
@@ -1180,7 +885,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
             }
             disk->bio_tail = NULL;
         }
-#endif
 
         fusion_spin_unlock_irqrestore(&disk->queue_lock);
 
@@ -1189,11 +893,6 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
         /* Tell Linux that disk is gone. */
         del_gendisk(disk->gd);
-
-#if defined(__VMKLNX__)
-        /* Stop submit thread here, we do not need it anymore. */
-        fio_stop_submit_thread(disk);
-#endif
 
         /*
          * If we have block device for the whole disk, wait for all
@@ -1275,12 +974,6 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 {
     struct kfio_disk *disk = bdev->bdev_gd;
 
-#if defined(__VMKLNX__)
-    kfio_unregister_esx_blkdev(disk->major, bdev->bdev_name);
-
-    fusion_condvar_destroy(&disk->submit_thread_cv);
-    fusion_cv_lock_destroy(&disk->submit_thread_lk);
-#endif
     fusion_destroy_spin(&disk->queue_lock);
 
     fusion_condvar_destroy(&disk->state_cv);
@@ -1292,20 +985,15 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 
 static void kfio_invalidate_bdev(struct block_device *bdev)
 {
-#if !defined(__VMKLNX__)
 #if ! KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS
     invalidate_bdev(bdev, 0);
 #else
     invalidate_bdev(bdev);
 #endif /* KFIOC_INVALIDATE_BDEV_REMOVED_DESTROY_DIRTY_BUFFERS */
-#else
-    /* XXXesx missing API */
-#endif
 }
 
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
-#if !defined(__VMKLNX__)
     kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
 
     if (disk == NULL)
@@ -1427,10 +1115,9 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
 # endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
-#endif /* !defined(__VMKLNX__) */
 }
 
-#if !defined(__VMKLNX__) && !KFIOC_PARTITION_STATS
+#if !KFIOC_PARTITION_STATS
 static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw)
 {
     struct gendisk *gd = disk->gd;
@@ -1459,7 +1146,7 @@ static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw)
     return gd->in_flight;
 # endif
 }
-#endif /* !defined(__VMKLNX__) && !KFIOC_PARTITION_STATS */
+#endif /* !KFIOC_PARTITION_STATS */
 
 void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 {
@@ -1528,8 +1215,6 @@ static int kfio_bio_is_discard(struct bio *bio)
 }
 #endif
 
-// kfio_dump_bio not supported for ESX4
-#if !defined(__VMKLNX__)
 /// @brief   Dump an OS bio to the log
 /// @param   msg   prefix for message
 /// @param   bio   the bio to drop
@@ -1581,7 +1266,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
 #endif
 }
-#endif // !__VMKLNX__
 
 static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
 {
@@ -1598,35 +1282,33 @@ static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
     kfio_bio_set_cpu(fbio, cpu);
 }
 
-#if !defined(__VMKLNX__)
-
 static unsigned long __kfio_bio_sync(struct bio *bio)
 {
-#if KFIOC_HAS_SEPARATE_OP_FLAGS
+# if KFIOC_HAS_SEPARATE_OP_FLAGS
     return bio_flags(bio) == REQ_SYNC;
-#else
-#if KFIOC_HAS_UNIFIED_BLKTYPES
+# else
+#  if KFIOC_HAS_UNIFIED_BLKTYPES
     return bio->bi_rw & REQ_SYNC;
-#elif KFIOC_HAS_BIO_RW_FLAGGED
+#  elif KFIOC_HAS_BIO_RW_FLAGGED
     return bio_rw_flagged(bio, BIO_RW_SYNCIO);
-#else
+#  else
     return bio_sync(bio);
-#endif
-#endif
+#  endif
+# endif
 }
 
 static unsigned long __kfio_bio_atomic(struct bio *bio)
 {
-#ifdef REQ_ATOMIC
+# ifdef REQ_ATOMIC
     return !!(bio->bi_rw & REQ_ATOMIC);
-#elif KFIOC_HAS_BIO_RW_ATOMIC
+# elif KFIOC_HAS_BIO_RW_ATOMIC
     return bio_rw_flagged(bio, BIO_RW_ATOMIC);
-#else
+# else
     return 0;
-#endif
+# endif
 }
 
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
+# if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t kfio_errno_to_blk_status(int error)
 {
     // We would use the kernel function of the same name, but they decided to impede us by making it GPL.
@@ -1677,9 +1359,9 @@ static blk_status_t kfio_errno_to_blk_status(int error)
 
     return blk_status;
 }
-#endif /* KFIOC_BIO_ERROR_CHANGED_TO_STATUS */
+# endif /* KFIOC_BIO_ERROR_CHANGED_TO_STATUS */
 
-#if KFIOC_HAS_END_REQUEST
+# if KFIOC_HAS_END_REQUEST
 static int errno_to_uptodate(int error)
 {
     // Convert an errno value to an uptodate value.
@@ -1687,7 +1369,7 @@ static int errno_to_uptodate(int error)
     // In this case we'll never have the general error returned, only success (0) or specific errno values.
     return error == 0? 1 : error;
 }
-#endif  /* KFIOC_HAS_END_REQUEST */
+# endif  /* KFIOC_HAS_END_REQUEST */
 
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error)
 {
@@ -2387,7 +2069,6 @@ static int should_holdoff_writes(struct kfio_disk *disk)
 {
     return fio_test_bit_atomic(KFIO_DISK_HOLDOFF_BIT, &disk->disk_state);
 }
-#endif /* !defined(__VMKLNX__) */
 
 static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
 {
@@ -2404,51 +2085,10 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
     }
     else
     {
-#if KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN
-        struct request_queue *q = disk->gd->queue;
-#endif
         fusion_cv_lock_irq(&disk->state_lk);
         fio_clear_bit_atomic(KFIO_DISK_HOLDOFF_BIT, &disk->disk_state);
         fusion_condvar_broadcast(&disk->state_cv);
         fusion_cv_unlock_irq(&disk->state_lk);
-
-        /*
-         * Re-kick the queue, if we stopped handing out writes
-         * due to log pressure. Do this out-of-line, since we can
-         * be called here with internal locks held and with IRQs
-         * disabled.
-         */
-#if KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN
-        if (q->request_fn)
-        {
-            /*
-             * The VMKernel initializes the request_queue in their implementation of
-             * blk_queue_init().  However, they both neglect to initialize the
-             * unplug handler, and also attempt to call it.  This badness is worked
-             * around here and also in kfio_init_queue().
-             */
-#if defined(__VMKLNX__)
-            if (q->unplug_work.work.pending & __WORK_OLD_COMPAT_BIT)
-            {
-                if (q->unplug_work.work.func.old == NULL)
-                {
-                    engprint("Null callback avoided; (__WORK_OLD_COMPAT_BIT)\n");
-                    return;
-                }
-            }
-            else
-            {
-                if (q->unplug_work.work.func.new == NULL)
-                {
-                    engprint("Null callback avoided; (!__WORK_OLD_COMPAT_BIT)\n");
-                    return;
-                }
-            }
-#endif /* defined(__VMKLNX__) */
-
-            kfio_restart_queue(q);
-        }
-#endif /* KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN */
     }
 }
 
@@ -2457,7 +2097,6 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
  */
 void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
 {
-#if !defined(__VMKLNX__)
     kfio_disk_t *disk = bdev->bdev_gd;
     struct gendisk *gd;
     struct request_queue *q;
@@ -2469,16 +2108,6 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
 
     gd = disk->gd;
     q = gd->queue;
-
-#if KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN
-    /*
-     * Only the request_fn driven model issues requests in a non-blocking
-     * manner. The direct queued model does not need this.
-     */
-    if (q->request_fn == NULL)
-    {
-        return;
-    }
 
     if (pending)
     {
@@ -2495,15 +2124,10 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
         if (atomic_dec_return(&disk->lock_pending) > 0)
         {
             atomic_set(&disk->lock_pending, 0);
-            kfio_restart_queue(q);
         }
     }
-#endif /* defined(KFIOC_REQUEST_QUEUE_HAS_REQUEST_FN) */
-#endif
 }
 
-
-#if !defined(__VMKLNX__)
 static int holdoff_writes_under_pressure(struct kfio_disk *disk)
 {
     int count = 0;
@@ -2542,7 +2166,7 @@ static int holdoff_writes_under_pressure(struct kfio_disk *disk)
     return 1;
 }
 
-#if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
+# if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
 static inline void *kfio_should_plug(struct request_queue *q)
 {
     if (use_workqueue == USE_QUEUE_NONE)
@@ -2578,7 +2202,7 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
 
     return ret;
 }
-#else
+# else
 static void *kfio_should_plug(struct request_queue *q)
 {
     struct kfio_disk *disk = q->queuedata;
@@ -2643,7 +2267,7 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
 
     return ret;
 }
-#endif
+# endif
 
 #if KFIOC_MAKE_REQUEST_FN_VOID
 static void kfio_make_request(struct request_queue *queue, struct bio *bio)
@@ -2745,855 +2369,11 @@ static int kfio_make_request(struct request_queue *queue, struct bio *bio)
     return FIO_MFN_RET;
 }
 
-#endif /* !defined(__VMKLNX__) */
-
 #if KFIOC_BARRIER == 1
 static void kfio_prepare_flush(struct request_queue *q, struct request *req)
 {
 }
 #endif
-
-#if KFIOC_USE_IO_SCHED
-
-static unsigned long kfio_get_req_hard_nr_sectors(struct request *req)
-{
-    kassert(use_workqueue == USE_QUEUE_RQ || use_workqueue == USE_QUEUE_MQ);
-
-# if KFIOC_USE_NEW_IO_SCHED
-    return blk_rq_sectors(req);
-# else
-    return req->hard_nr_sectors;
-# endif
-}
-
-static int kfio_end_that_request_first(struct request *req, int error, int count)
-{
-# if defined(__VMKLNX__)
-    return 0;
-# else
-
-    kassert(use_workqueue == USE_QUEUE_RQ);
-
-#  if KFIOC_HAS_END_REQUEST
-    // end_that_request_first() takes an 'uptodate' parameter where 1=success, 0=generic error, <0=specific error.
-    // Convert our incoming error value to an 'uptodate' value first.
-    return end_that_request_first(req, errno_to_uptodate(error), count);
-#  else
-    {
-#   if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
-        // bi_status is type blk_status_t, not an int errno, so must translate as necessary.
-        blk_status_t bio_status = BLK_STS_OK;
-
-        if (unlikely(error != 0))
-        {
-            bio_status = kfio_errno_to_blk_status(error);
-        }
-#   else
-        int bio_status = error;
-#   endif /* KFIOC_BIO_ERROR_CHANGED_TO_STATUS */
-
-        // We are already holding the queue lock so we call __blk_end_request
-        // If we ever decide to call this _without_ holding the lock, we should
-        // use blk_end_request() instead.
-        kassert(spin_is_locked(req->q->queue_lock));
-        return __blk_end_request(req, bio_status, blk_rq_bytes(req));
-    }
-#  endif /* KFIOC_HAS_END_REQUEST */
-# endif /* __VMKLNX__ */
-}
-
-static void kfio_end_that_request_last(struct request *req, int error)
-{
-# if !KFIOC_USE_NEW_IO_SCHED
-    kassert(use_workqueue == USE_QUEUE_RQ || use_workqueue == USE_QUEUE_MQ);
-
-#  if KFIOC_HAS_END_REQUEST
-    // end_that_request_last() takes an 'uptodate' value, which is <=0 is failure, 1=success.
-    //  Must convert our error value to an uptodate value first.
-    end_that_request_last(req, errno_to_uptodate(error));
-#  endif
-# endif
-}
-
-static void kfio_end_request(struct request *req, int error)
-{
-    if (kfio_end_that_request_first(req, error, kfio_get_req_hard_nr_sectors(req)))
-    {
-        kfail();
-    }
-    kfio_end_that_request_last(req, error);
-}
-
-static void kfio_restart_queue(struct request_queue *q)
-{
-# if KFIOC_HAS_BLK_DELAY_QUEUE
-    blk_delay_queue(q, 0);
-# else
-    if (!test_and_set_bit(QUEUE_FLAG_PLUGGED, &q->queue_flags))
-    {
-#  if KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG
-        kblockd_schedule_work(q, &q->unplug_work);
-#  else
-        kblockd_schedule_work(&q->unplug_work);
-#  endif /* KFIOC_KBLOCKD_SCHEDULE_HAS_QUEUE_ARG */
-    }
-# endif /* KFIOC_HAS_BLK_DELAY_QUEUE */
-}
-
-# if !defined(__VMKLNX__)
-/*
- * Returns non-zero if we have pending requests, either at the OS level
- * or on our internal retry list
- */
-static int kfio_has_pending_requests(struct request_queue *q)
-{
-        kfio_disk_t *disk = q->queuedata;
-        int ret;
-
-#  if KFIOC_USE_NEW_IO_SCHED
-        ret = blk_peek_request(q) != NULL;
-#  else
-        ret = !elv_queue_empty(q);
-#  endif
-        return ret || disk->retry_cnt;
-}
-
-/*
- * Typeless container_of(), since we are abusing a different type for
- * our atomic list entry.
- */
-#define void_container(e, t, f) (t*)(((fio_uintptr_t)(t*)((char *)(e))-((fio_uintptr_t)&((t*)0)->f)))
-
-/*
- * Splice completion list to local list and handle them
- */
-static int complete_list_entries(struct request_queue *q, int error, struct kfio_disk *dp)
-{
-    struct request *req;
-    struct fio_atomic_list list;
-    struct fio_atomic_list *entry, *tmp;
-    int completed = 0;
-
-    fusion_atomic_list_init(&list);
-    fusion_atomic_list_splice(&dp->comp_list, &list);
-    if (fusion_atomic_list_empty(&list))
-        return completed;
-
-    fusion_atomic_list_for_each(entry, tmp, &list)
-    {
-        req = void_container(entry, struct request, special);
-        kfio_end_request(req, error);
-        completed++;
-    }
-
-    kassert(dp->pending >= completed);
-    dp->pending -= completed;
-    return completed;
-}
-
-static void kfio_blk_complete_request(struct request *req, int error)
-{
-    struct request_queue *q = req->q;
-    struct kfio_disk *dp = q->queuedata;
-    struct fio_atomic_list *entry;
-    sector_t last_sector;
-    int      last_rw;
-    int i;
-
-    /*
-     * Save a local copy of the last sector in the request before putting
-     * it onto atomic completion list. Once it is there, requests is up for
-     * grabs for others completors and we cannot legally access its fields
-     * anymore.
-     */
-    last_sector = blk_rq_pos(req) + (blk_rq_bytes(req) >> 9);
-    last_rw = rq_data_dir(req);
-
-    /*
-     * Add this completion entry atomically to the shared completion
-     * list.
-     */
-    entry = (struct fio_atomic_list *) &req->special;
-    fusion_atomic_list_init(entry);
-    fusion_atomic_list_add(entry, &dp->comp_list);
-
-    /*
-     * Next try and grab the queue_lock, which we need for completion.
-     * If we succeed, set that we are now doing completions with the
-     * KFIO_DISK_COMPLETION bit. If we fail, check if someone is already
-     * doing completions. If they are, we are golden. They will see our
-     * completion entry and do it in due time. If not, repeat the lock
-     * check and completion bit check.
-     */
-    while (!fusion_spin_trylock_irqsave(&dp->queue_lock))
-    {
-        if (fio_test_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state))
-            return;
-
-        cpu_relax();
-    }
-
-    if (dp->last_dispatch == last_sector && dp->last_dispatch_rw == last_rw)
-    {
-        dp->last_dispatch = 0;
-        dp->last_dispatch_rw = -1;
-    }
-
-    /*
-     * Great, lets do completions. Mark us as doing that, and complete
-     * the list for up to 8 runs (or until it was empty).
-     */
-    fio_set_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
-    for (i = 0; i < 8; i++)
-    {
-        if (!complete_list_entries(q, error, dp))
-        {
-            break;
-        }
-    }
-
-    /*
-     * Complete the list after clearing the bit, in case we raced with
-     * someone adding entries.
-     */
-    fio_clear_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
-    complete_list_entries(q, error, dp);
-
-    /*
-     * We usually don't have to re-kick the queue, it happens automatically.
-     * But if we dropped out of the queueing loop, we do have to guarantee
-     * that we kick things into gear on our own. So do that if we end up
-     * in the situation where we have pending IO from the OS but nothing
-     * left internally.
-     */
-    if (!dp->pending && kfio_has_pending_requests(q))
-    {
-        kfio_restart_queue(q);
-    }
-
-    fusion_spin_unlock_irqrestore(&dp->queue_lock);
-}
-
-# else // #if !defined(__VMKLNX__)
-
-static void kfio_blk_do_softirq(struct request *req)
-{
-    struct request_queue *rq;
-    struct kfio_disk     *dp;
-
-    rq = req->q;
-    dp = rq->queuedata;
-
-    fusion_spin_lock_irqsave(&dp->queue_lock);
-    kfio_end_request(req, error);
-    fusion_spin_unlock_irqrestore(&dp->queue_lock);
-}
-
-static void kfio_blk_complete_request(struct request *req, int error)
-{
-    // On ESX completions must be done through the softirq handler.
-    blk_complete_request(req);
-}
-#endif
-
-static void kfio_elevator_change(struct request_queue *q, char *name)
-{
-    // Turns out that the kernel developers don't actually want drivers to change the I/O scheduler, and so
-    //  in 4.18 they prohibit use of elevator_init() and _exit() as well as elevator_change().
-    // So now, if the noop scheduler isn't set by default for our driver (which it should be),
-    //  then it must be set by an admin using either a udev rule or an init script, executing something like:
-    //      echo noop > /sys/block/fioX/queue/scheduler
-#if KFIOC_HAS_ELEVATOR_INIT_EXIT == 1
-
-// We don't use the real elevator_change since it isn't in the RedHat Whitelist
-// see FH-14626 for the gory details.
-# if !defined(__VMKLNX__)
-#  if KFIOC_ELEVATOR_EXIT_HAS_REQQ_PARAM
-    elevator_exit(q, q->elevator);
-#  else
-    elevator_exit(q->elevator);
-#  endif
-#  if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,32)
-    q->elevator = NULL;
-#  endif
-    if (elevator_init(q, name))
-    {
-        errprint_all(ERRID_LINUX_KBLK_INIT_SCHED, "Failed to initialize noop io scheduler\n");
-    }
-# endif
-#endif // KFIOC_HAS_ELEVATOR_INIT_EXIT
-}
-
-#if KFIOC_HAS_BIO_COMP_CPU
-# if KFIOC_MAKE_REQUEST_FN_VOID
-static void kfio_rq_make_request_fn(struct request_queue *q, struct bio *bio)
-# else
-static int kfio_rq_make_request_fn(struct request_queue *q, struct bio *bio)
-# endif
-{
-    kfio_disk_t *disk = q->queuedata;
-
-    if (bio->bi_comp_cpu == -1)
-    {
-        bio_set_completion_cpu(bio, kfio_current_cpu());
-    }
-
-# if KFIOC_MAKE_REQUEST_FN_VOID
-    disk->make_request_fn(q, bio);
-# else
-    return disk->make_request_fn(q, bio);
-# endif
-}
-#endif
-
-static void kfio_set_queue_depth(struct request_queue *q, unsigned int depth)
-{
-    int cong;
-
-    q->nr_requests = depth;
-
-    /* set watermark for congestion on */
-    cong = q->nr_requests - (q->nr_requests / 8) + 1;
-    if (cong > q->nr_requests)
-        cong = q->nr_requests;
-
-    q->nr_congestion_on = cong;
-
-    /* set watermark for congestion off */
-    cong = q->nr_requests - (q->nr_requests / 8) - (q->nr_requests / 16) - 1;
-    if (cong < 1)
-        cong = 1;
-
-    q->nr_congestion_off = cong;
-}
-
-#if defined(__VMKLNX__)
-static void dummy_unplug(struct work_struct *p)
-{
-    engprint("Null callback avoided in dummy_unplug()\n");
-}
-#endif /* #if defined(__VMKLNX__) */
-
-static struct request_queue *kfio_init_queue(struct kfio_disk *dp,
-                                             kfio_numa_node_t node)
-{
-    struct request_queue *rq;
-    static char elevator_name[] = "noop";
-
-    kassert(use_workqueue == USE_QUEUE_RQ);
-
-    rq = blk_init_queue_node(kfio_do_request, (spinlock_t *)&dp->queue_lock, node);
-    if (rq != NULL)
-    {
-        rq->queuedata = dp;
-
-#if KFIOC_HAS_BIO_COMP_CPU
-        dp->make_request_fn = rq->make_request_fn;
-        rq->make_request_fn = kfio_rq_make_request_fn;
-#endif
-
-        /* Change out the default io scheduler, and use noop instead */
-        kfio_elevator_change(rq, elevator_name);
-#if defined(__VMKLNX__)
-        // ESX expects completions to be done in the softirq handler.
-        // Otherwise we get mysterious hangs with no error messages.
-        blk_queue_softirq_done(rq, kfio_blk_do_softirq);
-#endif
-
-        /* Increase queue depth  */
-        kfio_set_queue_depth(rq, DEFAULT_LINUX_MAX_NR_REQUESTS);
-    }
-
-    /*
-     * The VMKernel initializes the request_queue in their implementation of
-     * blk_queue_init().  However, they both neglect to initialize the
-     * unplug handler, and also attempt to call it.  This badness is worked
-     * around here and also in linux_bdev_backpressure()
-     */
-#if defined(__VMKLNX__)
-    if (rq->unplug_work.work.pending & __WORK_OLD_COMPAT_BIT)
-    {
-        if (rq->unplug_work.work.func.old == NULL)
-        {
-            engprint("Null work func callback found & fixed (__WORK_OLD_COMPAT_BIT)\n");
-            rq->unplug_work.work.func.old = (old_work_func_t) dummy_unplug;
-        }
-    }
-    else
-    {
-        if (rq->unplug_work.work.func.new == NULL)
-        {
-            engprint("Null work func callback found & fixed (!__WORK_OLD_COMPAT_BIT)\n");
-            rq->unplug_work.work.func.new = (work_func_t) dummy_unplug;
-        }
-    }
-#endif /* #if defined(__VMKLNX__) */
-
-    return rq;
-}
-
-static struct request *kfio_blk_fetch_request(struct request_queue *q)
-{
-    struct request *req;
-
-    kassert(use_workqueue == USE_QUEUE_RQ);
-    kassert(spin_is_locked(q->queue_lock));
-
-#if KFIOC_USE_NEW_IO_SCHED
-    req = blk_fetch_request(q);
-#else
-    req = elv_next_request(q);
-    if (req != NULL)
-    {
-        blkdev_dequeue_request(req);
-    }
-#endif
-
-    return req;
-}
-
-static void kfio_req_completor(kfio_bio_t *fbio, uint64_t bytes_done, int error)
-{
-    struct request *req = (struct request *)fbio->fbio_parameter;
-
-    if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP))
-    {
-        kfio_dump_fbio(fbio);
-#if !defined(__VMKLNX__)
-        blk_dump_rq_flags(req, FIO_DRIVER_NAME);
-#endif
-    }
-
-#if KFIOC_HAS_BLK_MQ
-    if (use_workqueue == USE_QUEUE_MQ)
-    {
-# if KFIOC_BLKMQ_COMPLETE_NO_ERROR
-        blk_mq_complete_request(req);
-# else
-        blk_mq_complete_request(req, error);
-# endif
-#endif
-    } else {
-      kfio_blk_complete_request(req, error);
-    }
-}
-
-#if defined(__VMKLNX__) || KFIOC_HAS_RQ_FOR_EACH_BIO == 0
-#  define __rq_for_each_bio(lbio, req) \
-           if ((req->bio)) \
-               for (lbio = (req)->bio; lbio; lbio = lbio->bi_next)
-#endif
-#if defined(__VMKLNX__) || KFIOC_HAS_RQ_IS_SYNC == 0
-# if KFIOC_HAS_REQ_RW_SYNC == 1
-#    define rq_is_sync(rq)  (((rq)->flags & REQ_RW_SYNC) != 0)
-# else
-#    define rq_is_sync(rq)  (0)
-# endif
-#endif
-
-/// @brief determine if a block request is an empty flush.
-///
-/// NB: any write request may have the flush bit set, but we do not treat
-/// those as special, since all writes are powercut safe and may not be
-/// reordered. This function detects only zero-length requests with the
-/// flush bit set, which do require special handling.
-static inline bool rq_is_empty_flush(const struct request *req)
-{
-#if KFIOC_NEW_BARRIER_SCHEME == 1
-    if (blk_rq_bytes(req) == 0 && req->cmd_flags & REQ_FLUSH)
-    {
-        return true;
-    }
-#elif KFIOC_BARRIER_USES_QUEUE_FLAGS == 1
-    if (blk_rq_bytes(req) == 0 && req_op(req) == REQ_OP_FLUSH)
-    {
-        return true;
-    }
-#elif KFIOC_BARRIER == 1
-    if (blk_rq_bytes(req) == 0 && blk_barrier_rq(req))
-    {
-        return true;
-    }
-#endif
-    return false;
-}
-
-static kfio_bio_t *kfio_request_to_bio(kfio_disk_t *disk, struct request *req,
-                                       bool can_block)
-{
-    struct fio_bdev *bdev = disk->bdev;
-    kfio_bio_t *fbio;
-
-    if (can_block)
-    {
-        fbio = kfio_bio_alloc(bdev);
-    }
-    else
-    {
-        fbio = kfio_bio_try_alloc(bdev);
-    }
-    if (fbio == NULL)
-    {
-        return NULL;
-    }
-
-    kassert(blk_rq_bytes(req) % bdev->bdev_block_size == 0);
-
-    fbio->fbio_range.base = (blk_rq_pos(req) << 9) / bdev->bdev_block_size;
-    fbio->fbio_range.length = blk_rq_bytes(req) / bdev->bdev_block_size;
-
-    fbio->fbio_completor = kfio_req_completor;
-    fbio->fbio_parameter = (fio_uintptr_t)req;
-
-    /* Detect flush barrier requests. */
-    if (rq_is_empty_flush(req))
-    {
-        fbio->fbio_cmd = KBIO_CMD_FLUSH;
-
-        // Zero-length flush requests sometimes have uninitialized blk_rq_pos
-        // when received from the OS. Force a valid address to prevent woe
-        // elsewhere in the driver.
-        fbio->fbio_range.base = 0;
-
-        /* Actually flush on non-powercut-safe cards */
-        fbio->fbio_flags |= KBIO_FLG_SYNC;
-    }
-    else
-    /* Detect trim requests. */
-#if KFIOC_DISCARD == 1
-    if (enable_discard &&
-# if KFIOC_HAS_SEPARATE_OP_FLAGS
-        (req_op(req) == REQ_OP_DISCARD))
-# else
-        (req->cmd_flags & REQ_DISCARD))
-# endif
-    {
-        kassert((blk_rq_pos(req) << 9) % bdev->bdev_block_size == 0);
-        fbio->fbio_cmd = KBIO_CMD_DISCARD;
-    }
-    else
-#endif
-    /* This is a read or write request. */
-    {
-        struct bio *lbio;
-        int error = 0;
-
-        kassert((blk_rq_pos(req) << 9) % bdev->bdev_block_size == 0);
-
-        kfio_set_comp_cpu(fbio, req->bio);
-
-        if (rq_data_dir(req) == WRITE)
-        {
-            int sync_write = rq_is_sync(req);
-
-            fbio->fbio_cmd = KBIO_CMD_WRITE;
-
-#if KFIOC_NEW_BARRIER_SCHEME == 1 || KFIOC_BARRIER_USES_QUEUE_FLAGS == 1
-            sync_write |= req->cmd_flags & REQ_FUA;
-#endif
-
-            if (sync_write)
-            {
-                fbio->fbio_flags |= KBIO_FLG_SYNC;
-            }
-        }
-        else
-        {
-            fbio->fbio_cmd = KBIO_CMD_READ;
-        }
-
-        __rq_for_each_bio(lbio, req)
-        {
-            error = kfio_sgl_map_bio(fbio->fbio_sgl, lbio);
-            if (error != 0)
-            {
-                break;
-            }
-        }
-
-        /*
-         * Sanity checking: combined length of all bios should cover request
-         * size. Only makes sense if above iteration over bios was successful.
-         */
-        if (error == 0 && kfio_bio_chain_size_bytes(fbio) != kfio_sgl_size(fbio->fbio_sgl))
-        {
-            // ESX 40u1 wins this time...
-            errprint_all(ERRID_LINUX_KBLK_REQ_MISMATCH, "Request size mismatch. Request size %llu dma size %u\n",
-                         kfio_bio_chain_size_bytes(fbio), kfio_sgl_size(fbio->fbio_sgl));
-#if KFIOC_DISCARD == 1
-            infprint("Request cmd 0x%016llx\n", (uint64_t)req->cmd_flags);
-#endif
-            __rq_for_each_bio(lbio, req)
-            {
-#if KFIOC_HAS_BIOVEC_ITERATORS
-                struct bio_vec vec;
-                struct bvec_iter bv_i;
-#else
-                struct bio_vec *vec;
-                int bv_i;
-#endif
-#if KFIOC_HAS_SEPARATE_OP_FLAGS
-                infprint("\tbio %p sector %lu size 0x%08x flags 0x%08lx op 0x%08x op_flags 0x%04x\n", lbio,
-                         (unsigned long)BI_SECTOR(lbio), BI_SIZE(lbio), (unsigned long)lbio->bi_flags,
-                         bio_op(lbio), bio_flags(lbio));
-#else
-                infprint("\tbio %p sector %lu size 0x%08x flags 0x%08lx rw 0x%08lx\n", lbio,
-                         (unsigned long)BI_SECTOR(lbio), BI_SIZE(lbio), (unsigned long)lbio->bi_flags, lbio->bi_rw);
-#endif
-                infprint("\t\tvcnt %u idx %u\n", lbio->bi_vcnt, BI_IDX(lbio));
-
-                bio_for_each_segment(vec, lbio, bv_i)
-                {
-#if KFIOC_HAS_BIOVEC_ITERATORS
-                    infprint("vec %d: page %p offset %u len %u\n", bv_i.bi_idx, vec.bv_page,
-                             vec.bv_offset, vec.bv_len);
-#else
-                    infprint("vec %d: page %p offset %u len %u\n", bv_i, vec->bv_page,
-                             vec->bv_offset, vec->bv_len);
-#endif
-                }
-            }
-            infprint("SGL content:\n");
-            kfio_sgl_dump(fbio->fbio_sgl, NULL, "\t", 0);
-            error = -EIO; /* Any non-zero value will serve. */
-        }
-
-        if (error != 0)
-        {
-            /* This should not happen. */
-            kfail();
-            kfio_bio_free(fbio);
-            return NULL;
-        }
-
-        kassert(kfio_bio_chain_size_bytes(fbio) == kfio_sgl_size(fbio->fbio_sgl));
-    }
-
-    return fbio;
-}
-
-#if !defined(__VMKLNX__)
-
-/*
- * Pull off as many requests as we can from the IO scheduler, then
- * drop the linux block device queue lock and map/submit them. If we
- * fail allocating internal fbios, requeue the leftovers.
- */
-static void kfio_do_request(struct request_queue *q)
-{
-    kfio_disk_t *disk = q->queuedata;
-    struct request *req;
-    LIST_HEAD(list);
-    int rc, queued, requeued, rw, wait_for_merge;
-    struct list_head *entry, *tmp;
-
-    /*
-     * Guard against unwanted recursion.
-     * While we drop the request lock to allow more requests to be enqueued,
-     * we don't allow another thread to process requests in the driver until
-     * we process the ones we removed in order to maintain ordering requirements.
-     */
-    if (disk->in_do_request)
-    {
-        return;
-    }
-    disk->in_do_request = 1;
-
-    for ( ; ; )
-    {
-        wait_for_merge = rw = queued = requeued = 0;
-        /*
-         * Grab requests that we queued internally for retry first before
-         * diving into the OS pending queue.
-         */
-        if (!list_empty(&disk->retry_list))
-        {
-            list_splice_init(&disk->retry_list, &list);
-            rw = disk->retry_cnt;
-            disk->retry_cnt = 0;
-        }
-        else
-        {
-            while ((req = kfio_blk_fetch_request(q)))
-            {
-                // If the OS ever hands us a request with 'special' set, we'll blindly
-                // trust that it is a fbio pointer. That would be bad. Hence the
-                // following assert.
-                kassert(req->special == 0);
-
-#if KFIOC_HAS_BLK_FS_REQUEST
-                if (blk_fs_request(req))
-#elif KFIOC_REQUEST_HAS_CMD_TYPE
-                if (req->cmd_type == REQ_TYPE_FS)
-#else
-                if (!blk_rq_is_passthrough(req))
-#endif
-                {
-                    // Do not allow improperly aligned requests to go through. OS should
-                    // not really allow these to reach our entry point, but be paranoid
-                    // and fail ill-formed requests before they get to do any damage at
-                    // lower layers.
-                    if (((blk_rq_pos(req) << 9) & disk->sector_mask) != 0 ||
-                        (blk_rq_bytes(req) & disk->sector_mask) != 0)
-                    {
-                        if (!rq_is_empty_flush(req))
-                        {
-                            errprint_all(ERRID_LINUX_KBLK_REQ_REJ,
-                                         "Rejecting unaligned request %llu:%lu, device sector size is %u\n",
-                                         (unsigned long long)(blk_rq_pos(req) << 9), (unsigned long)blk_rq_bytes(req),
-                                         disk->sector_mask + 1);
-
-                            kfio_end_request(req, -EIO);
-                            continue;
-                        }
-                    }
-
-                    if (disk->pending && disk->last_dispatch == blk_rq_pos(req) &&
-                        disk->last_dispatch_rw == rq_data_dir(req) &&
-                        req->bio != 0 &&
-                        req->bio->bi_vcnt == 1)
-                    {
-                        blk_requeue_request(q, req);
-                        wait_for_merge = 1;
-                        break;
-                    }
-                }
-                list_add_tail(&req->queuelist, &list);
-                disk->last_dispatch = blk_rq_pos(req) + (blk_rq_bytes(req) >> 9);
-                disk->last_dispatch_rw = rq_data_dir(req);
-                rw++;
-            }
-        }
-
-        /*
-         * By and large we always queue everything we pull off, so
-         * add the total sum here. We'll decrement if we need to
-         * requeue again
-         */
-        disk->pending += rw;
-        spin_unlock_irq(q->queue_lock);
-
-        list_for_each_safe(entry, tmp, &list)
-        {
-            kfio_bio_t *fbio;
-
-            req = list_entry(entry, struct request, queuelist);
-
-            fbio = req->special;
-            if (!fbio)
-            {
-                fbio = kfio_request_to_bio(disk, req, false);
-            }
-            if (!fbio)
-            {
-                if (unlikely(fio_bdev_self_check(disk->bdev)))
-                {
-                    // Underlying hardware has failed. Retrying will not improve matters.
-                    list_del_init(&req->queuelist);
-                    spin_lock_irq(q->queue_lock);
-                    kfio_end_request(req, -EIO);
-                    spin_unlock_irq(q->queue_lock);
-                    queued++;
-                    disk->pending--;
-                    continue;
-                }
-
-                break;
-            }
-
-            list_del_init(&req->queuelist);
-            fbio->fbio_flags |= KBIO_FLG_NONBLOCK;
-
-            rc = kfio_bio_submit_handle_retryable(fbio);
-            if (rc)
-            {
-                if (kfio_bio_failure_is_retryable(rc))
-                {
-                    /*
-                     * "busy error" conditions. Store the prepped part
-                     * for faster retry, and exit.
-                     */
-                    req->special = fbio;
-                    list_add(&req->queuelist, &list);
-                    break;
-                }
-                // Bio is already finished, do not touch it.
-                continue;
-            }
-            queued++;
-        }
-
-        // Give up a little time to keep the Soft Lockup complaints a rest
-        fusion_cond_resched();
-
-        spin_lock_irq(q->queue_lock);
-        if (!list_empty(&list))
-        {
-            LIST_HEAD(tmp_list);
-
-            /*
-             * Splice not-done requests to our internal retry list.
-             * Old kernels have neither list_splice_tail() nor a
-             * __list_splice() we can use, so splice the old list out
-             * first to maintain ordering.
-             * The initial count was 'rw', 'queued' is how many we
-             * actually sent off. So remaining count is rw - queued.
-             */
-            list_splice_init(&disk->retry_list, &tmp_list);
-            list_splice_init(&list, &disk->retry_list);
-            list_splice(&tmp_list, &disk->retry_list);
-            disk->retry_cnt += (rw - queued);
-            requeued = (rw - queued);
-        }
-
-        if (requeued)
-        {
-            /*
-             * Subtract what we did not hand off to the hardware
-             */
-            disk->pending -= requeued;
-        }
-
-        /*
-         * If we have pending IO, just let some of that restart us. If not,
-         * then ensure that we get reentered. This is essentially a
-         * "should not happen" situation.
-         */
-        if (!disk->pending)
-        {
-            /*
-             * IO must have completed already, re-loop to potentially
-             * avoid punting to kblockd
-             */
-            if (wait_for_merge)
-            {
-                continue;
-            }
-#if KFIOC_HAS_BLK_DELAY_QUEUE
-            blk_delay_queue(q, 1);
-#else
-            blk_plug_device(q);
-#endif
-        }
-
-        if (!queued || requeued || wait_for_merge)
-        {
-            break;
-        }
-    }
-    disk->in_do_request = 0;
-}
-#endif /* __VMKLNX__ */
-
-#endif /* KFIOC_USE_IO_SCHED */
-
-// FIXME This interface is not implemented yet. It needs to be a callback for block/scsi interface co-existence.
-// void kfio_sq_item_cancel(struct bio *bio)
-// {
-// #if !defined(__VMKLNX__)
-//     __kfio_bio_complete(bio, 0, -EIO);
-// #endif
-// }
 
 /******************************************************************************
  *   Kernel Atomic Write API
