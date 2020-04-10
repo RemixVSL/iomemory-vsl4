@@ -252,20 +252,11 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
     const uint8_t *bp = buffer;
     struct linux_sgl *lsg = sgl;
     int old_num;
-    bool vmalloc_buffer = (((fio_uintptr_t)buffer) >= VMALLOC_START &&
+    bool vmalloc_buffer;
+
+    vmalloc_buffer = (((fio_uintptr_t)buffer) >= VMALLOC_START &&
                       ((fio_uintptr_t)buffer) < VMALLOC_END);
-
-
-#if defined(__VMKLNX__)
-    if  (seg != kfio_mem_seg_system)
-    {
-        errprint_all(ERRID_LINUX_KSCATTER_UNSUPPORTED_USER_MEM,
-                     "Attempt to map unsupported user memory segment.\n");
-        return -ENOMEM;
-    }
-#else
     old_num = lsg->num_entries;
-#endif
 
     while (size)
     {
