@@ -46,6 +46,3 @@ When the list is done ./include/fio/port/linux/kfio_config.h can be cleaned
 
 > block_alloc thingy
 > review: kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL/result:0
-
-> bio.bi_rw is gone....
-> review: kfio_config/KFIOC_HAS_BIO_RW_UNPLUG/result:0
