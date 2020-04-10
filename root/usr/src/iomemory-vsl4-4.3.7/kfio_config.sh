@@ -106,7 +106,6 @@ KFIOC_QUEUE_HAS_RANDOM_FLAG
 KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
-KFIOC_NEW_BARRIER_SCHEME
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
 KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
 KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
@@ -1054,24 +1053,6 @@ void kfioc_test_blk_queue_discard_granularity(void)
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:          KFIOC_NEW_BARRIER_SCHEME
-# usage:         1   Kernel uses the new barrier scheme
-#                0   It does not
-KFIOC_NEW_BARRIER_SCHEME()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_hew_barrier_scheme(void)
-{
-    struct request_queue q;
-
-    q.flush_flags = REQ_FLUSH | REQ_FUA;
-}
-'
-    kfioc_test "$test_code" KFIOC_NEW_BARRIER_SCHEME 1 -Werror
 }
 
 # flag:          KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
