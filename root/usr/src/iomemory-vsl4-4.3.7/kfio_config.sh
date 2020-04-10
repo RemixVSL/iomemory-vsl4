@@ -108,7 +108,6 @@ KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
 KFIOC_BVEC_KMAP_IRQ_HAS_LONG_FLAGS
-KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
 KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
@@ -1497,27 +1496,6 @@ void bvec_kmap_irq_has_long_flags(void)
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
-
-# flag:           KFIOC_HAS_BLK_ALLOC_QUEUE_NODE
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the blk_alloc_queue_node function
-#                 1     if the kernel has the function
-KFIOC_HAS_BLK_ALLOC_QUEUE_NODE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_has_blk_alloc_queue_node(void)
-{
-    struct request_queue *rq = NULL;
-    rq = blk_alloc_queue_node(GFP_NOIO, -1);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
 
 # flag:           KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 # values:
