@@ -41,9 +41,7 @@
 #include <linux/kthread.h>
 
 #include <fio/port/kfio_config.h>
-#if !defined(__VMKLNX__)
 #include <linux/kallsyms.h>
-#endif
 
 /**
  * @ingroup PORT_COMMON_LINUX
@@ -80,11 +78,7 @@ void kfio_put_cpu(kfio_get_cpu_t *flags)
  */
 unsigned int kfio_max_cpus(void)
 {
-  #if !defined(__VMKLNX__)
     return num_possible_cpus();
-  #else
-    return num_online_cpus();
-  #endif
 }
 
 /**
@@ -92,11 +86,7 @@ unsigned int kfio_max_cpus(void)
  */
 int kfio_cpu_online(kfio_cpu_t cpu)
 {
-  #if !defined(__VMKLNX__)
     return cpu_online(cpu);
-  #else
-    return 1;
-  #endif
 }
 
 /**
