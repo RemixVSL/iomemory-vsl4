@@ -1783,34 +1783,6 @@ static int kfio_bio_should_submit_now(struct bio *bio)
 #endif
 }
 
-#if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
-static void kfio_unplug(struct request_queue *q)
-{
-    struct kfio_disk *disk = q->queuedata;
-    struct bio *bio = NULL;
-
-    spin_lock_irq(q->queue_lock);
-    if (blk_remove_plug(q))
-    {
-        bio = disk->bio_head;
-        disk->bio_head = NULL;
-        disk->bio_tail = NULL;
-    }
-    spin_unlock_irq(q->queue_lock);
-
-    if (bio)
-    {
-        kfio_kickoff_plugged_io(q, bio);
-    }
-}
-
-static void test_safe_plugging(void)
-{
-    /* empty */
-}
-
-#else
-
 /* some 3.0 kernels call our unplug callback with
  * irqs off.  We use this variable to track it and
  * avoid plugging on those kernels.
@@ -1825,7 +1797,7 @@ struct kfio_plug {
     struct work_struct work;
 };
 
-#if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
+# if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
 static void kfio_unplug_do_cb(struct work_struct *work)
 {
     struct kfio_plug *plug = container_of(work, struct kfio_plug, work);
@@ -1854,12 +1826,12 @@ static void kfio_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
 
     kfio_unplug_do_cb(&plug->work);
 }
-#else
+# else
 static void kfio_unplug_cb(struct blk_plug_cb *cb)
 {
     BUG();
 }
-#endif
+# endif
 
 /*
  * this is used once while we create the block device,
@@ -1872,11 +1844,11 @@ struct test_plug
 };
 
 
-#if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
+# if KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
 static void safe_unplug_cb(struct blk_plug_cb *cb, bool from_schedule)
-#else
+# else
 static void safe_unplug_cb(struct blk_plug_cb *cb)
-#endif
+# endif
 {
     struct test_plug *test_plug = container_of(cb, struct test_plug, cb);
 
@@ -1902,14 +1874,14 @@ static void test_safe_plugging(void)
     if (dangerous_plugging_callback != -1)
         return;
 
-#if !KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
+# if !KFIOC_REQUEST_QUEUE_UNPLUG_FN_HAS_EXTRA_BOOL_PARAM
     /* plug callback should not sleep if called in scheduler. We need this
      * parameter to avoid sleep in the callback
      */
     dangerous_plugging_callback = 1;
     infprint("Unplug callbacks are run without from_schedule parameter.  Plugging disabled\n");
     return;
-#endif
+# endif
 
     /* setup a plug.  We don't need to worry about
      * the block device being ready because we won't do any IO
@@ -1941,7 +1913,6 @@ static void test_safe_plugging(void)
         dangerous_plugging_callback = 0;
     }
 }
-#endif
 
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
                                               kfio_numa_node_t node)
@@ -1961,9 +1932,6 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
         blk_queue_make_request(rq, kfio_make_request);
         // rq->queue_lock = (spinlock_t *)&dp->queue_lock;
         memcpy(&dp->queue_lock, &rq->queue_lock, sizeof(dp->queue_lock));
-#if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
-        rq->unplug_fn = kfio_unplug;
-#endif
     }
     return rq;
 }
@@ -2069,43 +2037,6 @@ static int holdoff_writes_under_pressure(struct kfio_disk *disk)
     return 1;
 }
 
-# if KFIOC_REQUEST_QUEUE_HAS_UNPLUG_FN
-static inline void *kfio_should_plug(struct request_queue *q)
-{
-    if (use_workqueue == USE_QUEUE_NONE)
-    {
-        return q;
-    }
-
-    return NULL;
-}
-static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
-{
-    struct request_queue *q = data;
-    struct kfio_disk *disk = q->queuedata;
-    struct bio *ret = NULL;
-
-    spin_lock_irq(q->queue_lock);
-    if (disk->bio_tail)
-    {
-        disk->bio_tail->bi_next = bio;
-    }
-    else
-    {
-        disk->bio_head = bio;
-    }
-    disk->bio_tail = bio;
-    if (kfio_bio_should_submit_now(bio) && use_workqueue == USE_QUEUE_NONE)
-    {
-        ret = disk->bio_head;
-        disk->bio_head = disk->bio_tail = NULL;
-    }
-    blk_plug_device(q);
-    spin_unlock_irq(q->queue_lock);
-
-    return ret;
-}
-# else
 static void *kfio_should_plug(struct request_queue *q)
 {
     struct kfio_disk *disk = q->queuedata;
@@ -2170,7 +2101,6 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
 
     return ret;
 }
-# endif
 
 #if KFIOC_MAKE_REQUEST_FN_UINT
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio)
