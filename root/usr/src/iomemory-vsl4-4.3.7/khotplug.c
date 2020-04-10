@@ -126,24 +126,6 @@ static int kfio_cpu_notify_online(unsigned int cpu)
 #endif  /* KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES */
 #endif  /* KFIOC_HAS_HOTPLUG_STATE_MACHINE */
 
-#if KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG
-// A function that adds a hotplug dyn state, then removes it iff the state is NOT the first state in the dyn array.
-// This is to avoid the kernel bug that prevents removal of the first state.
-void setup_first_hotplug_dyn_state(enum cpuhp_state desired_state)
-{
-    int reserved_state =
-    cpuhp_setup_state_nocalls(desired_state,
-                               "block/iomemory_vsl4:first_state",
-                               NULL,
-                               NULL);
-    if (reserved_state != desired_state)
-    {
-        // Returned state is _not_ the first in the array, so remove it so that we only take up one step.
-        cpuhp_remove_state_nocalls(reserved_state);
-    }
-}
-#endif  /* KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG */
-
 int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
 {
 #ifdef CONFIG_SMP
@@ -177,18 +159,6 @@ int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
         // Kernel 4.10 and above have symmetrical CPUHP_..._DYN states for online and offline callbacks.
 #if KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
 
-        // Unfortunately, in kernels 4.8 through 4.12 the cpuhp_remove_state() function does not properly remove the
-        //  first callback state in either DYN callback array. We apparently are the only one using the
-        //  CPUHP_BP_PREPARE_DYN array, and so attempting to remove our offline callback failed silently, and removing
-        //  our driver subsequently left the callbacks in the array pointing to bogus functions, causing page faults.
-        // To work around this, set up a state with NULL callback functions and if it is _not_ the first state in
-        //  the array then remove that state and set the real state with real callbacks.
-        //  If our state _is_ the first item in the array and this kernel has the bug then leave the NULL callbacks
-        //  entry in the array and _also_ add another state with the real callbacks.
-        // When removing the callbacks states just remove the non-NULL state. The NULL callbacks simply won't be called.
-#if KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG
-        setup_first_hotplug_dyn_state(CPUHP_BP_PREPARE_DYN);
-#endif
         // Whether kernel has states removal bug or not, now setup our real callback.
         cpuhp_offline_dyn_state =
         cpuhp_setup_state_nocalls(CPUHP_BP_PREPARE_DYN,
@@ -197,12 +167,6 @@ int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
                                    kfio_cpu_notify_offline);
 #endif  /* KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES */
 #if KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
-        // My (enb) testing didn't show the AP state having the same last-state-removal problem...but that's because
-        //  my AP state wasn't the first AP state in the array.
-        // So for safety we must do the same dance as with the BP DYN.
-#if KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG
-        setup_first_hotplug_dyn_state(CPUHP_AP_ONLINE_DYN);
-#endif
         cpuhp_online_dyn_state =
         cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
                                   "block/iomemory_vsl4:online",

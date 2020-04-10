@@ -111,7 +111,6 @@ KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
 KFIOC_HAS_HOTPLUG_STATE_MACHINE
 KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
 KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
-KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG
 KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
 KFIOC_HAS_BLK_QUEUE_SPLIT2
@@ -1356,27 +1355,6 @@ void test_cpuhp_ap_states(void)
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
-
-
-# flag:            KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG
-# usage:           1 The cpuhp_remove_state() function has a bug and can't remove the last item in its states array.
-#                  0 The kernel does not have the bug.
-# kernel version: v4.8 introduced the function and the bug, v4.13 fixed the bug.
-KFIOC_HAS_HOTPLUG_STATES_REMOVAL_BUG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/version.h>
-
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4, 8, 0)
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 13, 0)
-#error Kernel has a bug in cpuhp_remove_state().
-#endif
-#endif
-'
-    kfioc_test "$test_code" "$test_flag" 0 -Werror
-}
-
 
 # flag:            KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 # usage:           1 blk_mq_ops has a 'map_queues' field
