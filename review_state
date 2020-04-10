@@ -47,8 +47,8 @@
 # kfio_config/KFIOC_X_REQ_HAS_ERRORS/result:0
 # kfio_config/KFIOC_BIO_HAS_DESTRUCTOR/result:0
 # kfio_config/KFIOC_TASK_HAS_NR_CPUS_ALLOWED_RT/result:0
-kfio_config/KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE/result:0
-kfio_config/KFIOC_DISCARD_ZEROES_IN_LIMITS/result:0
+# kfio_config/KFIOC_HAS_BLK_QUEUE_HARDSECT_SIZE/result:0
+# kfio_config/KFIOC_DISCARD_ZEROES_IN_LIMITS/result:0
 kfio_config/KFIOC_SYSRQ_HANDLER_NEEDS_TTY_STRUCT/result:0
 kfio_config/KFIOC_HAS_BIO_COMP_CPU/result:0
 kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_REQUEST_FN/result:0

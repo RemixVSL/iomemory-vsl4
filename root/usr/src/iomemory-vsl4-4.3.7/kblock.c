@@ -539,13 +539,6 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
     if (enable_discard)
     {
 
-#if KFIOC_DISCARD_ZEROES_IN_LIMITS == 1
-        if (fio_bdev_ptrim_available(bdev))
-        {
-            rq->limits.discard_zeroes_data = 1;
-        }
-#endif  /* KFIOC_DISCARD_ZEROES_IN_LIMITS */
-
 #if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS == 1
         blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
 #else
