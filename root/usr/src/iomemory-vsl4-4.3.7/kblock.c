@@ -548,17 +548,6 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 #error No barrier scheme supported
 #endif
 
-#if defined(REQ_ATOMIC) || KFIOC_HAS_BIO_RW_ATOMIC
-    /* the kernel side of the atomics is only wired up for USE_QUEUE_NONE */
-    if (disk->use_workqueue == USE_QUEUE_NONE)
-    {
-        if (kfio_bdev_atomic_writes_enabled(bdev))
-        {
-            blk_queue_set_atomic_write(rq, kfio_bdev_max_atomic_iovs(bdev));
-        }
-    }
-#endif
-
 #if KFIOC_QUEUE_HAS_NONROT_FLAG
     /* Tell the kernel we are a non-rotational storage device */
 #if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
@@ -911,30 +900,23 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
 
     // Use a local conversion to avoid printf format warnings on some platforms
     sector = (uint64_t)BI_SECTOR(bio);
-// #if KFIOC_HAS_SEPARATE_OP_FLAGS
+
     infprint("%s: sector: %llx: flags: %lx : op: %x : op_flags: %x : vcnt: %x", msg,
              sector, (unsigned long)bio->bi_flags, bio_op(bio), bio_flags(bio), bio->bi_vcnt);
-#if KFIOC_X_BIO_HAS_BIO_SEGMENTS
+
     // need to put our own segment count here...
     infprint("%s : idx: %x : phys_segments: %x : size: %x",
              msg, BI_IDX(bio), bio_segments(bio), BI_SIZE(bio));
-#else
-    infprint("%s : idx: %x : phys_segments: %x : size: %x",
-             msg, BI_IDX(bio), bio->bi_phys_segments, BI_SIZE(bio));
-#endif
+
 #if KFIOC_BIO_HAS_SEG_SIZE
     infprint("%s: seg_front_size %x : seg_back_size %x", msg,
              bio->bi_seg_front_size, bio->bi_seg_back_size);
 #endif
-#if KFIOC_BIO_HAS_ATOMIC_REMAINING
-    infprint("%s: remaining %x", msg, atomic_read(&bio->bi_remaining));
-#endif
     infprint("%s: max_vecs: %x : cnt %x : io_vec %p : end_io: %p : private: %p",
              msg, bio->bi_max_vecs, kfio_bio_cnt(bio), bio->bi_io_vec,
              bio->bi_end_io, bio->bi_private);
-#if KFIOC_BIO_HAS_INTEGRITY
+
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
-#endif
 }
 
 static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
@@ -957,13 +939,7 @@ static unsigned long __kfio_bio_sync(struct bio *bio)
 
 static unsigned long __kfio_bio_atomic(struct bio *bio)
 {
-# ifdef REQ_ATOMIC
-    return !!(bio->bi_rw & REQ_ATOMIC);
-# elif KFIOC_HAS_BIO_RW_ATOMIC
-    return bio_rw_flagged(bio, BIO_RW_ATOMIC);
-# else
     return 0;
-# endif
 }
 
 // TODO: We should probably switch to using the Kernel GPL module.

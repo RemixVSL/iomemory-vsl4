@@ -98,7 +98,6 @@ KFIOC_HAS_BLK_LIMITS_IO_MIN
 KFIOC_HAS_BLK_LIMITS_IO_OPT
 KFIOC_HAS_UNIFIED_BLKTYPES
 KFIOC_HAS_SEPARATE_OP_FLAGS
-KFIOC_HAS_BIO_RW_ATOMIC
 KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 KFIOC_FOPS_USE_LOCKED_IOCTL
 KFIOC_HAS_RQ_POS_BYTES
@@ -124,7 +123,6 @@ KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_BIO_HAS_ATOMIC_REMAINING
-KFIOC_BIO_HAS_INTEGRITY
 KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_HAS_CPUMASK_WEIGHT
 KFIOC_BIO_HAS_USCORE_BI_CNT
@@ -1758,6 +1756,7 @@ void kfioc_acpi_eval_int_takes_unsigned_long_long(void)
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have bio seg_front/back_size
 #                 1     if the kernel has structure elements
+# kernel version: >= 2.6.27.15
 KFIOC_BIO_HAS_SEG_SIZE()
 {
     local test_flag="$1"
@@ -1777,6 +1776,7 @@ void kfioc_test_bio_seg_size(void) {
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have bio bi_remaining
 #                 1     if the kernel has structure element
+# kernel version: < 4.20.17, member was made private prior to 5.0.
 KFIOC_BIO_HAS_ATOMIC_REMAINING()
 {
     local test_flag="$1"
