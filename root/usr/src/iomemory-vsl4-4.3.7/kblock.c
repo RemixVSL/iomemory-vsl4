@@ -864,11 +864,7 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
             cpu = part_stat_lock();
             part_stat_inc(&gd->part0, ios[1]);
             part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
-#  if KFIOC_HAS_DISK_STATS_NSECS
             part_stat_add(&gd->part0, nsecs[1],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-#  else
-            part_stat_add(&gd->part0, ticks[1],   kfio_div64_64(duration * HZ, 1000000));
-#  endif /* KFIOC_HAS_DISK_STATS_NSECS */
             part_stat_unlock();
 #  endif /* defined(CONFIG_PREEMPT_RT) */
 # endif /* else ! KFIOC_PARTITION_STATS */
@@ -883,7 +879,7 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
             struct gendisk *gd = disk->gd;
 #endif
 # if KFIOC_PARTITION_STATS
-# if !defined(CONFIG_PREEMPT_RT) && !defined(CONFIG_TREE_PREEMPT_RCU) && !defined(CONFIG_PREEMPT_RCU)
+#  if !defined(CONFIG_PREEMPT_RT) && !defined(CONFIG_TREE_PREEMPT_RCU) && !defined(CONFIG_PREEMPT_RCU)
             int cpu;
 
             /* part_stat_lock() with defined(CONFIG_PREEMPT_RT) can't be used!
@@ -891,13 +887,9 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
             cpu = part_stat_lock();
             part_stat_inc(&gd->part0, ios[0]);
             part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
-#  endif
-#  if KFIOC_HAS_DISK_STATS_NSECS
             part_stat_add(&gd->part0, nsecs[0],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-#  else
-            part_stat_add(&gd->part0, ticks[0],   kfio_div64_64(duration * HZ, 1000000));
             part_stat_unlock();
-# endif /* defined(CONFIG_PREEMPT_RT) */
+#  endif /* defined(CONFIG_PREEMPT_RT) */
 # endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
