@@ -33,6 +33,10 @@
 // Provides linux/types.h
 #include <fio/port/port_config.h>
 #include <fio/port/message_ids.h>
+
+// Ignore this whole file, if the block device is not being included in the build.
+#if KFIO_BLOCK_DEVICE
+
 #include "port-internal.h"
 #include <fio/port/dbgset.h>
 #include <fio/port/kfio.h>
@@ -69,9 +73,6 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on);
 static void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending);
 static void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration);
 static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight);
-#if !KFIOC_PARTITION_STATS
-static int kfio_get_gd_in_flight(kfio_disk_t *disk, int rw);
-#endif
 
 #define BI_SIZE(bio) (bio->bi_iter.bi_size)
 #define BI_SECTOR(bio) (bio->bi_iter.bi_sector)
@@ -341,6 +342,7 @@ static long kfio_compat_ioctl(struct file *filp, unsigned int cmd, unsigned long
 
     return rc;
  }
+#endif
 
 static struct block_device_operations fio_bdev_ops =
 {
@@ -365,24 +367,24 @@ static void kfio_invalidate_bdev(struct block_device *bdev);
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 {
     struct kfio_disk *disk = hctx->driver_data;
-#if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+# if ! KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     struct fio_bdev  *bdev = disk->bdev;
-#endif
+# endif
     struct request *req = bd->rq;
     kfio_bio_t *fbio;
     int rc;
 
-#if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     fbio = req->special;
     if (!fbio)
     {
-#else
+# else
     // fbio = kfio_request_to_bio(disk, req, false);
     fbio = kfio_bio_try_alloc(bdev);
-#endif
-#if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+# endif
+# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     }
-#endif
+# endif
     if (!fbio)
     {
         goto busy;
@@ -401,9 +403,9 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
              * "busy error" conditions. Store the prepped part
              * for faster retry, and exit.
              */
-#if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
+# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
             req->special = fbio;
-#endif
+# endif
             goto retry;
         }
         /*
@@ -431,17 +433,16 @@ static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 
 static struct blk_mq_ops fio_mq_ops = {
     .queue_rq   = fio_queue_rq,
-#if KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
+# if KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
     /* We want to use blk_mq_map_queues, but it's GPL: however, the block
        driver will call it for us if the function pointer is NULL */
     .map_queues = NULL,
-#else
+# else
     .map_queue  = blk_mq_map_queue,
-#endif
+# endif
     .init_hctx  = fio_init_hctx,
 };
 
-#endif
 
 /* @brief Parameter to the work queue call. */
 struct kfio_blk_add_disk_param
@@ -845,13 +846,8 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  * here and no concurrent open-close operation can race with the
                  * wait below.
                  */
-#if KFIOC_HAS_BLKDEV_OLD_BD_SEM
-                down(&linux_bdev->bd_sem);
-                up(&linux_bdev->bd_sem);
-#else
                 mutex_lock(&linux_bdev->bd_mutex);
                 mutex_unlock(&linux_bdev->bd_mutex);
-#endif
 
                 fusion_cv_lock_irq(&disk->state_lk);
                 while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
@@ -1148,7 +1144,6 @@ static unsigned long __kfio_bio_atomic(struct bio *bio)
 }
 
 // TODO: We should probably switch to using the Kernel GPL module.
-#if KFIOC_BIO_ERROR_CHANGED_TO_STATUS
 static blk_status_t kfio_errno_to_blk_status(int error)
 {
     // We would use the kernel function of the same name, but they decided to impede us by making it GPL.
@@ -1885,7 +1880,6 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
             //kfio_restart_queue(q); function does nothing.
         }
     }
-#endif /* defined(KFIOC_REQUEST_QUEUE_HAS_REQUEST_FN) */
 }
 
 static int holdoff_writes_under_pressure(struct kfio_disk *disk)
