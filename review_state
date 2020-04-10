@@ -81,7 +81,7 @@ When the list is done ./include/fio/port/linux/kfio_config.h can be cleaned
 > block_alloc thingy
 > review: kfio_config/KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL/result:0
 # kfio_config/KFIOC_KMAP_ATOMIC_NEEDS_TYPE/result:0
-kfio_config/KFIOC_X_PART0_HAS_IN_FLIGHT/result:0
-kfio_config/KFIOC_X_PART_STAT_REQUIRES_CPU/result:0
+# kfio_config/KFIOC_X_PART0_HAS_IN_FLIGHT/result:0
+# kfio_config/KFIOC_X_PART_STAT_REQUIRES_CPU/result:0
 kfio_config/KFIOC_HAS_REQ_RW_SYNC/result:0
 kfio_config/KFIOC_HAS_BIO_RW_UNPLUG/result:0

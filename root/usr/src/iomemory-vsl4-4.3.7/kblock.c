@@ -848,6 +848,7 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
     {
         if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
+// TODO: Check if this can go as KFIOC_PARTITION_STATS is a thing...
 # if !(KFIOC_PARTITION_STATS && \
       (defined(CONFIG_PREEMPT_RT) || defined(CONFIG_TREE_PREEMPT_RCU) || defined(CONFIG_PREEMPT_RCU)))
             struct gendisk *gd = disk->gd;
@@ -861,44 +862,15 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
              * rcu_read_update which is GPL in the RT patch set.
              */
             cpu = part_stat_lock();
-#   if KFIOC_X_PART_STAT_REQUIRES_CPU
-            part_stat_inc(cpu, &gd->part0, ios[1]);
-            part_stat_add(cpu, &gd->part0, sectors[1], totalsize >> 9);
-#   else
             part_stat_inc(&gd->part0, ios[1]);
             part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
-#   endif
-#   if KFIOC_HAS_DISK_STATS_NSECS && KFIOC_X_PART_STAT_REQUIRES_CPU
-            part_stat_add(cpu, &gd->part0, nsecs[1],   duration * FIO_NSEC_PER_USEC);   // Convert our usec duration to nsecs.
-#   elif KFIOC_HAS_DISK_STATS_NSECS && ! KFIOC_X_PART_STAT_REQUIRES_CPU
+#  if KFIOC_HAS_DISK_STATS_NSECS
             part_stat_add(&gd->part0, nsecs[1],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-#   else
-#    if KFIOC_X_PART_STAT_REQUIRES_CPU
-            part_stat_add(cpu, &gd->part0, ticks[1],   kfio_div64_64(duration * HZ, 1000000));
-#    else
+#  else
             part_stat_add(&gd->part0, ticks[1],   kfio_div64_64(duration * HZ, 1000000));
-#    endif
-#   endif /* KFIOC_HAS_DISK_STATS_NSECS */
+#  endif /* KFIOC_HAS_DISK_STATS_NSECS */
             part_stat_unlock();
 #  endif /* defined(CONFIG_PREEMPT_RT) */
-# else /* KFIOC_PARTITION_STATS */
-
-#  if KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS
-            disk_stat_inc(gd, ios[1]);
-            disk_stat_add(gd, sectors[1], totalsize >> 9);
-#   if KFIOC_HAS_DISK_STATS_NSECS
-            disk_stat_add(gd, nsecs[1], jiffies_to_nsecs(fusion_usectohz(duration)));
-#   else
-            disk_stat_add(gd, ticks[1], fusion_usectohz(duration));
-#   endif
-#  else /* KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS */
-            disk_stat_inc(gd, writes);
-            disk_stat_add(gd, write_sectors, totalsize >> 9);
-            disk_stat_add(gd, write_ticks, fusion_usectohz(duration));
-#  endif /* else ! KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS */
-            // TODO: #warning Need disk_round_stats() implementation to replace GPL version.
-            // disk_round_stats(gd);
-            disk_stat_add(gd, time_in_queue, kfio_get_gd_in_flight(disk, BIO_DIR_WRITE));
 # endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
@@ -917,44 +889,15 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
             /* part_stat_lock() with defined(CONFIG_PREEMPT_RT) can't be used!
                It ends up calling rcu_read_update which is GPL in the RT patch set */
             cpu = part_stat_lock();
-#  if KFIOC_X_PART_STAT_REQUIRES_CPU
-            part_stat_inc(cpu, &gd->part0, ios[0]);
-            part_stat_add(cpu, &gd->part0, sectors[0], totalsize >> 9);
-#  else
             part_stat_inc(&gd->part0, ios[0]);
             part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
 #  endif
-#  if KFIOC_HAS_DISK_STATS_NSECS && KFIOC_X_PART_STAT_REQUIRES_CPU
-            part_stat_add(cpu, &gd->part0, nsecs[0],   duration * FIO_NSEC_PER_USEC);
-#  elif KFIOC_HAS_DISK_STATS_NSECS
+#  if KFIOC_HAS_DISK_STATS_NSECS
             part_stat_add(&gd->part0, nsecs[0],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
 #  else
-#    if KFIOC_X_PART_STAT_REQUIRES_CPU
-            part_stat_add(cpu, &gd->part0, ticks[0],   kfio_div64_64(duration * HZ, 1000000));
-#    else
             part_stat_add(&gd->part0, ticks[0],   kfio_div64_64(duration * HZ, 1000000));
-#    endif
-#  endif /* KFIOC_HAS_DISK_STATS_NSECS && KFIOC_X_PART_STAT_REQUIRES_CPU */
             part_stat_unlock();
 # endif /* defined(CONFIG_PREEMPT_RT) */
-# else /* KFIOC_PARTITION_STATS */
-#  if KFIOC_HAS_DISK_STATS_READ_WRITE_ARRAYS
-            disk_stat_inc(gd, ios[0]);
-            disk_stat_add(gd, sectors[0], totalsize >> 9);
-#  if KFIOC_HAS_DISK_STATS_NSECS
-            disk_stat_add(gd, nsecs[0], fusion_usectohz(duration));
-#  else
-            disk_stat_add(gd, ticks[0], fusion_usectohz(duration));
-#  endif
-#  else /* KFIO_C_HAS_DISK_STATS_READ_WRITE_ARRAYS */
-            disk_stat_inc(gd, reads);
-            disk_stat_add(gd, read_sectors, totalsize >> 9);
-            disk_stat_add(gd, read_ticks, fusion_usectohz(duration));
-#  endif /* else ! KFIO_C_HAS_DISK_STATS_READ_WRITE_ARRAYS */
-
-            // TODO: #warning Need disk_round_stats() implementation to replace GPL version.
-            // disk_round_stats(gd);
-            disk_stat_add(gd, time_in_queue, kfio_get_gd_in_flight(disk, BIO_DIR_READ));
 # endif /* else ! KFIOC_PARTITION_STATS */
         }
     }
