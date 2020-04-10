@@ -52,10 +52,8 @@
 #include <linux/fs.h>
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
-
-#if KFIOC_HAS_BLK_MQ
 #include <linux/blk-mq.h>
-#endif
+
 
 extern int use_workqueue;
 static int fio_major;
@@ -101,10 +99,7 @@ struct kfio_disk
     fusion_atomic32_t     ref_count;
     make_request_fn      *make_request_fn;
     int                   use_workqueue;
-
-#if KFIOC_HAS_BLK_MQ
     struct blk_mq_tag_set tag_set;
-#endif
 };
 
 enum {
@@ -140,15 +135,6 @@ extern int enable_discard;
 
 extern int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *bio);
 
-static int kfio_bio_cnt(const struct bio * const bio)
-{
-    return
-#if KFIOC_BIO_HAS_USCORE_BI_CNT
-    atomic_read(&bio->__bi_cnt);
-#else
-    atomic_read(&bio->bi_cnt);
-#endif
-}
 
 /******************************************************************************
  *   Functions required to register and unregister fio block device driver    *
@@ -444,7 +430,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     {
         return -ENODEV;
     }
-#if KFIOC_HAS_BLK_MQ
+
     if (use_workqueue == USE_QUEUE_MQ)
     {
        int rv;
@@ -472,7 +458,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
        }
     }
     else
-#endif
+
     if (disk->use_workqueue != USE_QUEUE_RQ)
         disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
 
@@ -525,28 +511,17 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 
 #if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
-#elif KFIOC_BARRIER_USES_QUEUE_FLAGS
-    queue_flag_set(QUEUE_FLAG_WC, rq);
 #else
 #error No barrier scheme supported
 #endif
 
 #if KFIOC_QUEUE_HAS_NONROT_FLAG
     /* Tell the kernel we are a non-rotational storage device */
-#if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_set(QUEUE_FLAG_NONROT, rq);
-#else
-    queue_flag_set_unlocked(QUEUE_FLAG_NONROT, rq);
-#endif
 #endif
 #if KFIOC_QUEUE_HAS_RANDOM_FLAG
     /* Disable device global entropy contribution */
-#if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
-#else
-    queue_flag_clear_unlocked(QUEUE_FLAG_ADD_RANDOM, rq);
-#endif
-#endif
 
     disk->gd = gd = alloc_disk(FIO_NUM_MINORS);
     if (disk->gd == NULL)
@@ -659,12 +634,11 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
          * Prevent request_fn callback from interfering with
          * the queue shutdown.
          */
-#if KFIOC_HAS_BLK_MQ
         if (disk->rq->mq_ops)
         {
             blk_mq_stop_hw_queues(disk->rq);
         }
-#endif
+
         /*
          * The queue is stopped and dead and no new user requests will be
          * coming to it anymore. Fetch remaining already queued requests
@@ -754,12 +728,12 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
     if (disk->rq != NULL)
     {
         blk_cleanup_queue(disk->rq);
-#if KFIOC_HAS_BLK_MQ
+
         if (use_workqueue == USE_QUEUE_MQ)
         {
             blk_mq_free_tag_set(&disk->tag_set);
         }
-#endif
+
         disk->rq = NULL;
     }
 
@@ -895,8 +869,8 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
     infprint("%s: seg_front_size %x : seg_back_size %x", msg,
              bio->bi_seg_front_size, bio->bi_seg_back_size);
 #endif
-    infprint("%s: max_vecs: %x : cnt %x : io_vec %p : end_io: %p : private: %p",
-             msg, bio->bi_max_vecs, kfio_bio_cnt(bio), bio->bi_io_vec,
+    infprint("%s: max_vecs: %x : io_vec %p : end_io: %p : private: %p",
+             msg, bio->bi_max_vecs, bio->bi_io_vec,
              bio->bi_end_io, bio->bi_private);
 
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
@@ -1351,8 +1325,7 @@ static kfio_bio_t *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio
             }
 
 #if PORT_SUPPORTS_FIO_REQ_ATOMIC
-            if (bio->bi_flags & FIO_REQ_ATOMIC ||
-                __kfio_bio_atomic(bio))
+            if (bio->bi_flags & FIO_REQ_ATOMIC)
             {
                 fbio->fbio_flags |= KBIO_FLG_ATOMIC;
             }
