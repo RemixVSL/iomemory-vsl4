@@ -467,11 +467,9 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
     blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
     blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
-    blk_queue_flag_clear(QUEUE_FLAG_CLUSTER, rq);
     blk_queue_max_segment_size(rq, PAGE_SIZE);
     blk_queue_logical_block_size(rq, bdev->bdev_block_size);
 
-#if KFIOC_DISCARD == 1i
     if (enable_discard)
     {
         blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
@@ -481,13 +479,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         rq->limits.discard_granularity = bdev->bdev_block_size;
 #endif
     }
-#else
-    if (enable_discard)
-    {
-        infprint("enable_discard set but discard not supported on this linux version\n");
-        enable_discard = 0;         // Seems like a good idea to also disable our discard code.
-    }
-#endif  /* KFIOC_DISCARD */
+
 
 #if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);

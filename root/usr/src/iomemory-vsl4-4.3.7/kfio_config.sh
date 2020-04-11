@@ -80,8 +80,6 @@ KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_MODULE_PARAM_ARRAY_NUMP
-KFIOC_HAS_BLK_LIMITS_IO_MIN
-KFIOC_HAS_BLK_LIMITS_IO_OPT
 KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 KFIOC_FOPS_USE_LOCKED_IOCTL
 KFIOC_HAS_RQ_POS_BYTES
@@ -90,7 +88,6 @@ KFIOC_QUEUE_HAS_RANDOM_FLAG
 KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
-KFIOC_HAS_QUEUE_FLAG_CLUSTER
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
 KFIOC_HAS_SCSI_RESID_FNS
@@ -102,7 +99,6 @@ KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
-KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
 KFIOC_HAS_BLK_QUEUE_SPLIT2
 KFIOC_MISSING_WORK_FUNC_T
@@ -729,40 +725,6 @@ module_param_array(test, charp, NULL, 0);
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_HAS_BLK_LIMITS_IO_MIN
-#                 1     if the kernel defines blk_limits_io_min
-#                 0     if the kernel does not
-KFIOC_HAS_BLK_LIMITS_IO_MIN()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_blk_limits_io_min(void)
-{
-    blk_limits_io_min(NULL, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_BLK_LIMITS_IO_OPT
-#                 1     if the kernel defines blk_limits_io_opt
-#                 0     if the kernel does not
-KFIOC_HAS_BLK_LIMITS_IO_OPT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_has_blk_limits_io_opt(void)
-{
-    blk_limits_io_opt(NULL, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
 # flag:           KFIOC_FOPS_USE_LOCKED_IOCTL
 #                 1     if the driver should use fops->ioctl()
 #                 0     if the driver should use fops->unlocked_ioctl()
@@ -899,22 +861,6 @@ void kfioc_kmem_cache_alloc_node_takes_flags(void)
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_HAS_QUEUE_FLAG_CLUSTER
-# usage:         1   Kernel has QUEUE_FLAG_CLUSTER
-#                0   It does not
-KFIOC_HAS_QUEUE_FLAG_CLUSTER()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int has_queue_flag_cluster(void)
-{
-    return QUEUE_FLAG_CLUSTER ? 1 : 0;
-}
-'
-    kfioc_test "$test_code" KFIOC_HAS_QUEUE_FLAG_CLUSTER 1 -Werror
 }
 
 # flag:          KFIOC_SGLIST_NEW_API
@@ -1137,29 +1083,6 @@ KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS()
     set_kfioc_status "$test_flag" 0 exit
     set_kfioc_status "$test_flag" "$result" result
 }
-
-# flag:            KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
-# usage:           1 blk_mq_ops has a 'map_queues' field
-#                  0 blk_mq_ops has the older 'map_queue' field
-# git commit:      da695ba236b993f07a540d35c17f271ef08c89f3 <- added new API
-#                  xxx <- removed old API
-# kernel version: v4.10
-KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blk-mq.h>
-
-void test_blk_map_queues(void)
-{
-    struct blk_mq_ops ops;
-
-    ops.map_queues = NULL;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
 
 # flag:            KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
 # usage:           1 pci_enable_msix_exact() function exists
