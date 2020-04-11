@@ -95,7 +95,6 @@ KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
-KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
 KFIOC_HAS_SCSI_RESID_FNS
@@ -1035,30 +1034,6 @@ void support_sglist_new_api(void)
 }
 '
     kfioc_test "$test_code" KFIOC_SGLIST_NEW_API 1 -Werror
-}
-
-# flag:           KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
-# values:
-#                 0     for old one with the done function pointer argument
-#                 1     for new one
-# comments:
-KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_host.h>
-#include <scsi/scsi_cmnd.h>
-
-int myfunc(struct Scsi_Host *shost, struct scsi_cmnd *scmd){
-    return 0;
-}
-
-struct scsi_host_template testtemplate = {
-    .queuecommand = myfunc
-};
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
 }
 
 # flag:           KFIOC_HAS_SCSI_QD_CHANGE_FN
