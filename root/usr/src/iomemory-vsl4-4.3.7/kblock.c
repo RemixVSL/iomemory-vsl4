@@ -475,9 +475,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
         // XXXXXXX !!! WARNING - power of two sector sizes only !!! (always true in standard linux)
         blk_queue_max_discard_sectors(rq, (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9);
-#if KFIOC_DISCARD_GRANULARITY_IN_LIMITS
         rq->limits.discard_granularity = bdev->bdev_block_size;
-#endif
     }
 
 
