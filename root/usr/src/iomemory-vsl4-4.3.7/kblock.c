@@ -463,27 +463,15 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     rq = disk->rq;
 
-#if KFIOC_HAS_BLK_LIMITS_IO_MIN
     blk_limits_io_min(&rq->limits, bdev->bdev_block_size);
-#endif
-#if KFIOC_HAS_BLK_LIMITS_IO_OPT
     blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
-#endif
-
-blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
-blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
-
-#if KFIOC_HAS_QUEUE_FLAG_CLUSTER
+    blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
+    blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
     blk_queue_flag_clear(QUEUE_FLAG_CLUSTER, rq);
-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
-// Linux from 5.0 > removed the limits.cluster: https://patchwork.kernel.org/patch/10716231/
-#else
-#  error "Do not know how to disable request queue clustering for this kernel."
-#endif
-
     blk_queue_max_segment_size(rq, PAGE_SIZE);
     blk_queue_logical_block_size(rq, bdev->bdev_block_size);
-#if KFIOC_DISCARD == 1
+
+#if KFIOC_DISCARD == 1i
     if (enable_discard)
     {
         blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
