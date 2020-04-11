@@ -95,7 +95,6 @@ KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
 KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_HAS_QUEUE_FLAG_CLUSTER
-KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
 KFIOC_HAS_SCSI_RESID_FNS
@@ -108,9 +107,6 @@ KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_HAS_CPUMASK_WEIGHT
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
-KFIOC_HAS_HOTPLUG_STATE_MACHINE
-KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
-KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
 KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
 KFIOC_HAS_BLK_QUEUE_SPLIT2
@@ -1040,30 +1036,6 @@ void support_sglist_new_api(void)
     kfioc_test "$test_code" KFIOC_SGLIST_NEW_API 1 -Werror
 }
 
-# flag:           KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE
-# values:
-#                 0     for old one with the done function pointer argument
-#                 1     for new one
-# comments:
-KFIOC_HAS_NEW_QUEUECOMMAND_SIGNATURE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_host.h>
-#include <scsi/scsi_cmnd.h>
-
-int myfunc(struct Scsi_Host *shost, struct scsi_cmnd *scmd){
-    return 0;
-}
-
-struct scsi_host_template testtemplate = {
-    .queuecommand = myfunc
-};
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
-
 # flag:           KFIOC_HAS_SCSI_QD_CHANGE_FN
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have the SCSI change queue depth function
@@ -1283,77 +1255,6 @@ KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS()
 
     set_kfioc_status "$test_flag" 0 exit
     set_kfioc_status "$test_flag" "$result" result
-}
-
-
-# flag:            KFIOC_HAS_HOTPLUG_STATE_MACHINE
-# usage:           1 cpuhp_setup_state() exists
-#                  0 use older cpu hotplug register/unregister notifier functions
-# git commit:      5b7aa87e0482be768486e0c2277aa4122487eb9d <- added new API
-#                  530e9b76ae8f863dfdef4a6ad0b38613d32e8c3f <- removed old API
-# kernel version: Starting with v4.8
-KFIOC_HAS_HOTPLUG_STATE_MACHINE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/cpuhotplug.h>
-
-static int test_cpu_online(unsigned int cpu)
-{
-    return 0;
-}
-
-static int test_cpu_offline(unsigned int cpu)
-{
-    return 0;
-}
-
-void test_cpuhp(void)
-{
-    cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "block/iomemory_vsl4:online",
-                      test_cpu_online, test_cpu_offline);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-
-# flag:            KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
-# usage:           1 CPUHP_BP_PREPARE_DYN exists
-#                  0 use older cpu hotplug unregister notifier function
-# kernel version: v4.10
-KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/cpuhotplug.h>
-
-void test_cpuhp_bp_states(void)
-{
-    cpuhp_setup_state(CPUHP_BP_PREPARE_DYN, "block/iomemory_vsl4:offline", NULL, NULL);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-
-# NOTE: This test implies that the state machine is implemented.
-# flag:            KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
-# usage:           1 CPUHP_AP_ONLINE_DYN exists
-#                  0 use older cpu hotplug unregister notifier function
-# kernel version: v4.8
-KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/cpuhotplug.h>
-
-void test_cpuhp_ap_states(void)
-{
-    cpuhp_setup_state(CPUHP_AP_ONLINE_DYN, "block/iomemory_vsl4:online", NULL, NULL);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
 # flag:            KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES

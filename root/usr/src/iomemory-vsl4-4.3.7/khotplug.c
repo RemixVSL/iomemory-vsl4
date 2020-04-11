@@ -73,58 +73,19 @@ static void send_event_all(int online_flag, kfio_cpu_t cpu)
     spin_unlock_irq(&hotplug_lock);
 }
 
-// Kernel 4.8 introduced the hotplug state machine, but without the callback state for offline,
-// Kernel 4.10 has hotplug state machine with callback states for both online and offline.
-#if !KFIOC_HAS_HOTPLUG_STATE_MACHINE || (KFIOC_HAS_HOTPLUG_STATE_MACHINE && !KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES)
-static int notify_fn(struct notifier_block *self, unsigned long action, void *hcpu)
-{
-    switch (action)
-    {
-        case CPU_DEAD:
-#ifdef CPU_DEAD_FROZEN
-        case CPU_DEAD_FROZEN:
-#endif
-            send_event_all(0, (kfio_cpu_t)(unsigned long)hcpu);
-            break;
-
-#if !KFIOC_HAS_HOTPLUG_STATE_MACHINE    // Make sure 'online' notifier is enabled only if state machine does not exist.
-        case CPU_ONLINE:
-#ifdef CPU_ONLINE_FROZEN
-        case CPU_ONLINE_FROZEN:
-#endif
-            send_event_all(1, (kfio_cpu_t)(unsigned long)hcpu);
-            break;
-#endif  /* KFIOC_HAS_HOTPLUG_STATE_MACHINE */
-    }
-
-    return NOTIFY_OK;
-}
-
-static struct notifier_block kfio_linux_cpu_notifier =
-{
-    .notifier_call = notify_fn,
-};
-#endif  /* !KFIOC_HAS_HOTPLUG_STATE_MACHINE || (KFIOC_HAS_HOTPLUG_STATE_MACHINE && !KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES) */
-
-#if KFIOC_HAS_HOTPLUG_STATE_MACHINE
-#if KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
 static int cpuhp_offline_dyn_state; // Global, so we can release the state callback.
 static int kfio_cpu_notify_offline(unsigned int cpu)
 {
     send_event_all(0, (kfio_cpu_t)cpu);
     return 0;
 }
-#endif  /* KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES */
 
-#if KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
 static int cpuhp_online_dyn_state;  // Global, so can release the state callback.
 static int kfio_cpu_notify_online(unsigned int cpu)
 {
     send_event_all(1, (kfio_cpu_t)cpu);
     return 0;
 }
-#endif  /* KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES */
-#endif  /* KFIOC_HAS_HOTPLUG_STATE_MACHINE */
 
 int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
 {
@@ -157,27 +118,17 @@ int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
         //  So we use cpuhp_setup_state() for setting an 'online' callback but use the old register_cpu_notifier()
         //  for 'offline'.
         // Kernel 4.10 and above have symmetrical CPUHP_..._DYN states for online and offline callbacks.
-#if KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
-
         // Whether kernel has states removal bug or not, now setup our real callback.
         cpuhp_offline_dyn_state =
         cpuhp_setup_state_nocalls(CPUHP_BP_PREPARE_DYN,
                                    "block/iomemory_vsl4:offline",
                                    NULL,
                                    kfio_cpu_notify_offline);
-#endif  /* KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES */
-#if KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
         cpuhp_online_dyn_state =
         cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
                                   "block/iomemory_vsl4:online",
                                   kfio_cpu_notify_online,
                                   NULL);
-#endif  /* KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES */
-        // If kernel is < 4.8 then must always use notifer.
-        // If kernel == 4.8 then our functions require use of notifier only for offline.
-#if !KFIOC_HAS_HOTPLUG_STATE_MACHINE || (KFIOC_HAS_HOTPLUG_STATE_MACHINE && !KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES)
-        register_cpu_notifier(&kfio_linux_cpu_notifier);
-#endif
     }
 #endif  /* CONFIG_SMP */
     return 0;
@@ -214,15 +165,8 @@ void kfio_unregister_cpu_notifier(kfio_cpu_notify_fn *func)
      */
     if (do_unregister != 0)
     {
-#if KFIOC_HAS_HOTPLUG_AP_ONLINE_DYN_STATES
         cpuhp_remove_state_nocalls(cpuhp_online_dyn_state);
-#endif
-#if KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES
         cpuhp_remove_state_nocalls(cpuhp_offline_dyn_state);
-#endif
-#if !KFIOC_HAS_HOTPLUG_STATE_MACHINE || (KFIOC_HAS_HOTPLUG_STATE_MACHINE && !KFIOC_HAS_HOTPLUG_BP_PREPARE_DYN_STATES)
-        unregister_cpu_notifier(&kfio_linux_cpu_notifier);
-#endif
     }
 
 #endif  /* CONFIG_SMP */
