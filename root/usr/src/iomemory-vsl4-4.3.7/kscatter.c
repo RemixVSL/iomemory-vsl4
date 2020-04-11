@@ -93,26 +93,6 @@ C_ASSERT(sizeof(struct linux_dma_cookie) < sizeof(kfio_dma_cookie_t));
     #define GET_USER_PAGES_FLAGS(write, force) write, force
 #endif
 
-#if KFIOC_SGLIST_NEW_API == 0
-static void sg_init_table(struct scatterlist *sgl, unsigned int nents)
-{
-    memset(sgl, 0, sizeof(*sgl) * nents);
-}
-
-static inline struct page *sg_page(struct scatterlist *sg)
-{
-    return sg->page;
-}
-
-/* ESX4 doesn't define above two APIs but this one */
-static inline void sg_set_page(struct scatterlist *sg, struct page *page,
-                               unsigned int len, unsigned int offset)
-{
-    sg->page = page;
-    sg->offset = offset;
-    sg->length = len;
-}
-#endif
 
 int kfio_dma_cookie_create(kfio_dma_cookie_t *_cookie, kfio_pci_dev_t *pcidev, int nvecs)
 {
@@ -385,11 +365,7 @@ int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *pbio)
 
     // Make sure combining this pbio into the current sgl won't result in too many sg vectors.
     // The bio_for_each_segment() loop below will catch this, but it seems more efficient to catch it here.
-#if KFIOC_X_BIO_HAS_BIO_SEGMENTS
     if (lsg->num_entries + bio_segments(pbio) > lsg->max_entries)
-#else
-    if (lsg->num_entries + pbio->bi_phys_segments > lsg->max_entries)
-#endif
     {
         return -EAGAIN;                 // Too many segments. Try the pbio again.
     }
