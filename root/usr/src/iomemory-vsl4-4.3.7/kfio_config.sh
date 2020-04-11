@@ -79,7 +79,6 @@ KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
 KFIOC_HAS_KMEM_CACHE
 KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
-KFIOC_DISCARD
 KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_MODULE_PARAM_ARRAY_NUMP
@@ -690,26 +689,6 @@ int kfioc_test_unregister_blkdev(void) {
 
     kfioc_test "$test_code" "$test_flag" 0
 }
-
-# flag:           KFIOC_DISCARD
-# values:
-#                 0     for kernel doesn't support TRIM/Discard
-#                 1     for kernel supports TRIM/Discard
-# comments:
-KFIOC_DISCARD()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int kfioc_test_blk_queue_set_discard(void)
-{
-	return QUEUE_FLAG_DISCARD;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
 
 # flag:           KFIOC_HAS_BIOVEC_ITERATORS
 # values:

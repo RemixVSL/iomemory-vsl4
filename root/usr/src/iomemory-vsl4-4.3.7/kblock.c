@@ -114,9 +114,7 @@ enum {
  */
 int iodrive_barrier_sync = 0;
 
-#if KFIOC_DISCARD == 1
 extern int enable_discard;
-#endif
 
 #ifndef bio_flags
 #define bio_flags(bio) ((bio)->bi_opf & REQ_OP_MASK)
@@ -483,7 +481,6 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
 
     blk_queue_max_segment_size(rq, PAGE_SIZE);
     blk_queue_logical_block_size(rq, bdev->bdev_block_size);
-#if KFIOC_DISCARD == 1
     if (enable_discard)
     {
         blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
@@ -493,13 +490,7 @@ blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
         rq->limits.discard_granularity = bdev->bdev_block_size;
 #endif
     }
-#else
-    if (enable_discard)
-    {
-        infprint("enable_discard set but discard not supported on this linux version\n");
-        enable_discard = 0;         // Seems like a good idea to also disable our discard code.
-    }
-#endif  /* KFIOC_DISCARD */
+
 
 #if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
@@ -810,12 +801,10 @@ void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 /**
  * @brief returns 1 if bio is O_SYNC priority
  */
-#if KFIOC_DISCARD == 1
 static int kfio_bio_is_discard(struct bio *bio)
 {
     return bio_op(bio) == REQ_OP_DISCARD;
 }
-#endif
 
 /// @brief   Dump an OS bio to the log
 /// @param   msg   prefix for message
@@ -980,12 +969,10 @@ static int kfio_kbio_add_bio(kfio_bio_t *fbio, struct bio *bio)
     fio_blen_t blen;
     int error;
 
-#if KFIOC_DISCARD == 1
     if (kfio_bio_is_discard(bio))
     {
         return 1;
     }
-#endif
 
     /*
      * Need matching direction, and sequential offset
@@ -1053,13 +1040,11 @@ static int kfio_bio_chain_count(struct fio_bdev *bdev,
             return -EINVAL;
         }
 
-#if KFIOC_DISCARD == 1
         if (kfio_bio_is_discard(bio))
         {
             bio = bio->bi_next;
             continue;
         }
-#endif
 
         if (bio_data_dir(bio) != WRITE)
         {
@@ -1116,13 +1101,11 @@ static int kfio_bio_chain_to_fbio_chain(struct fio_bdev *bdev,
         fbio->fbio_range.length = linux_bio_get_blen(bdev, bio);
         fbio->fbio_flags = KBIO_FLG_ATOMIC;
 
-#if KFIOC_DISCARD == 1
         if (kfio_bio_is_discard(bio))
         {
             fbio->fbio_cmd = KBIO_CMD_DISCARD;
         }
         else
-#endif
         {
             fbio->fbio_cmd = KBIO_CMD_WRITE;
 
@@ -1262,13 +1245,11 @@ static kfio_bio_t *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio
 
     kfio_set_comp_cpu(fbio, bio);
 
-#if KFIOC_DISCARD == 1
     if (kfio_bio_is_discard(bio))
     {
         fbio->fbio_cmd = KBIO_CMD_DISCARD;
     }
     else
-#endif
     {
         if (bio_data_dir(bio) == WRITE)
         {
@@ -1364,12 +1345,7 @@ static int kfio_bio_should_submit_now(struct bio *bio)
     {
         return 1;
     }
-
-#if KFIOC_DISCARD == 1
     return kfio_bio_is_discard(bio);
-#else
-    return 0;
-#endif
 }
 
 /* some 3.0 kernels call our unplug callback with
