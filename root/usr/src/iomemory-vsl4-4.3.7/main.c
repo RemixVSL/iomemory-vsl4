@@ -147,9 +147,8 @@ static int __init init_fio_driver(void)
     auto_attach = 0;
 #endif
 
-    // USE_QUEUE_MQ (i.e. use_workqueue=4) is disabled in all builds and OS's. FH-24331
-    // USE_QUEUE_MQ (i.e. use_workqueue=4) is disabled in all builds and OS's. FH-24331
-    if (use_workqueue == USE_QUEUE_MQ)
+    // just force use_workqueue == USE_QUEUE_MQ
+    /*if (use_workqueue == USE_QUEUE_MQ)
     {
         infprint("blk-mq not supported: Reverting use_workqueue=4 to use_workqueue=0.\n");
         use_workqueue = USE_QUEUE_NONE;
@@ -158,7 +157,7 @@ static int __init init_fio_driver(void)
     if (use_workqueue == USE_QUEUE_RQ)
     {
         infprint("Using Linux I/O Scheduler\n");
-    }
+    }*/
 
     /* If the LEB map isn't loaded then don't bother trying to auto attach */
     if (!iodrive_load_eb_map)

@@ -72,6 +72,12 @@ static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_fli
 #define BI_SECTOR(bio) (bio->bi_iter.bi_sector)
 #define BI_IDX(bio) (bio->bi_iter.bi_idx)
 
+/*
+ * Typeless container_of(), since we are abusing a different type for
+ * our atomic list entry.
+ */
+#define void_container(e, t, f) (t*)(((fio_uintptr_t)(t*)((char *)(e))-((fio_uintptr_t)&((t*)0)->f)))
+
 /******************************************************************************
  *   Block request and bio processing methods.                                *
  ******************************************************************************/
@@ -258,12 +264,6 @@ static inline void kfio_set_comp_cpu(kfio_bio_t* fbio, struct bio* bio)
     return kfio_bio_set_cpu(fbio, kfio_current_cpu());
 }
 
-static void kfio_restart_queue(struct request_queue* q)
-{
-    if (!test_and_set_bit(QUEUE_FLAG_PLUGGED, &q->queue_flags))
-        kblockd_schedule_work(&q->unplug_work);
-}
-
 /*
  * Splice completion list to local list and handle them
  */
@@ -282,7 +282,7 @@ static int complete_list_entries(struct request_queue* q, int error, struct kfio
     fusion_atomic_list_for_each(entry, tmp, &list)
     {
         req = void_container(entry, struct request, special);
-        kfio_end_request(req, error);
+        blk_mq_complete_request(req, error);
         completed++;
     }
 
@@ -313,7 +313,7 @@ static void kfio_blk_complete_request(struct request* req, int error)
      * Add this completion entry atomically to the shared completion
      * list.
      */
-    entry = (struct fio_atomic_list*) & req->special;
+    entry = (struct fio_atomic_list*) & dp->fbio;
     fusion_atomic_list_init(entry);
     fusion_atomic_list_add(entry, &dp->comp_list);
 
@@ -359,18 +359,6 @@ static void kfio_blk_complete_request(struct request* req, int error)
     fio_clear_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
     complete_list_entries(q, error, dp);
 
-    /*
-     * We usually don't have to re-kick the queue, it happens automatically.
-     * But if we dropped out of the queueing loop, we do have to guarantee
-     * that we kick things into gear on our own. So do that if we end up
-     * in the situation where we have pending IO from the OS but nothing
-     * left internally.
-     */
-    if (!dp->pending && kfio_has_pending_requests(q))
-    {
-        kfio_restart_queue(q);
-    }
-
     fusion_spin_unlock_irqrestore(&dp->queue_lock);
 }
 
@@ -382,7 +370,7 @@ static void kfio_blk_complete_request(struct request* req, int error)
 /// flush bit set, which do require special handling.
 static inline bool rq_is_empty_flush(const struct request* req)
 {
-    return (blk_rq_bytes(req) == 0 && (req_op(req) == REQ_OP_FLUSH)) ? true : false;
+    return ((blk_rq_bytes(req) == 0) && (req_op(req) == REQ_OP_FLUSH)) ? true : false;
 }
 
 static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
@@ -394,10 +382,7 @@ static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
         kfio_dump_fbio(fbio);
     }
 
-    if (use_workqueue == USE_QUEUE_MQ)
-        blk_mq_complete_request(req);
-    else
-        kfio_blk_complete_request(req, error);
+    kfio_blk_complete_request(req);
 }
 
 static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
@@ -561,8 +546,7 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
              * "busy error" conditions. Store the prepped part
              * for faster retry, and exit.
              */
-           // we need to save fbio here too
-           // req->special = fbio;
+            disk->fbio = fbio;
             goto retry;
         }
         /*
@@ -822,10 +806,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     return 0;
 }
 
-static void kfio_kill_requests(struct request_queue *q)
-{
-}
-
 static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 {
     struct kfio_disk *disk = bdev->bdev_gd;
@@ -862,13 +842,14 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
         /*
          * The queue is stopped and dead and no new user requests will be
          * coming to it anymore. Fetch remaining already queued requests
-         * and fail them,
+         * and fail them.
          */
-        if (disk->use_workqueue == USE_QUEUE_RQ)
+        if (disk->use_workqueue == USE_QUEUE_RQ || disk->use_workqueue == USE_QUEUE_MQ)
         {
-            kfio_kill_requests(disk->rq);
+            // I don't see a corresponding function in blk_mq that does the same thing.
+            blk_cleanup_queue(disk->rq);
         }
-        else if (disk->use_workqueue != USE_QUEUE_MQ)
+        else
         {
             /* Fail all bio's already on internal bio queue. */
             struct bio *bio;
@@ -1705,7 +1686,7 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
         if (atomic_dec_return(&disk->lock_pending) > 0)
         {
             atomic_set(&disk->lock_pending, 0);
-            //kfio_restart_queue(q); function does nothing.
+
         }
     }
 }
