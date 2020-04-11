@@ -35,8 +35,8 @@
 #if defined(USERSPACE_KERNEL)
 # include <fio/port/userspace/kfio_config.h>
 #elif defined(__linux__)
-//#wtf where is fio/port/linux/kfio_config.h??
-//#include <fio/port/linux/kfio_config.h>
+// created at compile time
+#include <fio/port/linux/kfio_config.h>
 #elif defined(__SVR4) && defined(__sun)
 #include <fio/port/solaris/kfio_config.h>
 #include <fio/port/ktypes.h>
