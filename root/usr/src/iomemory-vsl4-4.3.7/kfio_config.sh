@@ -71,7 +71,6 @@ EX_OSFILE=72
 # architecture.
 
 KFIOC_TEST_LIST="KFIOC_HAS_BIOVEC_ITERATORS
-KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
 KFIOC_HAS_PCI_ERROR_HANDLERS
 KFIOC_HAS_GLOBAL_REGS_POINTER
 KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
@@ -514,34 +513,6 @@ void kfio_test_work_func_t(void) {
 
     kfioc_test "$test_code" "$test_flag" 0
 }
-
-
-# flag:           KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
-# values:
-#                 0     for older kernels that pass void data to the work function
-#                 1     if the kernel passes work queue data in the work struct
-# git commit:     65f27f38446e1976cc98fd3004b110fedcddd189
-# kernel version: >= 2.6.20
-# comments:       Possible ABI compatibility if older kernel doesn't pass
-#                 workstruct as data - may need individual .o
-KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/workqueue.h>
-
-struct work_struct *wq;
-work_func_t func;
-
-void tst(void)
-{
-    INIT_WORK(wq, func);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 
 # flag:           KFIOC_HAS_PCI_ERROR_HANDLERS
 # values:

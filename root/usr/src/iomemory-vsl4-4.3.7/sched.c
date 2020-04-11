@@ -43,27 +43,17 @@ typedef void (*work_func_t)(void *);
 #endif
 #include <linux/workqueue.h>
 
-#if KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
 C_ASSERT(sizeof(struct fusion_work_struct) >= sizeof(struct delayed_work));
-#endif
 C_ASSERT(sizeof(struct fusion_work_struct) >= sizeof(struct work_struct));
 
 void noinline fusion_setup_dpc(fusion_dpc_t *wq, fusion_work_func_t func)
 {
-#if KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
     INIT_WORK((struct work_struct *) wq, (work_func_t) func);
-#else
-    INIT_WORK((struct work_struct *) wq, (work_func_t) func, wq);
-#endif
 }
 
 void noinline fusion_setup_delayed_dpc(fusion_delayed_dpc_t *wq, fusion_work_func_t func)
 {
-#if KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
     INIT_DELAYED_WORK((struct delayed_work *) wq, (work_func_t) func);
-#else
-    INIT_WORK((struct work_struct *) wq, (work_func_t) func, wq);
-#endif
 }
 
 /**
@@ -78,11 +68,7 @@ void noinline fusion_schedule_dpc(fusion_dpc_t *work)
  */
 void noinline fusion_init_work(fusion_work_struct_t *wq, fusion_work_func_t func)
 {
-#if KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
     INIT_WORK((struct work_struct *) wq, (work_func_t) func);
-#else
-    INIT_WORK((struct work_struct *) wq, (work_func_t) func, wq);
-#endif
 }
 
 /**
@@ -106,11 +92,7 @@ void noinline fusion_schedule_work(fusion_work_struct_t *work )
  */
 void noinline fusion_init_delayed_work(fusion_work_struct_t *wq, fusion_work_func_t func)
 {
-#if KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
     INIT_DELAYED_WORK((struct delayed_work *) wq, (work_func_t) func);
-#else
-    INIT_WORK((struct work_struct *) wq, (work_func_t) func, wq);
-#endif
 }
 
 /**
@@ -128,11 +110,7 @@ void noinline fusion_destroy_delayed_work(fusion_work_struct_t *work)
  */
 void noinline fusion_schedule_delayed_work(fusion_work_struct_t *wq, uint64_t sleep_time )
 {
-#if KFIOC_WORKDATA_PASSED_IN_WORKSTRUCT
     schedule_delayed_work((struct delayed_work *) wq, fusion_usectohz(sleep_time));
-#else
-    schedule_delayed_work((struct work_struct *) wq, fusion_usectohz(sleep_time));
-#endif
 }
 
 void noinline fusion_might_sleep(void)
