@@ -76,7 +76,6 @@ KFIOC_HAS_GLOBAL_REGS_POINTER
 KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
 KFIOC_HAS_LINUX_SCATTERLIST_H
 KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
-KFIOC_HAS_KMEM_CACHE
 KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
 KFIOC_USE_LINUX_UACCESS_H
@@ -615,32 +614,6 @@ void kfioc_test_kmem_cache_create(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_HAS_KMEM_CACHE
-# values:
-#                 0     for older kernels that use kmem_cache_s
-#                 1     for kernels that have kmem_cache
-# git commit:     2109a2d1b175dfcffbfdac693bdbe4c4ab62f11f
-# comments:       minor name change of the structure.
-KFIOC_HAS_KMEM_CACHE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/slab.h>
-
-struct kfioc_test_kmem_cache {
-    int junk;
-};
-
-void kfioc_test_kmem_cache(void) {
-    struct kfioc_test_kmem_cache c;
-    kmem_cache_destroy((struct kmem_cache *) &c);
-    return;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
 }
 
 # flag:           KFIOC_STRUCT_FILE_HAS_PATH
