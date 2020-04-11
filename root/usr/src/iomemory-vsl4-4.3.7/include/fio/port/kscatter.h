@@ -230,7 +230,7 @@ extern int kfio_sgl_copy_data(kfio_sg_list_t *dst, kfio_sg_list_t *src, uint32_t
 
 /* Debug interface used only in error injection. */
 #if ENABLE_ERROR_INJECTION
-# if defined(__linux__) && !defined(__VMKLNX__) || (defined(__SVR4) && defined(__sun)) || defined (__OSX__) || defined(USERSPACE_KERNEL)
+# if defined(__linux__) || (defined(__SVR4) && defined(__sun)) || defined (__OSX__) || defined(USERSPACE_KERNEL)
 extern void *kfio_sgl_get_byte_pointer(kfio_sg_list_t *sgl, uint32_t offset);
 # else
 #  define kfio_sgl_get_byte_pointer(sgl, offset) 0
