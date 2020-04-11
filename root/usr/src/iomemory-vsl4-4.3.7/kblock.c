@@ -258,7 +258,6 @@ static struct block_device_operations fio_bdev_ops =
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
-static void kfio_invalidate_bdev(struct block_device *bdev);
 
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 {
@@ -448,9 +447,10 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
        }
     }
     else
-
-    if (disk->use_workqueue != USE_QUEUE_RQ)
-        disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
+    {
+        if (disk->use_workqueue != USE_QUEUE_RQ)
+            disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
+    }
 
     if (disk->rq == NULL)
     {
@@ -577,7 +577,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
         if (linux_bdev != NULL)
         {
-            kfio_invalidate_bdev(linux_bdev);
+            invalidate_bdev(linux_bdev);
         }
 
         set_capacity(disk->gd, 0);
@@ -709,10 +709,6 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
     bdev->bdev_gd = NULL;
 }
 
-static void kfio_invalidate_bdev(struct block_device *bdev)
-{
-    invalidate_bdev(bdev);
-}
 
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
@@ -728,9 +724,8 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
         if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
             struct gendisk *gd = disk->gd;
-            int cpu;
 
-            cpu = part_stat_lock();
+            part_stat_lock();
             part_stat_inc(&gd->part0, ios[1]);
             part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
             part_stat_add(&gd->part0, nsecs[1],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
@@ -742,9 +737,8 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
         if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
             struct gendisk *gd = disk->gd;
-            int cpu;
 
-            cpu = part_stat_lock();
+            part_stat_lock();
             part_stat_inc(&gd->part0, ios[0]);
             part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
             part_stat_add(&gd->part0, nsecs[0],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
@@ -821,58 +815,6 @@ static unsigned long __kfio_bio_atomic(struct bio *bio)
     return 0;
 }
 
-// TODO: We should probably switch to using the Kernel GPL module.
-static blk_status_t kfio_errno_to_blk_status(int error)
-{
-    // We would use the kernel function of the same name, but they decided to impede us by making it GPL.
-
-    // Translate the possible errno values to blk_status_t values.
-    // This is the reverse of the kernel blk_status_to_errno() function.
-    blk_status_t blk_status;
-
-    switch (error)
-    {
-        case 0:
-            blk_status = BLK_STS_OK;
-            break;
-        case -EOPNOTSUPP:
-            blk_status = BLK_STS_NOTSUPP;
-            break;
-        case -ETIMEDOUT:
-            blk_status = BLK_STS_TIMEOUT;
-            break;
-        case -ENOSPC:
-            blk_status = BLK_STS_NOSPC;
-            break;
-        case -ENOLINK:
-            blk_status = BLK_STS_TRANSPORT;
-            break;
-        case -EREMOTEIO:
-            blk_status = BLK_STS_TARGET;
-            break;
-        case -EBADE:
-            blk_status = BLK_STS_NEXUS;
-            break;
-        case -ENODATA:
-            blk_status = BLK_STS_MEDIUM;
-            break;
-        case -EILSEQ:
-            blk_status = BLK_STS_PROTECTION;
-            break;
-        case -ENOMEM:
-            blk_status = BLK_STS_RESOURCE;
-            break;
-        case -EAGAIN:
-            blk_status = BLK_STS_AGAIN;
-            break;
-        default:
-            blk_status = BLK_STS_IOERR;
-            break;
-    }
-
-    return blk_status;
-}
-
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error)
 {
     // bi_status is type blk_status_t, not an int errno, so must translate as necessary.
@@ -880,9 +822,8 @@ static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int er
 
     if (unlikely(error != 0))
     {
-        bio_status = kfio_errno_to_blk_status(error);
+        bio->bi_status = errno_to_blk_status(error);
     }
-    bio->bi_status = bio_status;            /* bi_error was changed to bi_status <sigh> */
 
     bio_endio(bio);
 }
