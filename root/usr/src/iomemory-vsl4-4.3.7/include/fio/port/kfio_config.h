@@ -34,12 +34,9 @@
 
 #if defined(USERSPACE_KERNEL)
 # include <fio/port/userspace/kfio_config.h>
-#elif defined(__ESXI5__)
-#include <fio/port/esxi5/kfio_config.h>
-#elif defined(__ESXI6__)
-#include <fio/port/esxi6/kfio_config.h>
 #elif defined(__linux__)
-#include <fio/port/linux/kfio_config.h>
+//#wtf where is fio/port/linux/kfio_config.h??
+//#include <fio/port/linux/kfio_config.h>
 #elif defined(__SVR4) && defined(__sun)
 #include <fio/port/solaris/kfio_config.h>
 #include <fio/port/ktypes.h>
