@@ -37,7 +37,9 @@
 #include <linux/proc_fs.h>
 #include <linux/signal.h>
 #include <linux/poll.h>
-
+#if KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+#include <linux/proc_fs.h>
+#endif
 #include <fio/port/common-linux/kfile.h>
 
 /**
@@ -219,7 +221,12 @@ void noinline kfio_remove_proc_entry(const char *name, fusion_proc_dir_entry *pa
 fusion_proc_dir_entry * noinline kfio_create_proc_fops_entry(const char *name,
     fio_mode_t mode, fusion_proc_dir_entry *base, fusion_file_operations_t *fops, void *data)
 {
+#if KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+    #error breaks for now...
+    return proc_create_data(name, mode, base, (struct proc_ops *)fops, data);
+#else /* ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */
     return proc_create_data(name, mode, base, (struct file_operations *)fops, data);
+#endif /* KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */
 }
 
 typedef fio_loff_t  (*file_ops_llseek_fn)  (struct file *, fio_loff_t, int);

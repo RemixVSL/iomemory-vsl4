@@ -13,6 +13,7 @@ KFIOC_TEST_LIST="${KFIOC_TEST_LIST}
 KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
 KFIOC_X_BIO_HAS_BIO_SEGMENTS
 KFIOC_X_HAS_COARSE_REAL_TS
+KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
 "
 
 KFIOC_REMOVE_TESTS=""
@@ -85,37 +86,26 @@ void kfioc_test_request_queue_has_queue_lock_pointer(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_HAS_BLK_MQ
+# flag:           KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
 # usage:          undef for automatic selection by kernel version
-#                 0     if the kernel doesn't support blk-mq
-#                 1     if the kernel has blk-mq
-# kernel version: v4.1-rc1
-# A popular distro has backported blk-mq.h into 3.10.0 kernel in a way that does
-# not work with the driver
-## The original test is broken, and missing linux/version.h
-KFIOC_HAS_BLK_MQ()
+#                 0     if the kernel does not have the proc_create_data function
+#                 1     if the kernel has the function
+# description:    Between 5.3 and 5.6 the 4th option for proc_create_data changes.
+#                 It went from a "const struct file_operations *" to a
+#                 const struct proc_ops *.
+#                 https://elixir.bootlin.com/linux/v5.3/source/include/linux/proc_fs.h#L44
+#                 https://elixir.bootlin.com/linux/v5.6.3/source/include/linux/proc_fs.h#L59
+KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS()
 {
     local test_flag="$1"
     local test_code='
-#include <linux/version.h>
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)
-#include <linux/blk-mq.h>
+#include <linux/proc_fs.h>
 
-int kfioc_has_blk_mq(void)
+void *kfioc_has_proc_create_data(struct inode *inode)
 {
-    struct blk_mq_tag_set tag_set;
-    tag_set.nr_hw_queues = 1;
-    tag_set.cmd_size = 0;
-    if (!blk_mq_alloc_tag_set(&tag_set))
-    {
-        blk_mq_init_queue(&tag_set);
-    }
-    blk_mq_run_hw_queues(NULL,0);
-    return 1;
+    const struct proc_ops *pops
+    return proc_create_data(NULL, 0, NULL, pops, NULL);
 }
-#else
-#error blk-mq was added in 3.13.0 kernel
-#endif
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
