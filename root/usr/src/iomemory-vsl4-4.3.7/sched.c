@@ -34,13 +34,6 @@
  * @{
  */
 
-/* XXX work_func_t undefined in early kernels:
- * the func member of work_struct is   void (*func)(void *)
- */
-
-#if KFIOC_MISSING_WORK_FUNC_T
-typedef void (*work_func_t)(void *);
-#endif
 #include <linux/workqueue.h>
 
 C_ASSERT(sizeof(struct fusion_work_struct) >= sizeof(struct delayed_work));

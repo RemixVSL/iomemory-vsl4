@@ -101,7 +101,6 @@ KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
 KFIOC_HAS_BLK_QUEUE_SPLIT2
-KFIOC_MISSING_WORK_FUNC_T
 KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
 "
 
@@ -483,28 +482,6 @@ kfioc_has_include()
 #
 # Actual test procedures for determining Kernel capabilities
 #
-
-
-# flag:           KFIOC_MISSING_WORK_FUNC_T
-# usage:          undef for automatic selection by kernel version
-#                 0     for non stupid kernels
-#                 1     for 2.6.18-92.el5.h
-# git commit:
-# comments:
-KFIOC_MISSING_WORK_FUNC_T()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/workqueue.h>
-
-void kfio_test_work_func_t(void) {
-    work_func_t *fn;
-    fn = NULL;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 0
-}
 
 # flag:           KFIOC_HAS_PCI_ERROR_HANDLERS
 # values:
