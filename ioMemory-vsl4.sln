@@ -3,9 +3,103 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.30002.166
 MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{73F68DC5-ACC4-4F6F-9F92-686F9591633A}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fio", "fio", "{1A68A8FF-456A-47C6-AA0C-122D95CBF2FF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common", "common", "{B5753780-A5D6-4560-9D4F-F1EE8AD8C8AD}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\kinfo.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\kinfo.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\tsc.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\tsc.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\uuid.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\uuid.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "port", "port", "{40FA8E73-4C97-47B2-8141-3B9C4C4A1CF8}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "linux", "linux", "{71E72CEA-8BC2-4772-8719-EC43459C9905}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\linux\ktypes.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\linux\ktypes.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\linux\utypes.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\linux\utypes.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "gcc", "gcc", "{26231BB7-78BF-4A74-B736-6536597D04FF}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\gcc\align.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\gcc\align.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\gcc\compiler.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\gcc\compiler.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "arch", "arch", "{FFCEAA8E-48B5-4833-95C7-828DB1CF9012}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "common-linux", "common-linux", "{B42416E2-327C-45B1-83E2-94C8F4F324C8}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\commontypes.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\commontypes.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\div64.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\div64.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\errno.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\errno.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kassert.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kassert.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kblock.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kblock.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kcondvar.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kcondvar.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kfile.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kfile.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kfio.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kfio.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kpci.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kpci.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kscsi.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kscsi.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kscsi_config.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kscsi_config.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\message_ids.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\message_ids.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\stdint.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\stdint.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\ufio.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\ufio.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ppc", "ppc", "{01878F5F-4C47-401A-8C2F-20651195EF51}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\atomic.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\atomic.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\bits.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\bits.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\cache.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\cache.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "x86_common", "x86_common", "{C5896B78-2E97-4F5B-8321-5F5F7338813C}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\atomic.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\atomic.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\bits.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\bits.h
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\cache.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\cache.h
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "public", "public", "{52A0AD63-5312-4D41-9BB1-9142DCBA1325}"
+	ProjectSection(SolutionItems) = preProject
+		root\usr\src\iomemory-vsl4-4.3.7\include\fio\public\fioapi.h = root\usr\src\iomemory-vsl4-4.3.7\include\fio\public\fioapi.h
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ioMemory-vsl4", "ioMemory-vsl4\ioMemory-vsl4.vcxproj", "{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}"
+EndProject
 Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Debug|x64.ActiveCfg = Debug|x64
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Debug|x64.Build.0 = Debug|x64
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Debug|x86.ActiveCfg = Debug|Win32
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Debug|x86.Build.0 = Debug|Win32
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Release|x64.ActiveCfg = Release|x64
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Release|x64.Build.0 = Release|x64
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Release|x86.ActiveCfg = Release|Win32
+		{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1A68A8FF-456A-47C6-AA0C-122D95CBF2FF} = {73F68DC5-ACC4-4F6F-9F92-686F9591633A}
+		{B5753780-A5D6-4560-9D4F-F1EE8AD8C8AD} = {1A68A8FF-456A-47C6-AA0C-122D95CBF2FF}
+		{40FA8E73-4C97-47B2-8141-3B9C4C4A1CF8} = {1A68A8FF-456A-47C6-AA0C-122D95CBF2FF}
+		{71E72CEA-8BC2-4772-8719-EC43459C9905} = {40FA8E73-4C97-47B2-8141-3B9C4C4A1CF8}
+		{26231BB7-78BF-4A74-B736-6536597D04FF} = {40FA8E73-4C97-47B2-8141-3B9C4C4A1CF8}
+		{FFCEAA8E-48B5-4833-95C7-828DB1CF9012} = {40FA8E73-4C97-47B2-8141-3B9C4C4A1CF8}
+		{B42416E2-327C-45B1-83E2-94C8F4F324C8} = {40FA8E73-4C97-47B2-8141-3B9C4C4A1CF8}
+		{01878F5F-4C47-401A-8C2F-20651195EF51} = {FFCEAA8E-48B5-4833-95C7-828DB1CF9012}
+		{C5896B78-2E97-4F5B-8321-5F5F7338813C} = {FFCEAA8E-48B5-4833-95C7-828DB1CF9012}
+		{52A0AD63-5312-4D41-9BB1-9142DCBA1325} = {1A68A8FF-456A-47C6-AA0C-122D95CBF2FF}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {238EF96D-3E6C-4D7C-8380-7005C4CBF7AE}

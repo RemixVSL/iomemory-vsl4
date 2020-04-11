@@ -22,7 +22,6 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}</ProjectGuid>
     <RootNamespace>ioMemoryvsl4</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -85,8 +84,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_BLOCK;CONFIG_BLK_DEV_INTEGRITY;__linux__</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include;C:\Users\dcassidy\source\repos\linux-kernel\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -99,6 +99,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -138,6 +139,138 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\cdev.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\common_kinfo.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\dbgset.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\driver_init.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\errno.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kblock.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kcache.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kcondvar.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kcpu.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kcsr.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kfile.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kfio.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kfio_common.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\khotplug.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kinfo.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kinit.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kmem.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kmsg.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kscatter.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kscsi.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\kscsi_host.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\ktime.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\license.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\main.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\module_param.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\pci.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\sched.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\six_lock.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\state.c" />
+    <ClCompile Include="..\root\usr\src\iomemory-vsl4-4.3.7\sysrq.c" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\check_target_kernel.conf" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\check_target_kernel.sh" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\dkms.conf" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\dkms.conf.example" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\Kbuild" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\kfio_config.sh" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\kfio_config_add.sh" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\Makefile" />
+    <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\patch_module_version.sh" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\kinfo.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\tsc.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\uuid.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\align.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\atomic.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\bits.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\ppc\cache.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\atomic.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\bits.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\arch\x86_common\cache.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\atomic_list.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\bitops.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\byteswap.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\cdev.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\commontypes.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\div64.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\errno.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kassert.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kblock.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kcondvar.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kfile.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kfio.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kpci.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kscsi.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\kscsi_config.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\message_ids.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\stdint.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\common-linux\ufio.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\commontypes.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\compiler.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\csr_simulator.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\dbgset.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\errno.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\fio-poppack.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\fio-port.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\fio-pshpack1.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\fio-stat.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\fiostring.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\gcc\align.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\gcc\compiler.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ifio.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ioctl.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kbio.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kblock.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kcache.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kcondvar.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kcpu.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kcsr.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kfio.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kfio_config.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kglobal.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kinfo.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kmem.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kmsg.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kpci.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kscatter.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\kscsi.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ktime.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ktypes.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ktypes_32.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ktypes_64.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\libgen.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\linux\ktypes.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\linux\utypes.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\list.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\message_ids.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\message_id_ranges.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\nanddev.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\nexus.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\pci.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\porting_cdev.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config_macros.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config_macros_clear.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config_vars_externs.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ranges.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\sched.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\six_lock.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\state.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\stdint.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\types.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ufio.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\unaligned.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\utypes.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\vararg.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\version.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\public\fioapi.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\port-internal-boss.h" />
+    <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\port-internal.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

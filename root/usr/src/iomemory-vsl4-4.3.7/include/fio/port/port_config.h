@@ -188,13 +188,13 @@
 #define FUSION_DEBUG_MEMORY 0
 
 /* Turn on internal-only features */
-#define FUSION_INTERNAL 0
+#define FUSION_INTERNAL 1
 
 /* The major version of this build */
 #define FUSION_MAJOR_VERSION "4"
 
 /* Turn on release symbol mangling */
-#define FUSION_MANGLE_RELEASE_SYMBOLS 1
+#define FUSION_MANGLE_RELEASE_SYMBOLS 0
 
 /* VSL Build for in-field media testing tool. */
 #define FUSION_MEDIA_TEST_TOOL 0

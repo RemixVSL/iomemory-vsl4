@@ -54,13 +54,7 @@ C_ASSERT(sizeof(fusion_file_operations_t) >= sizeof(struct file_operations));
 */
 fusion_inode * noinline kfio_fs_inode(fusion_file *fp)
 {
-#if KFIOC_HAS_FILE_INODE_HELPER
     return (fusion_inode *) file_inode(fp);
-#elif KFIOC_STRUCT_FILE_HAS_PATH
-    return (fusion_inode *) ((struct file *)fp)->f_path.dentry->d_inode;
-#else
-    return (fusion_inode *) ((struct file *)fp)->f_dentry->d_inode;
-#endif
 }
 
 /**
@@ -148,13 +142,7 @@ void noinline kfio_seq_commit(fusion_seq_file *sp, int num)
 */
 void *noinline kfio_inode_data(fusion_inode *ip)
 {
-#if KFIOC_HAS_PROCFS_PDE_DATA
     return PDE_DATA(ip);
-#else
-    /* get proc_dir_entry that contains this inode */
-    struct proc_dir_entry *pe = PDE((struct inode *) ip);
-    return pe->data;
-#endif
 }
 
 /**
@@ -231,19 +219,7 @@ void noinline kfio_remove_proc_entry(const char *name, fusion_proc_dir_entry *pa
 fusion_proc_dir_entry * noinline kfio_create_proc_fops_entry(const char *name,
     fio_mode_t mode, fusion_proc_dir_entry *base, fusion_file_operations_t *fops, void *data)
 {
-#if KFIOC_HAS_PROC_CREATE_DATA
     return proc_create_data(name, mode, base, (struct file_operations *)fops, data);
-#else
-    struct proc_dir_entry *entry;
-
-    entry = create_proc_entry(name, mode, base);
-    if (entry != NULL)
-    {
-        entry->proc_fops = (struct file_operations *)fops;
-        entry->data = data;
-    }
-    return entry;
-#endif
 }
 
 typedef fio_loff_t  (*file_ops_llseek_fn)  (struct file *, fio_loff_t, int);
