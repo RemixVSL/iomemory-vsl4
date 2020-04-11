@@ -102,7 +102,6 @@ KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_HAS_FILE_INODE_HELPER
-KFIOC_HAS_CPUMASK_WEIGHT
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
 KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
@@ -1143,24 +1142,6 @@ void kfioc_test_file_inode(void) {
         struct file f;
         struct inode *test = file_inode(&f);
         (void)test;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_CPUMASK_WEIGHT
-# usage:          1 if cpumask_weight(const struct cpumask *srcp) is defined
-#                 0 otherwise
-# git commit:     2d3854a37e8b767a51aba38ed6d22817b0631e33 introduces cpumask_weight in v2.6.28-rc4
-#                 2f0f267ea0720ec6adbe9cf7386450425fac8258 removes deprecated cpus_weight in v4.1-rc1
-KFIOC_HAS_CPUMASK_WEIGHT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/cpumask.h>
-
-void kfioc_has_cpumask_weight(void) {
-    cpumask_weight(NULL);
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
