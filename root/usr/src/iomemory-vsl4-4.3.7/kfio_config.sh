@@ -79,7 +79,6 @@ KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
 KFIOC_HAS_KMEM_CACHE
 KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
-KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_MODULE_PARAM_ARRAY_NUMP
 KFIOC_HAS_BLK_LIMITS_IO_MIN
@@ -708,28 +707,6 @@ void kfioc_test_has_biovec_iterators(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_DISCARD_GRANULARITY_IN_LIMITS
-# values:
-#                 1     for queue has q->limits.discard_granularity
-#                 0     it does not
-# comments:
-KFIOC_DISCARD_GRANULARITY_IN_LIMITS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_blk_queue_discard_granularity(void)
-{
-    struct request_queue q;
-
-    q.limits.discard_granularity = 0;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
 # flag:          KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
