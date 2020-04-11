@@ -222,9 +222,8 @@ fusion_proc_dir_entry * noinline kfio_create_proc_fops_entry(const char *name,
     fio_mode_t mode, fusion_proc_dir_entry *base, fusion_file_operations_t *fops, void *data)
 {
 #if KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
-    #error breaks for now...
-    return proc_create_data(name, mode, base, (struct proc_ops *)fops, data);
-#else /* ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */
+    return proc_create_data(name, mode, base, (struct proc_ops *)pops, data);
+#elif ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
     return proc_create_data(name, mode, base, (struct file_operations *)fops, data);
 #endif /* KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */
 }
@@ -240,6 +239,27 @@ typedef void   (*seq_ops_stop_fn)  (struct seq_file *m, void *v);
 typedef void * (*seq_ops_next_fn)  (struct seq_file *m, void *v, fio_loff_t *pos);
 typedef int    (*seq_ops_show_fn)  (struct seq_file *m, void *v);
 
+void kfio_set_seq_ops_start_handler(fusion_seq_operations_t *sops, void *start)
+{
+    ((struct seq_operations *)sops)->start = (seq_ops_start_fn)start;
+}
+
+void kfio_set_seq_ops_stop_handler(fusion_seq_operations_t *sops, void *stop)
+{
+    ((struct seq_operations *)sops)->stop = (seq_ops_stop_fn)stop;
+}
+
+void kfio_set_seq_ops_next_handler(fusion_seq_operations_t *sops, void *next)
+{
+    ((struct seq_operations *)sops)->next = (seq_ops_next_fn)next;
+}
+
+void kfio_set_seq_ops_show_handler(fusion_seq_operations_t *sops, void *show)
+{
+    ((struct seq_operations *)sops)->show = (seq_ops_show_fn)show;
+}
+
+#if ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
 void kfio_set_file_ops_owner(fusion_file_operations_t *fops, void *owner)
 {
     ((struct file_operations *)fops)->owner = (struct module *)owner;
@@ -269,26 +289,34 @@ void kfio_set_file_ops_release_handler(fusion_file_operations_t *fops, void *rel
 {
     ((struct file_operations *)fops)->release = (file_ops_release_fn)release;
 }
-
-void kfio_set_seq_ops_start_handler(fusion_seq_operations_t *sops, void *start)
+#elif KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+void kfio_set_file_ops_llseek_handler(fusion_file_operations_t *fops, void *llseek)
 {
-    ((struct seq_operations *)sops)->start = (seq_ops_start_fn)start;
+    ((struct file_operations *)fops)->proc_llseek = (file_ops_llseek_fn)llseek;
 }
 
-void kfio_set_seq_ops_stop_handler(fusion_seq_operations_t *sops, void *stop)
+void kfio_set_file_ops_read_handler(fusion_file_operations_t *fops, void *read)
 {
-    ((struct seq_operations *)sops)->stop = (seq_ops_stop_fn)stop;
+    ((struct file_operations *)fops)->proc_read = (file_ops_read_fn)read;
 }
 
-void kfio_set_seq_ops_next_handler(fusion_seq_operations_t *sops, void *next)
+void kfio_set_file_ops_write_handler(fusion_file_operations_t *fops, void *write)
 {
-    ((struct seq_operations *)sops)->next = (seq_ops_next_fn)next;
+    ((struct file_operations *)fops)->proc_write = (file_ops_write_fn)write;
 }
 
-void kfio_set_seq_ops_show_handler(fusion_seq_operations_t *sops, void *show)
+void kfio_set_file_ops_open_handler(fusion_file_operations_t *fops, void *open)
 {
-    ((struct seq_operations *)sops)->show = (seq_ops_show_fn)show;
+    ((struct file_operations *)fops)->proc_open = (file_ops_open_fn)open;
 }
+
+void kfio_set_file_ops_release_handler(fusion_file_operations_t *fops, void *release)
+{
+    ((struct file_operations *)fops)->proc_release = (file_ops_release_fn)release;
+}
+
+#endif /* ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */
+
 
 /**
  * @}
