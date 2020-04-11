@@ -328,8 +328,12 @@ static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 }
 
 static struct blk_mq_ops fio_mq_ops = {
+    /* TODO: The original code set .map_queues explicitly to NULL
+     * to avoid the GPL or something. We need to test the effects
+     * of removing this code bit down the line.
+     */
     .queue_rq   = fio_queue_rq,
-    .map_queues = blk_mq_map_queues,
+    .map_queues = NULL,
     .init_hctx  = fio_init_hctx
 };
 
