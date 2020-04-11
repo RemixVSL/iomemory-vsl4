@@ -76,11 +76,8 @@ KFIOC_HAS_GLOBAL_REGS_POINTER
 KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
 KFIOC_HAS_LINUX_SCATTERLIST_H
 KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
-KFIOC_HAS_KMEM_CACHE
 KFIOC_STRUCT_FILE_HAS_PATH
 KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
-KFIOC_DISCARD
-KFIOC_DISCARD_GRANULARITY_IN_LIMITS
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_MODULE_PARAM_ARRAY_NUMP
 KFIOC_HAS_BLK_LIMITS_IO_MIN
@@ -104,7 +101,6 @@ KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
 KFIOC_HAS_FILE_INODE_HELPER
-KFIOC_HAS_CPUMASK_WEIGHT
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
 KFIOC_BLK_MQ_OPS_HAS_MAP_QUEUES
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
@@ -620,32 +616,6 @@ void kfioc_test_kmem_cache_create(void) {
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-# flag:           KFIOC_HAS_KMEM_CACHE
-# values:
-#                 0     for older kernels that use kmem_cache_s
-#                 1     for kernels that have kmem_cache
-# git commit:     2109a2d1b175dfcffbfdac693bdbe4c4ab62f11f
-# comments:       minor name change of the structure.
-KFIOC_HAS_KMEM_CACHE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/slab.h>
-
-struct kfioc_test_kmem_cache {
-    int junk;
-};
-
-void kfioc_test_kmem_cache(void) {
-    struct kfioc_test_kmem_cache c;
-    kmem_cache_destroy((struct kmem_cache *) &c);
-    return;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 "-Werror"
-}
-
 # flag:           KFIOC_STRUCT_FILE_HAS_PATH
 # values:
 #                 0     for older kernels that had separate struct dentry and
@@ -691,26 +661,6 @@ int kfioc_test_unregister_blkdev(void) {
     kfioc_test "$test_code" "$test_flag" 0
 }
 
-# flag:           KFIOC_DISCARD
-# values:
-#                 0     for kernel doesn't support TRIM/Discard
-#                 1     for kernel supports TRIM/Discard
-# comments:
-KFIOC_DISCARD()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int kfioc_test_blk_queue_set_discard(void)
-{
-	return QUEUE_FLAG_DISCARD;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
 # flag:           KFIOC_HAS_BIOVEC_ITERATORS
 # values:
 #                 0     for kernel doesn't support biovec_iter and immuatable biovecs
@@ -729,28 +679,6 @@ void kfioc_test_has_biovec_iterators(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_DISCARD_GRANULARITY_IN_LIMITS
-# values:
-#                 1     for queue has q->limits.discard_granularity
-#                 0     it does not
-# comments:
-KFIOC_DISCARD_GRANULARITY_IN_LIMITS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void kfioc_test_blk_queue_discard_granularity(void)
-{
-    struct request_queue q;
-
-    q.limits.discard_granularity = 0;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
 # flag:          KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
@@ -1187,24 +1115,6 @@ void kfioc_test_file_inode(void) {
         struct file f;
         struct inode *test = file_inode(&f);
         (void)test;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_CPUMASK_WEIGHT
-# usage:          1 if cpumask_weight(const struct cpumask *srcp) is defined
-#                 0 otherwise
-# git commit:     2d3854a37e8b767a51aba38ed6d22817b0631e33 introduces cpumask_weight in v2.6.28-rc4
-#                 2f0f267ea0720ec6adbe9cf7386450425fac8258 removes deprecated cpus_weight in v4.1-rc1
-KFIOC_HAS_CPUMASK_WEIGHT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/cpumask.h>
-
-void kfioc_has_cpumask_weight(void) {
-    cpumask_weight(NULL);
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration

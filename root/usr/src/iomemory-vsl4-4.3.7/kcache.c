@@ -38,12 +38,7 @@
  * @ingroup PORT_LINUX
  * @{
  */
-
-#if KFIOC_HAS_KMEM_CACHE
 #define KCACHE_PTR (struct kmem_cache *)
-#else
-#define KCACHE_PTR (struct kmem_cache_s *)
-#endif
 
 /**
  *
