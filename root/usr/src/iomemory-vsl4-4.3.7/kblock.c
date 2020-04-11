@@ -476,21 +476,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         rq->limits.discard_granularity = bdev->bdev_block_size;
     }
 
-
-#if KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
-#else
-#error No barrier scheme supported
-#endif
-
-#if KFIOC_QUEUE_HAS_NONROT_FLAG
     /* Tell the kernel we are a non-rotational storage device */
     blk_queue_flag_set(QUEUE_FLAG_NONROT, rq);
-#endif
-#if KFIOC_QUEUE_HAS_RANDOM_FLAG
     /* Disable device global entropy contribution */
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
-#endif
 
     disk->gd = gd = alloc_disk(FIO_NUM_MINORS);
     if (disk->gd == NULL)
@@ -505,9 +495,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->fops = &fio_bdev_ops;
     gd->queue = rq;
     gd->private_data = bdev;
-#if defined GENHD_FL_EXT_DEVT
     gd->flags = GENHD_FL_EXT_DEVT;
-#endif
 
     fio_bdev_ops.owner = THIS_MODULE;
 

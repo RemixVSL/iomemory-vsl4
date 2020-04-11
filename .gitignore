@@ -31,3 +31,4 @@ ioMemory-vsl4/.vs/slnx.sqlite
 ioMemory-vsl4/.vs/ProjectSettings.json
 ioMemory-vsl4/.vs/ioMemory-vsl4/v16/Browse.VC.db
 ioMemory-vsl4/.vs/ioMemory-vsl4/v16/.suo
+*.ipch
