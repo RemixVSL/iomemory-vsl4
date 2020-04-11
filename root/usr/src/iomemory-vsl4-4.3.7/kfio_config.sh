@@ -75,33 +75,22 @@ KFIOC_HAS_PCI_ERROR_HANDLERS
 KFIOC_HAS_GLOBAL_REGS_POINTER
 KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
 KFIOC_HAS_LINUX_SCATTERLIST_H
-KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
-KFIOC_STRUCT_FILE_HAS_PATH
-KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
 KFIOC_USE_LINUX_UACCESS_H
 KFIOC_MODULE_PARAM_ARRAY_NUMP
 KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
 KFIOC_FOPS_USE_LOCKED_IOCTL
 KFIOC_HAS_RQ_POS_BYTES
-KFIOC_QUEUE_HAS_NONROT_FLAG
-KFIOC_QUEUE_HAS_RANDOM_FLAG
 KFIOC_NUMA_MAPS
 KFIOC_PCI_HAS_NUMA_INFO
-KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
 KFIOC_HAS_SCSI_SG_FNS
 KFIOC_HAS_SCSI_SG_COPY_FNS
 KFIOC_HAS_SCSI_RESID_FNS
 KFIOC_HAS_SCSI_QD_CHANGE_FN
-KFIOC_HAS_PROCFS_PDE_DATA
-KFIOC_HAS_PROC_CREATE_DATA
-KFIOC_SGLIST_NEW_API
 KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 KFIOC_BIO_HAS_SEG_SIZE
-KFIOC_HAS_FILE_INODE_HELPER
 KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
 KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
 KFIOC_HAS_BLK_QUEUE_SPLIT2
-KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
 "
 
 
@@ -568,72 +557,6 @@ KFIOC_HAS_LINUX_SCATTERLIST_H()
     kfioc_test "$test_code" "$test_flag" 1
 }
 
-
-# flag:           KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR
-# values:
-#                 0     for older kernels that have the dtor argument to kmem_cache_create
-#                 1     for kernels that removed the dtor argument to kmem_cache_create
-# git commit:     c59def9f222d44bb7e2f0a559f2906191a0862d7
-# comments:       API and ABI incompatible.
-KFIOC_KMEM_CACHE_CREATE_REMOVED_DTOR()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/slab.h>
-
-void kfioc_test_kmem_cache_create(void) {
-    kmem_cache_create("foo", 0, 0, 0, NULL);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_STRUCT_FILE_HAS_PATH
-# values:
-#                 0     for older kernels that had separate struct dentry and
-#                       struct vfsmount.
-#                 1     for newer kernels with struct path in struct file.
-# git commit:     0f7fc9e4d03987fe29f6dd4aa67e4c56eb7ecb05
-# comments:       API portability.  ABI portability problems because struct vfsmount
-#                 and struct dentry are reversed in struct path.
-KFIOC_STRUCT_FILE_HAS_PATH()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-
-void kfioc_test_file_path(void) {
-    struct file f = { .f_path = { [0] = 0, [1] = 0 } };
-    (void)f;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
-# values:
-#                 0     for kernels that return int from unregister_blkdev()
-#                 1     for newer kernels that return void from unregister_blkdev()
-# git commit:     f4480240f700587c15507b7815e75989b16825b2
-# comments:
-KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-
-int kfioc_test_unregister_blkdev(void) {
-    int rc = 0;
-    rc = unregister_blkdev(0, NULL);
-    return rc;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 0
-}
-
 # flag:           KFIOC_HAS_BIOVEC_ITERATORS
 # values:
 #                 0     for kernel doesn't support biovec_iter and immuatable biovecs
@@ -652,25 +575,6 @@ void kfioc_test_has_biovec_iterators(void) {
 '
 
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS
-# usage:         1   Kernel uses newer blk_queue_flag_set/clear functions.
-#                0   It uses older queue_flag_set/clear functions.
-# comments:       Changed in kernel 4.18 so that the queue lock is taken when manipulating queue flags.
-KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void kfioc_use_blk_queue_functions(void)
-{
-    struct request_queue *rq = NULL;
-    int flags = 1;
-    blk_queue_flag_set(flags, rq);
-}
-'
-    kfioc_test "$test_code" KFIOC_USE_BLK_QUEUE_FLAGS_FUNCTIONS 1 -Werror
 }
 
 # flag:           KFIOC_USE_LINUX_UACCESS_H
@@ -756,38 +660,6 @@ int kfioc_pci_request_regions_const_param(void)
     kfioc_test "$test_code" KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR 1 -Werror
 }
 
-# flag:          KFIOC_QUEUE_HAS_NONROT_FLAG
-# usage:         1   Kernel supports flag for non-rotational device
-#                0   It does not
-KFIOC_QUEUE_HAS_NONROT_FLAG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int kfioc_check_nonrot_flag(void)
-{
-    return QUEUE_FLAG_NONROT;
-}
-'
-    kfioc_test "$test_code" KFIOC_QUEUE_HAS_NONROT_FLAG 1 -Werror
-}
-
-# flag:          KFIOC_QUEUE_HAS_RANDOM_FLAG
-# usage:         1   Kernel supports flag for disabling random entropy
-#                0   It does not
-KFIOC_QUEUE_HAS_RANDOM_FLAG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-int kfioc_check_random_flag(void)
-{
-    return QUEUE_FLAG_ADD_RANDOM;
-}
-'
-    kfioc_test "$test_code" KFIOC_QUEUE_HAS_RANDOM_FLAG 1 -Werror
-}
-
 # flag:          KFIOC_NUMA_MAPS
 # usage:         1   Kernel exports enough NUMA knowledge for us to bind
 #                0   It does not
@@ -822,40 +694,6 @@ int kfioc_pci_has_numa_info(void)
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS
-# usage:         1   kmem_cache_alloc_node takes a 'flags' parameter.
-#                0   It does not
-KFIOC_CACHE_ALLOC_NODE_TAKES_FLAGS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/slab.h>
-void kfioc_kmem_cache_alloc_node_takes_flags(void)
-{
-    kmem_cache_alloc_node(0, GFP_KERNEL, 0);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_SGLIST_NEW_API
-# usage:         1   Kernel supports new sglist API
-#                0   It does not
-KFIOC_SGLIST_NEW_API()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/scatterlist.h>
-void support_sglist_new_api(void)
-{
-    struct scatterlist *sl = NULL;
-
-    sg_set_page(sl, sg_page(sl), 0, 0);
-}
-'
-    kfioc_test "$test_code" KFIOC_SGLIST_NEW_API 1 -Werror
 }
 
 # flag:           KFIOC_HAS_SCSI_QD_CHANGE_FN
@@ -943,45 +781,6 @@ void kfioc_has_scsi_resid_fns(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
 }
 
-# flag:           KFIOC_HAS_PROCFS_PDE_DATA
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the PDE_DATA helper
-#                 1     if the kernel has the PDE_DATA function
-# git commit:     d9dda78bad879595d8c4220a067fc029d6484a16
-# kernel version: >= 3.10
-KFIOC_HAS_PROCFS_PDE_DATA()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/proc_fs.h>
-
-void *kfioc_has_procfs_pde_data(struct inode *inode)
-{
-    return PDE_DATA(inode);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_PROC_CREATE_DATA
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the proc_create_data function
-#                 1     if the kernel has the function
-# git commit:     59b7435149eab2dd06dd678742faff6049cb655f
-KFIOC_HAS_PROC_CREATE_DATA()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/proc_fs.h>
-
-void *kfioc_has_proc_create_data(struct inode *inode)
-{
-    return proc_create_data(NULL, 0, NULL, NULL, NULL);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
 # flag:           KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
 # values:
 #                 0     32-bit version of acpi_evaluate_integer present
@@ -1019,25 +818,6 @@ void kfioc_test_bio_seg_size(void) {
 	struct bio bio;
 	bio.bi_seg_front_size=0;
 	bio.bi_seg_back_size=0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_FILE_INODE_HELPER
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have file_inode() helper
-#                 1     if the kernel has file_inode() helper
-KFIOC_HAS_FILE_INODE_HELPER()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-
-void kfioc_test_file_inode(void) {
-        struct file f;
-        struct inode *test = file_inode(&f);
-        (void)test;
 }
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
