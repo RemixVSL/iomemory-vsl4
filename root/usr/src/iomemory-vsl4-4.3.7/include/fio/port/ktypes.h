@@ -45,10 +45,6 @@
 #include <fio/port/userspace/ktypes.h>
 #elif defined(UEFI)
 #include <fio/port/uefi/ktypes.h>
-#elif defined(__ESXI5__)
-#include <fio/port/esxi5/ktypes.h>
-#elif defined(__ESXI6__)
-#include <fio/port/esxi6/ktypes.h>
 #elif defined(__linux__)
 #include <fio/port/linux/ktypes.h>
 #elif defined(__SVR4) && defined(__sun)

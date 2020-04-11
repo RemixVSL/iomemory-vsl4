@@ -39,10 +39,6 @@
 #include <fio/port/stdint.h>
 #else
 #include <linux/types.h>
-#if defined(__VMKLNX__)
-#include <linux/string.h>
-#include <linux/mutex.h>
-#endif
 #endif
 #include <fio/port/bitops.h>
 #include <fio/port/common-linux/commontypes.h>
@@ -216,11 +212,6 @@ typedef int (*fusion_kthread_func_t)(void *);
 //nand_device can be NULL in the following fxn call
 int fusion_create_kthread(fusion_kthread_func_t func, void *data, void *fusion_nand_device,
                           const char *fmt, ...);
-#if defined(__VMKLNX__)
-struct task_struct *fusion_esx_create_kthread(fusion_kthread_func_t func, void *data,
-                                              void *fusion_nand_device, const char *fmt, ...);
-void fusion_esx_wakeup_thread(struct task_struct *ts);
-#endif
 
 ////#define kfio_page_address(pg)          page_address(pg)
 
@@ -234,11 +225,7 @@ void fusion_esx_wakeup_thread(struct task_struct *ts);
 #endif
 
 // Returns true if we're running on what is considered a server OS
-#if defined(__VMKLNX__)
-#define fusion_is_server_os()     1
-#else
 #define fusion_is_server_os()     0
-#endif
 
 #if defined(__i386__)
 
@@ -282,15 +269,8 @@ static inline unsigned long long kfio_rdtsc(void)
 
 #endif
 
-#if defined(__VMKLNX__)
-/* FH-11140: ESX can crash under certain proc operations, using sysctl kinfo
- *           backend.  Thus, we use the agnostic backend instead.
- */
-#define KFIO_INFO_USE_OS_BACKEND 0
-#else
 /* Linux port implements kinfo backend using sysctl. */
 #define KFIO_INFO_USE_OS_BACKEND 1
-#endif
 
 /**
  * @}

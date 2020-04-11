@@ -188,7 +188,7 @@
 #define FUSION_DEBUG_MEMORY 0
 
 /* Turn on internal-only features */
-#define FUSION_INTERNAL 1
+#define FUSION_INTERNAL 0
 
 /* The major version of this build */
 #define FUSION_MAJOR_VERSION "4"

@@ -33,9 +33,7 @@
 # include <fio/port/userspace/stdint.h>
 #elif defined(UEFI)
 # include <fio/port/uefi/stdint.h>
-#elif (defined(__VMKAPI__))
-#include <fio/port/esxi6/stdint.h>
-#elif (defined(__linux__) && !defined(SICORTEX)) || defined(__VMKLNX__)
+#elif (defined(__linux__) && !defined(SICORTEX))
 # include <fio/port/common-linux/stdint.h>
 #elif defined(__SVR4) && defined(__sun)
 # include <fio/port/solaris/stdint.h>

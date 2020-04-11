@@ -35,7 +35,7 @@
 
 #if defined(USERSPACE_KERNEL)
 # include <fio/port/userspace/compiler.h>
-#elif defined(__linux__) || defined(__VMKLNX__)
+#elif defined(__linux__)
 # include <fio/port/gcc/compiler.h>
 #elif defined(__SVR4) && defined(__sun)
 # include <fio/port/solaris/compiler.h>

@@ -152,18 +152,11 @@ int kfio_platform_init_block_interface(void)
     return fio_major <= 0 ? -EBUSY : 0;
 }
 
-
+// TODO: unregister_blkdev returns void. should cleanup.
 int kfio_platform_teardown_block_interface(void)
 {
-    int rc = 0;
-
-#if KFIOC_UNREGISTER_BLKDEV_RETURNS_VOID
     unregister_blkdev(fio_major, "fio");
-#else
-    rc = unregister_blkdev(fio_major, "fio");
-#endif
-
-    return rc;
+    return 0;
 }
 
 /******************************************************************************

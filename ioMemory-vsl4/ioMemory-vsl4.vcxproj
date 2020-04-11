@@ -84,7 +84,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions);CONFIG_BLOCK;CONFIG_BLK_DEV_INTEGRITY;__linux__</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);_DEBUG;_CONSOLE;__GNUC__;CONFIG_BLOCK;CONFIG_BLK_DEV_INTEGRITY;__linux__;__KERNEL__</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include;C:\Users\dcassidy\source\repos\linux-kernel\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
