@@ -221,10 +221,10 @@ void noinline kfio_remove_proc_entry(const char *name, fusion_proc_dir_entry *pa
 fusion_proc_dir_entry * noinline kfio_create_proc_fops_entry(const char *name,
     fio_mode_t mode, fusion_proc_dir_entry *base, fusion_file_operations_t *fops, void *data)
 {
-#if KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
-    return proc_create_data(name, mode, base, (struct proc_ops *)pops, data);
-#elif ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+#if ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
     return proc_create_data(name, mode, base, (struct file_operations *)fops, data);
+#elif KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+    return proc_create_data(name, mode, base, (struct proc_ops *)fops, data);
 #endif /* KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */
 }
 
@@ -290,29 +290,34 @@ void kfio_set_file_ops_release_handler(fusion_file_operations_t *fops, void *rel
     ((struct file_operations *)fops)->release = (file_ops_release_fn)release;
 }
 #elif KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
-void kfio_set_file_ops_llseek_handler(fusion_file_operations_t *fops, void *llseek)
+/* TODO: check if we need to make the full conversion to proc_ops, now we cheat
+   our way through it by just pretending we're dumb deaf and blind, and reuse
+   the botched allocated memory that was there before
+*/
+
+void kfio_set_file_ops_llseek_handler(fusion_file_operations_t *pops, void *llseek)
 {
-    ((struct file_operations *)fops)->proc_llseek = (file_ops_llseek_fn)llseek;
+    ((struct proc_ops *)pops)->proc_lseek = (file_ops_llseek_fn)llseek;
 }
 
-void kfio_set_file_ops_read_handler(fusion_file_operations_t *fops, void *read)
+void kfio_set_file_ops_read_handler(fusion_file_operations_t *pops, void *read)
 {
-    ((struct file_operations *)fops)->proc_read = (file_ops_read_fn)read;
+    ((struct proc_ops *)pops)->proc_read = (file_ops_read_fn)read;
 }
 
-void kfio_set_file_ops_write_handler(fusion_file_operations_t *fops, void *write)
+void kfio_set_file_ops_write_handler(fusion_file_operations_t *pops, void *write)
 {
-    ((struct file_operations *)fops)->proc_write = (file_ops_write_fn)write;
+    ((struct proc_ops *)pops)->proc_write = (file_ops_write_fn)write;
 }
 
-void kfio_set_file_ops_open_handler(fusion_file_operations_t *fops, void *open)
+void kfio_set_file_ops_open_handler(fusion_file_operations_t *pops, void *open)
 {
-    ((struct file_operations *)fops)->proc_open = (file_ops_open_fn)open;
+    ((struct proc_ops *)pops)->proc_open = (file_ops_open_fn)open;
 }
 
-void kfio_set_file_ops_release_handler(fusion_file_operations_t *fops, void *release)
+void kfio_set_file_ops_release_handler(fusion_file_operations_t *pops, void *release)
 {
-    ((struct file_operations *)fops)->proc_release = (file_ops_release_fn)release;
+    ((struct proc_ops *)pops)->proc_release = (file_ops_release_fn)release;
 }
 
 #endif /* ! KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS */

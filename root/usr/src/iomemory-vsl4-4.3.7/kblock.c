@@ -253,7 +253,7 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
 
 
-// TODO: need to find a replacement for req->special. 
+// TODO: need to find a replacement for req->special.
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 {
 # if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
@@ -812,9 +812,6 @@ static unsigned long __kfio_bio_atomic(struct bio *bio)
 
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error)
 {
-    // bi_status is type blk_status_t, not an int errno, so must translate as necessary.
-    blk_status_t bio_status = BLK_STS_OK;
-
     if (unlikely(error != 0))
     {
         bio->bi_status = errno_to_blk_status(error);
