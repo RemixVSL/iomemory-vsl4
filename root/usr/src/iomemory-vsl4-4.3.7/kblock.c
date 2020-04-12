@@ -339,26 +339,14 @@ static void kfio_blk_complete_request(struct request* req, int error)
         dp->last_dispatch_rw = -1;
     }
 
-    /*
-     * Great, lets do completions. Mark us as doing that, and complete
-     * the list for up to 8 runs (or until it was empty).
-     */
     fio_set_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
-    for (i = 0; i < 8; i++)
-    {
-        if (!complete_list_entries(q, error, dp))
-        {
-            break;
-        }
-    }
 
-    /*
-     * Complete the list after clearing the bit, in case we raced with
-     * someone adding entries.
-     */
+    // tell the Kernel we are completing this request. If there's any bytes left, it should just requeue the rest.
+    blk_mq_end_request(req, error);
+
     fio_clear_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
-    complete_list_entries(q, error, dp);
 
+    // release the queue lock
     fusion_spin_unlock_irqrestore(&dp->queue_lock);
 }
 
@@ -378,11 +366,9 @@ static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
     struct request* req = (struct request*)fbio->fbio_parameter;
 
     if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP))
-    {
         kfio_dump_fbio(fbio);
-    }
 
-    kfio_blk_complete_request(req);
+    return kfio_blk_complete_request(req, error);
 }
 
 static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
@@ -667,37 +653,32 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    if (use_workqueue == USE_QUEUE_MQ)
-    {
-       int rv;
+ 
+    int rv;
 
-       disk->rq = NULL;
-       disk->tag_set.ops = &fio_mq_ops;
-       /* single hw queue path */
-       disk->tag_set.nr_hw_queues = 1;
-       /* Limit to 256 qd , need to run perf tests if this is OK */
-       disk->tag_set.queue_depth = 256;
-       disk->tag_set.numa_node = bdev->bdev_numa_node;
-       disk->tag_set.cmd_size = 0;
-       disk->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
-       disk->tag_set.driver_data = disk;
+    disk->rq = NULL;
+    disk->tag_set.ops = &fio_mq_ops;
+    /* single hw queue path */
+    disk->tag_set.nr_hw_queues = 1;
+    /* Limit to 256 qd , need to run perf tests if this is OK */
+    disk->tag_set.queue_depth = 256;
+    disk->tag_set.numa_node = bdev->bdev_numa_node;
+    disk->tag_set.cmd_size = 0;
+    disk->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
+    disk->tag_set.driver_data = disk;
 
-       rv = blk_mq_alloc_tag_set(&disk->tag_set);
-       if (!rv)
-       {
-          disk->rq = blk_mq_init_queue(&disk->tag_set);
-          if (IS_ERR(disk->rq))
-          {
-              blk_mq_free_tag_set(&disk->tag_set);
-              disk->rq = NULL;
-          }
-       }
-    }
-    else
+    rv = blk_mq_alloc_tag_set(&disk->tag_set);
+    if (rv == 0) // success
     {
-        if (disk->use_workqueue != USE_QUEUE_RQ)
-            disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
+        disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
+        disk->rq = blk_mq_init_queue(&disk->tag_set);
+        if (IS_ERR(disk->rq))
+        {
+            blk_mq_free_tag_set(&disk->tag_set);
+            disk->rq = NULL;
+        }
     }
+  
 
     if (disk->rq == NULL)
     {
@@ -1611,7 +1592,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
 {
     struct request_queue *rq;
 
-    test_safe_plugging();
+    test_safe_plugging(); // not sure if this is needed now.
 
     rq = blk_alloc_queue_node(GFP_NOIO, node);
     if (rq != NULL)
