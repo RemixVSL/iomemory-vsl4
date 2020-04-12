@@ -434,7 +434,7 @@ static uint8_t find_slot_number_bios(const struct pci_dev *dev)
     const uint8_t *stop_addr;
     void *bios_addr;
 
-    bios_addr = ioremap_nocache(BIOS_MEMORY_ADDRESS, BIOS_MEMORY_LEN);
+    bios_addr = ioremap(BIOS_MEMORY_ADDRESS, BIOS_MEMORY_LEN);
     if (bios_addr == NULL)
     {
         errprint_lbl(pci_name((struct pci_dev*)dev), ERRID_CMN_LINUX_PCI_MAP_BIO, "Could not map bios\n");
@@ -622,13 +622,13 @@ int kfio_pci_map_csr(kfio_pci_dev_t *pci_dev, const char *device_label, struct k
     if ((bar_phys = kfio_pci_resource_start(pci_dev, barnum)) != 0)
     {
         infprint("%s: mapping controller on BAR %u\n", device_label, barnum);
-        csr->csr_virt = ioremap_nocache(bar_phys, kfio_pci_resource_len(pci_dev, barnum));
+        csr->csr_virt = ioremap(bar_phys, kfio_pci_resource_len(pci_dev, barnum));
     }
     else
     {
         infprint("%s: mapping controller on BAR 0 (fallback)\n", device_label);
         bar_phys = kfio_pci_resource_start (pci_dev, 0);
-        csr->csr_virt = ioremap_nocache(bar_phys, kfio_pci_resource_len(pci_dev, 0));
+        csr->csr_virt = ioremap(bar_phys, kfio_pci_resource_len(pci_dev, 0));
     }
 
     if (csr->csr_virt == NULL)
