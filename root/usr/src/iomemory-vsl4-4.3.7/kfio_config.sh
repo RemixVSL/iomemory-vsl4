@@ -110,17 +110,18 @@ update_timeout()
 # while still having stdout and stderr sent to . . . stdout and stderr!
 open_log()
 {
+    FIFO_DIR=$CONFIGDIR
     # The tee processes will die when this process exits.
-    rm -f "$CONFIGDIR/kfio_config.stdout" "$CONFIGDIR/kfio_config.stderr" "$CONFIGDIR/kfio_config.log"
+    rm -f "$FIFO_DIR/kfio_config.stdout" "$FIFO_DIR/kfio_config.stderr" "$FIFO_DIR/kfio_config.log"
     exec 3>&1 4>&2
-    touch "$CONFIGDIR/kfio_config.log"
-    mkfifo "$CONFIGDIR/kfio_config.stdout"
-    tee -a "$CONFIGDIR/kfio_config.log" <"$CONFIGDIR/kfio_config.stdout" >&3 &
-    mkfifo "$CONFIGDIR/kfio_config.stderr"
-    tee -a "$CONFIGDIR/kfio_config.log" <"$CONFIGDIR/kfio_config.stderr" >&4 &
-    exec >"$CONFIGDIR/kfio_config.stdout"  2>"$CONFIGDIR/kfio_config.stderr"
+    touch "$FIFO_DIR/kfio_config.log"
+    mkfifo "$FIFO_DIR/kfio_config.stdout"
+    tee -a "$FIFO_DIR/kfio_config.log" <"$FIFO_DIR/kfio_config.stdout" >&3 &
+    mkfifo "$FIFO_DIR/kfio_config.stderr"
+    tee -a "$FIFO_DIR/kfio_config.log" <"$FIFO_DIR/kfio_config.stderr" >&4 &
+    exec >"$FIFO_DIR/kfio_config.stdout"  2>"$FIFO_DIR/kfio_config.stderr"
     # Don't need these now that everything is connected
-    rm -f "$CONFIGDIR/kfio_config.stdout" "$CONFIGDIR/kfio_config.stderr"
+    rm -f "$FIFO_DIR/kfio_config.stdout" "$FIFO_DIR/kfio_config.stderr"
 }
 
 
