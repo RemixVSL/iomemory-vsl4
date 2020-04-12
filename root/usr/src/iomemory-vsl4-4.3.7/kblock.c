@@ -307,7 +307,7 @@ static void kfio_blk_complete_request(struct request* req, int error)
      * anymore.
      */
     last_sector = blk_rq_pos(req) + (blk_rq_bytes(req) >> 9);
-    last_rw = rq_data_dir(req);
+    last_rw = rq_data_dir(req); // READ or WRITE
 
     /*
      * Add this completion entry atomically to the shared completion
@@ -361,6 +361,11 @@ static inline bool rq_is_empty_flush(const struct request* req)
     return ((blk_rq_bytes(req) == 0) && (req_op(req) == REQ_OP_FLUSH)) ? true : false;
 }
 
+/* 
+ *  Callback on the completion of a bio
+ *
+ *
+*/
 static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
 {
     struct request* req = (struct request*)fbio->fbio_parameter;
@@ -501,7 +506,6 @@ static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
     return fbio;
 }
 
-// TODO: need to find a replacement for req->special. 
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 {
     struct kfio_disk *disk = hctx->driver_data;
