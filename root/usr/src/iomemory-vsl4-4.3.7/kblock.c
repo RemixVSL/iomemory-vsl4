@@ -269,6 +269,7 @@ static inline void kfio_set_comp_cpu(kfio_bio_t* fbio, struct bio* bio)
  */
 static int complete_list_entries(struct request_queue* q, int error, struct kfio_disk* dp)
 {
+    kfio_bio_t* fbio;
     struct request* req;
     struct fio_atomic_list list;
     struct fio_atomic_list* entry, * tmp;
@@ -281,8 +282,9 @@ static int complete_list_entries(struct request_queue* q, int error, struct kfio
 
     fusion_atomic_list_for_each(entry, tmp, &list)
     {
-        req = void_container(entry, struct request, special);
-        blk_mq_complete_request(req, error);
+        fbio = (kfio_bio_t*)entry;
+        req = (struct request*)fbio->fbio_parameter;
+        blk_mq_complete_request(req);
         completed++;
     }
 
@@ -313,7 +315,7 @@ static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
         kfio_dump_fbio(fbio);
 
     struct request* req = (struct request*)fbio->fbio_parameter;
-    struct kfio_disk* dp = q->queuedata;
+    struct kfio_disk* dp = req->q->queuedata;
     struct fio_atomic_list* entry;
     sector_t last_sector;
     int      last_rw;
