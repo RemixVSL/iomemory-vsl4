@@ -954,37 +954,34 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
     kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
+    struct gendisk* gd = disk->gd;
 
-    if (disk == NULL)
+    if (disk == NULL || disk->use_workqueue != USE_QUEUE_NONE)
     {
         return;
     }
 
-    if (dir == BIO_DIR_WRITE)
+    switch (dir) {
+    case BIO_DIR_WRITE:
     {
-        if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
-        {
-            struct gendisk *gd = disk->gd;
-
-            part_stat_lock();
-            part_stat_inc(&gd->part0, ios[1]);
-            part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
-            part_stat_add(&gd->part0, nsecs[1],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-            part_stat_unlock();
-        }
+        part_stat_lock();
+        part_stat_inc(&gd->part0, ios[1]);
+        part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
+        part_stat_add(&gd->part0, nsecs[1], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
+        part_stat_unlock();
+        break;
     }
-    else if (dir == BIO_DIR_READ)
+    case BIO_DIR_READ:
     {
-        if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
-        {
-            struct gendisk *gd = disk->gd;
-
-            part_stat_lock();
-            part_stat_inc(&gd->part0, ios[0]);
-            part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
-            part_stat_add(&gd->part0, nsecs[0],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-            part_stat_unlock();
-        }
+        part_stat_lock();
+        part_stat_inc(&gd->part0, ios[0]);
+        part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
+        part_stat_add(&gd->part0, nsecs[0], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
+        part_stat_unlock();
+        break;
+    }
+    default:
+        return;
     }
 }
 
