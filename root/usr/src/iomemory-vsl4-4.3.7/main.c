@@ -73,7 +73,7 @@ static uint32_t fio_init_state;
 #define FIO_INIT_STATE_SYSRQ   0x0008
 
 
-//TODO: I am not sure what this does. Seems many of these functions lack definitions.
+
 /// @brief Driver initialization for parts that do not require cleanup if initialization fails.
 /// @note  The companion fio_do_exit() function may be called at any time, regardless of the
 ///        status of fio_do_init(). However, on error, a call to fio_do_exit() is unnecessary
@@ -143,21 +143,25 @@ static int __init init_fio_driver(void)
 {
     int rc = 0;
 
+// wtf is this?
 #if defined(__MONO_KERNEL__)
     auto_attach = 0;
 #endif
 
-    // just force use_workqueue == USE_QUEUE_MQ
-    /*if (use_workqueue == USE_QUEUE_MQ)
-    {
-        infprint("blk-mq not supported: Reverting use_workqueue=4 to use_workqueue=0.\n");
-        use_workqueue = USE_QUEUE_NONE;
+    switch (use_workqueue) {
+        case USE_QUEUE_MQ:
+            infprint("WARNING: blk-mq is still experimental and should NOT be used in production.\n");
+            break;
+        case USE_QUEUE_RQ:
+            infprint("Using default Linux block I/O scheduler\n");
+            break;
+        case USE_QUEUE_NONE:
+            infprint("No Queue strategy is set.\n");
+            break;
+        default:
+            infprint("Using unknown or invalid queue strategy, aborting driver startup.\n");
+            return -1;
     }
-
-    if (use_workqueue == USE_QUEUE_RQ)
-    {
-        infprint("Using Linux I/O Scheduler\n");
-    }*/
 
     /* If the LEB map isn't loaded then don't bother trying to auto attach */
     if (!iodrive_load_eb_map)

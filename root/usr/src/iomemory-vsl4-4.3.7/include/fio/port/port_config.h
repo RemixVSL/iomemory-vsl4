@@ -190,6 +190,9 @@
 /* Turn on internal-only features */
 #define FUSION_INTERNAL 0
 
+/* Turn on debugging statements */
+#define FUSION_DEBUG 1
+
 /* The major version of this build */
 #define FUSION_MAJOR_VERSION "4"
 

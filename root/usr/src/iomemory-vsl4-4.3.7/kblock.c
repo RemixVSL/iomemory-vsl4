@@ -659,30 +659,43 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    /* blk_mq_init_sq_queue will allocate a new tag set by calling blk_mq_alloc_tag_set,
-    *  then will call blk_mq_init_queue for us. If allocation fails, blk_mq_free_tag_set is 
-    *  then called by the kernel.
-    *
-    *  We are setting a QD of 256 and flags of BLK_MQ_F_SHOULD_MERGE. 
-    *   
-    *  We should test changing the QD at runtime to see what would achieve best performance.
-    *  The flags parameter takes a value of BLK_MQ_F_* flags, but there's no docs on what they
-    *  all mean.
-    *
-    */
     disk->rq = NULL;
-    disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
-    if (IS_ERR(disk->rq))
-    {
-        /* Undo work done so far. */
-        linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
-        return -ENOMEM;
-    }
 
-    // manually add our preferred NUMA node and driver data
-    disk->tag_set.numa_node = bdev->bdev_numa_node;
-    disk->tag_set.cmd_size = 0;
-    disk->tag_set.driver_data = disk;
+    switch(use_workqueue)
+    {
+        case USE_QUEUE_MQ:
+        {
+            /* blk_mq_init_sq_queue will allocate a new tag set by calling blk_mq_alloc_tag_set,
+            *  then will call blk_mq_init_queue for us. If allocation fails, blk_mq_free_tag_set is
+            *  then called by the kernel.
+            *
+            *  We are setting a QD of 256 and flags of BLK_MQ_F_SHOULD_MERGE.
+            *
+            *  We should test changing the QD at runtime to see what would achieve best performance.
+            *  The flags parameter takes a value of BLK_MQ_F_* flags, but there's no docs on what they
+            *  all mean.
+            *
+            */
+            
+            disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
+
+            if (IS_ERR(disk->rq))
+                goto err; // maybe move error handler to another function with extra logging?
+
+            // success: manually add our preferred NUMA node and driver data now.
+            disk->tag_set.numa_node = bdev->bdev_numa_node;
+            disk->tag_set.cmd_size = 0;
+            disk->tag_set.driver_data = disk;
+            break;
+        }
+        case USE_QUEUE_NONE:
+            disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
+            if (IS_ERR(disk->rq))
+                goto err; // maybe move error handler to another function with extra logging?
+            break;
+        case default:
+            goto err; // this should not happen
+    }
 
     rq = disk->rq;
 
@@ -783,6 +796,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
      */
     coms_wait_for_dev(gd->disk_name);
     return 0;
+
+err:
+/* Undo work done so far. */
+linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
+return -ENOMEM;
 }
 
 static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
@@ -932,7 +950,7 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
     bdev->bdev_gd = NULL;
 }
 
-
+//TODO: this function as it stands does nothing unless queueing is disabled.
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
     kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
