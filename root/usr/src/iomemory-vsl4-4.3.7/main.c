@@ -150,7 +150,12 @@ static int __init init_fio_driver(void)
 
     switch (use_workqueue) {
         case USE_QUEUE_MQ:
+#ifndef FUSION_DEBUG
+            infprint("ERROR: USE_QUEUE_MQ can only be enabled if FUSION_DEBUG is set due to experimental code.\n");
+            return -1;
+#else
             infprint("WARNING: blk-mq is still experimental and should NOT be used in production.\n");
+#endif
             break;
         case USE_QUEUE_RQ:
             infprint("Using default Linux block I/O scheduler\n");
