@@ -693,7 +693,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             if (IS_ERR(disk->rq))
                 goto err; // maybe move error handler to another function with extra logging?
             break;
-        case default:
+        default:
             goto err; // this should not happen
     }
 
