@@ -72,12 +72,19 @@ static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_fli
 #define BI_SECTOR(bio) (bio->bi_iter.bi_sector)
 #define BI_IDX(bio) (bio->bi_iter.bi_idx)
 
+/*
+ * Typeless container_of(), since we are abusing a different type for
+ * our atomic list entry.
+ */
+#define void_container(e, t, f) (t*)(((fio_uintptr_t)(t*)((char *)(e))-((fio_uintptr_t)&((t*)0)->f)))
+
 /******************************************************************************
  *   Block request and bio processing methods.                                *
  ******************************************************************************/
 
 struct kfio_disk
 {
+    kfio_bio_t           *fbio;
     struct fio_bdev      *bdev;
     struct gendisk       *gd;
     struct request_queue *rq;
@@ -252,36 +259,273 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_no
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
 
+static inline void kfio_set_comp_cpu(kfio_bio_t* fbio, struct bio* bio)
+{
+    return kfio_bio_set_cpu(fbio, kfio_current_cpu());
+}
 
-// TODO: need to find a replacement for req->special.
+/*
+ * Splice completion list to local list and handle them
+ */
+static int complete_list_entries(struct request_queue* q, int error, struct kfio_disk* dp)
+{
+    kfio_bio_t* fbio;
+    struct request* req;
+    struct fio_atomic_list list;
+    struct fio_atomic_list* entry, * tmp;
+    int completed = 0;
+
+    fusion_atomic_list_init(&list);
+    fusion_atomic_list_splice(&dp->comp_list, &list);
+    if (fusion_atomic_list_empty(&list))
+        return completed;
+
+    fusion_atomic_list_for_each(entry, tmp, &list)
+    {
+        fbio = (kfio_bio_t*)entry;
+        req = (struct request*)fbio->fbio_parameter;
+        blk_mq_complete_request(req);
+        completed++;
+    }
+
+    kassert(dp->pending >= completed);
+    dp->pending -= completed;
+    return completed;
+}
+
+/// @brief determine if a block request is an empty flush.
+///
+/// NB: any write request may have the flush bit set, but we do not treat
+/// those as special, since all writes are powercut safe and may not be
+/// reordered. This function detects only zero-length requests with the
+/// flush bit set, which do require special handling.
+static inline bool rq_is_empty_flush(const struct request* req)
+{
+    return ((blk_rq_bytes(req) == 0) && (req_op(req) == REQ_OP_FLUSH)) ? true : false;
+}
+
+/* 
+ *  Callback on the completion of a bio by the HW
+ *
+ *
+*/
+static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
+{
+    if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP))
+        kfio_dump_fbio(fbio);
+
+    struct request* req = (struct request*)fbio->fbio_parameter;
+    struct kfio_disk* dp = req->q->queuedata;
+    struct fio_atomic_list* entry;
+    sector_t last_sector;
+    int      last_rw;
+
+    /*
+     * Save a local copy of the last sector in the request before putting
+     * it onto atomic completion list. Once it is there, requests is up for
+     * grabs for others completors and we cannot legally access its fields
+     * anymore.
+     */
+    last_sector = blk_rq_pos(req) + (blk_rq_bytes(req) >> 9);
+    last_rw = rq_data_dir(req); // READ or WRITE
+
+    /*
+     * Add this completion entry atomically to the shared completion
+     * list.
+     */
+    entry = (struct fio_atomic_list*) & dp->fbio;
+    fusion_atomic_list_init(entry);
+    fusion_atomic_list_add(entry, &dp->comp_list);
+
+    /*
+     * Next try and grab the queue_lock, which we need for completion.
+     * If we succeed, set that we are now doing completions with the
+     * KFIO_DISK_COMPLETION bit. If we fail, check if someone is already
+     * doing completions. If they are, we are golden. They will see our
+     * completion entry and do it in due time. If not, repeat the lock
+     * check and completion bit check.
+     */
+    while (!fusion_spin_trylock_irqsave(&dp->queue_lock))
+    {
+        if (fio_test_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state))
+            return; // someone else has the lock?
+
+        cpu_relax();
+    }
+
+    if (dp->last_dispatch == last_sector && dp->last_dispatch_rw == last_rw)
+    {
+        dp->last_dispatch = 0;
+        dp->last_dispatch_rw = -1;
+    }
+
+    fio_set_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
+
+    // since we got the lock, complete all entries in the completion list.
+    complete_list_entries(req->q, error, dp);
+
+    fio_clear_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
+
+    // release the queue lock
+    fusion_spin_unlock_irqrestore(&dp->queue_lock);
+}
+
+static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
+    bool can_block)
+{
+    struct fio_bdev* bdev = disk->bdev;
+    kfio_bio_t* fbio;
+
+    if (can_block)
+    {
+        fbio = kfio_bio_alloc(bdev);
+    }
+    else
+    {
+        fbio = kfio_bio_try_alloc(bdev);
+    }
+
+    if (fbio == NULL)
+        return NULL;
+    
+    kassert(blk_rq_bytes(req) % bdev->bdev_block_size == 0);
+
+    fbio->fbio_range.base = (blk_rq_pos(req) << 9) / bdev->bdev_block_size;
+    fbio->fbio_range.length = blk_rq_bytes(req) / bdev->bdev_block_size;
+
+    fbio->fbio_completor = kfio_req_completor;
+    fbio->fbio_parameter = (fio_uintptr_t)req;
+
+    /* Detect flush barrier requests. */
+    if (rq_is_empty_flush(req))
+    {
+        fbio->fbio_cmd = KBIO_CMD_FLUSH;
+
+        // Zero-length flush requests sometimes have uninitialized blk_rq_pos
+        // when received from the OS. Force a valid address to prevent woe
+        // elsewhere in the driver.
+        fbio->fbio_range.base = 0;
+
+        /* Actually flush on non-powercut-safe cards */
+        fbio->fbio_flags |= KBIO_FLG_SYNC;
+    }
+    else
+    {
+        /* Detect trim requests. */
+        if (enable_discard &&
+            (req_op(req) == REQ_OP_DISCARD))
+        {
+            kassert((blk_rq_pos(req) << 9) % bdev->bdev_block_size == 0);
+            fbio->fbio_cmd = KBIO_CMD_DISCARD;
+        }
+        else
+            /* This is a read or write request. */
+        {
+            struct bio* lbio;
+            int error = 0;
+
+            kassert((blk_rq_pos(req) << 9) % bdev->bdev_block_size == 0);
+
+            kfio_set_comp_cpu(fbio, req->bio);
+
+            if (rq_data_dir(req) == WRITE)
+            {
+                int sync_write = rq_is_sync(req);
+
+                fbio->fbio_cmd = KBIO_CMD_WRITE;
+
+                sync_write |= req->cmd_flags & REQ_FUA;
+
+                if (sync_write)
+                    fbio->fbio_flags |= KBIO_FLG_SYNC;
+            }
+            else
+            {
+                fbio->fbio_cmd = KBIO_CMD_READ;
+            }
+
+            __rq_for_each_bio(lbio, req)
+            {
+                error = kfio_sgl_map_bio(fbio->fbio_sgl, lbio);
+                
+                /* This should not happen. */
+                if (error != 0)
+                {
+                    kfail();
+                    kfio_bio_free(fbio);
+                    return NULL;
+                }
+            }
+
+            /*
+             * Sanity checking: combined length of all bios should cover request
+             * size. Only makes sense if above iteration over bios was successful.
+             */
+            if (error == 0 && kfio_bio_chain_size_bytes(fbio) != kfio_sgl_size(fbio->fbio_sgl))
+            {
+                // ESX 40u1 wins this time...
+                errprint_all(ERRID_LINUX_KBLK_REQ_MISMATCH, "Request size mismatch. Request size %llu dma size %u\n",
+                    kfio_bio_chain_size_bytes(fbio), kfio_sgl_size(fbio->fbio_sgl));
+
+                infprint("Request cmd 0x%016llx\n", (uint64_t)req->cmd_flags);
+
+                __rq_for_each_bio(lbio, req)
+                {
+
+                    struct bio_vec vec;
+                    struct bvec_iter bv_i;
+
+                    infprint("\tbio %p sector %lu size 0x%08x flags 0x%08lx op 0x%08x op_flags 0x%04x\n", lbio,
+                        (unsigned long)BI_SECTOR(lbio), BI_SIZE(lbio), (unsigned long)lbio->bi_flags,
+                        bio_op(lbio), bio_flags(lbio));
+
+                    infprint("\t\tvcnt %u idx %u\n", lbio->bi_vcnt, BI_IDX(lbio));
+
+                    bio_for_each_segment(vec, lbio, bv_i)
+                    {
+                        infprint("vec %d: page %p offset %u len %u\n", bv_i.bi_idx, vec.bv_page,
+                            vec.bv_offset, vec.bv_len);
+                    }
+                }
+                infprint("SGL content:\n");
+                kfio_sgl_dump(fbio->fbio_sgl, NULL, "\t", 0);
+                error = -EIO; /* Any non-zero value will serve. */
+            }
+
+            
+
+            kassert(kfio_bio_chain_size_bytes(fbio) == kfio_sgl_size(fbio->fbio_sgl));
+        }
+    }
+    return fbio;
+}
+
 static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq_queue_data *bd)
 {
-# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
     struct kfio_disk *disk = hctx->driver_data;
-# endif
     struct request *req = bd->rq;
     kfio_bio_t *fbio;
     int rc;
 
-# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
-    fbio = req->special;
+    fbio = disk->fbio;
     if (!fbio)
     {
-# else
-    // fbio = kfio_request_to_bio(disk, req, false);;
-# endif
-# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
-    }
-# endif
-    if (!fbio)
-    {
-        goto busy;
+        // allocate a new fbio if it doesn't exist
+        fbio = kfio_request_to_bio(disk, req, false);
+
+        if (!fbio) {
+            // handle failure by delaying the next queue run for 1 microsecond...
+            blk_mq_delay_run_hw_queue(hctx, 1);
+            return BLK_STS_RESOURCE;
+        }
     }
 
     fbio->fbio_flags |= KBIO_FLG_NONBLOCK;
 
+    // tell the Kernel we're about to start processing a request
     blk_mq_start_request(req);
 
+    // submit bio to the HW
     rc = kfio_bio_submit_handle_retryable(fbio);
     if (rc)
     {
@@ -291,26 +535,23 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
              * "busy error" conditions. Store the prepped part
              * for faster retry, and exit.
              */
-# if KFIOC_X_REQUEST_QUEUE_HAS_SPECIAL
-            req->special = fbio;
-# endif
-            goto retry;
+            disk->fbio = fbio;
+            blk_mq_run_hw_queues(hctx->queue, true);
+            return BLK_STS_RESOURCE;
         }
         /*
          * Bio already completed, we'll just return QUEUE_OK as we should not
          * touch it anymore.
          */
     }
-
     return BLK_STS_OK;
-busy:
-    blk_mq_delay_run_hw_queue(hctx, 1);
-    return BLK_STS_RESOURCE;
-retry:
-    blk_mq_run_hw_queues(hctx->queue, true);
-    return BLK_STS_RESOURCE;
 }
 
+/*
+* Add a kfio_disk* to a blk_mq_hw_ctx->(void*)driver_data member.
+* 
+* kfio_disk should be unique per card. It gets saved in the hw ctx and is passed on to fio_queue_rq.
+*/
 static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 {
     struct kfio_disk *disk = data;
@@ -320,12 +561,15 @@ static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 }
 
 static struct blk_mq_ops fio_mq_ops = {
-    /* TODO: The original code set .map_queues explicitly to NULL
-     * to avoid the GPL or something. We need to test the effects
-     * of removing this code bit down the line.
+    /* 
+     * fio_queue_rq is responsible for dispatching a request to the driver.
+     * It will be called by by the Kernel when there's data in the request_queue for us to process.
      */
     .queue_rq   = fio_queue_rq,
-    .map_queues = NULL,
+
+    /*
+    * fio_init_hctx is called once during driver initialization.
+    */
     .init_hctx  = fio_init_hctx
 };
 
@@ -415,43 +659,42 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    if (use_workqueue == USE_QUEUE_MQ)
-    {
-       int rv;
+    disk->rq = NULL;
 
-       disk->rq = NULL;
-       disk->tag_set.ops = &fio_mq_ops;
-       /* single hw queue path */
-       disk->tag_set.nr_hw_queues = 1;
-       /* Limit to 256 qd , need to run perf tests if this is OK */
-       disk->tag_set.queue_depth = 256;
-       disk->tag_set.numa_node = bdev->bdev_numa_node;
-       disk->tag_set.cmd_size = 0;
-       disk->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
-       disk->tag_set.driver_data = disk;
-
-       rv = blk_mq_alloc_tag_set(&disk->tag_set);
-       if (!rv)
-       {
-          disk->rq = blk_mq_init_queue(&disk->tag_set);
-          if (IS_ERR(disk->rq))
-          {
-              blk_mq_free_tag_set(&disk->tag_set);
-              disk->rq = NULL;
-          }
-       }
-    }
-    else
+    switch(use_workqueue)
     {
-        if (disk->use_workqueue != USE_QUEUE_RQ)
+        case USE_QUEUE_MQ:
+        {
+            /* blk_mq_init_sq_queue will allocate a new tag set by calling blk_mq_alloc_tag_set,
+            *  then will call blk_mq_init_queue for us. If allocation fails, blk_mq_free_tag_set is
+            *  then called by the kernel.
+            *
+            *  We are setting a QD of 256 and flags of BLK_MQ_F_SHOULD_MERGE.
+            *
+            *  We should test changing the QD at runtime to see what would achieve best performance.
+            *  The flags parameter takes a value of BLK_MQ_F_* flags, but there's no docs on what they
+            *  all mean.
+            *
+            */
+            
+            disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
+
+            if (IS_ERR(disk->rq))
+                goto err; // maybe move error handler to another function with extra logging?
+
+            // success: manually add our preferred NUMA node and driver data now.
+            disk->tag_set.numa_node = bdev->bdev_numa_node;
+            disk->tag_set.cmd_size = 0;
+            disk->tag_set.driver_data = disk;
+            break;
+        }
+        case USE_QUEUE_NONE:
             disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
-    }
-
-    if (disk->rq == NULL)
-    {
-        /* Undo work done so far. */
-        linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
-        return -ENOMEM;
+            if (IS_ERR(disk->rq))
+                goto err; // maybe move error handler to another function with extra logging?
+            break;
+        default:
+            goto err; // this should not happen
     }
 
     rq = disk->rq;
@@ -471,6 +714,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         rq->limits.discard_granularity = bdev->bdev_block_size;
     }
 
+    /* Enable writeback cache */
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
     /* Tell the kernel we are a non-rotational storage device */
     blk_queue_flag_set(QUEUE_FLAG_NONROT, rq);
@@ -505,7 +749,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     /*
      * Offload device exposure to separate worker thread. On some kernels from
-     * certain vendores add_disk is happy do do a lot of nested processing,
+     * certain vendors add_disk is happy do do a lot of nested processing,
      * eating through limited kernel stack space.
      */
     param = kfio_malloc(sizeof(*param));
@@ -552,10 +796,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
      */
     coms_wait_for_dev(gd->disk_name);
     return 0;
-}
 
-static void kfio_kill_requests(struct request_queue *q)
-{
+err:
+/* Undo work done so far. */
+linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
+return -ENOMEM;
 }
 
 static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
@@ -594,13 +839,14 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
         /*
          * The queue is stopped and dead and no new user requests will be
          * coming to it anymore. Fetch remaining already queued requests
-         * and fail them,
+         * and fail them.
          */
-        if (disk->use_workqueue == USE_QUEUE_RQ)
+        if (disk->use_workqueue == USE_QUEUE_RQ || disk->use_workqueue == USE_QUEUE_MQ)
         {
-            kfio_kill_requests(disk->rq);
+            // I don't see a corresponding function in blk_mq that does the same thing.
+            blk_cleanup_queue(disk->rq);
         }
-        else if (disk->use_workqueue != USE_QUEUE_MQ)
+        else
         {
             /* Fail all bio's already on internal bio queue. */
             struct bio *bio;
@@ -704,41 +950,38 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
     bdev->bdev_gd = NULL;
 }
 
-
+//TODO: this function as it stands does nothing unless queueing is disabled.
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
     kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
+    struct gendisk* gd = disk->gd;
 
-    if (disk == NULL)
+    if (disk == NULL || disk->use_workqueue != USE_QUEUE_NONE)
     {
         return;
     }
 
-    if (dir == BIO_DIR_WRITE)
+    switch (dir) {
+    case BIO_DIR_WRITE:
     {
-        if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
-        {
-            struct gendisk *gd = disk->gd;
-
-            part_stat_lock();
-            part_stat_inc(&gd->part0, ios[1]);
-            part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
-            part_stat_add(&gd->part0, nsecs[1],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-            part_stat_unlock();
-        }
+        part_stat_lock();
+        part_stat_inc(&gd->part0, ios[1]);
+        part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
+        part_stat_add(&gd->part0, nsecs[1], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
+        part_stat_unlock();
+        break;
     }
-    else if (dir == BIO_DIR_READ)
+    case BIO_DIR_READ:
     {
-        if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
-        {
-            struct gendisk *gd = disk->gd;
-
-            part_stat_lock();
-            part_stat_inc(&gd->part0, ios[0]);
-            part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
-            part_stat_add(&gd->part0, nsecs[0],   kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
-            part_stat_unlock();
-        }
+        part_stat_lock();
+        part_stat_inc(&gd->part0, ios[0]);
+        part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
+        part_stat_add(&gd->part0, nsecs[0], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
+        part_stat_unlock();
+        break;
+    }
+    default:
+        return;
     }
 }
 
@@ -791,13 +1034,6 @@ static void kfio_dump_bio(const char *msg, const struct bio * const bio)
              bio->bi_end_io, bio->bi_private);
 
     infprint("%s: integrity: %p", msg, bio_integrity(bio) );
-}
-
-static inline void kfio_set_comp_cpu(kfio_bio_t *fbio, struct bio *bio)
-{
-    int cpu;
-    cpu = kfio_current_cpu();
-    kfio_bio_set_cpu(fbio, cpu);
 }
 
 static unsigned long __kfio_bio_sync(struct bio *bio)
@@ -1369,7 +1605,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
 {
     struct request_queue *rq;
 
-    test_safe_plugging();
+    test_safe_plugging(); // not sure if this is needed now.
 
     rq = blk_alloc_queue_node(GFP_NOIO, node);
     if (rq != NULL)
@@ -1441,7 +1677,7 @@ void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
         if (atomic_dec_return(&disk->lock_pending) > 0)
         {
             atomic_set(&disk->lock_pending, 0);
-            //kfio_restart_queue(q); function does nothing.
+
         }
     }
 }

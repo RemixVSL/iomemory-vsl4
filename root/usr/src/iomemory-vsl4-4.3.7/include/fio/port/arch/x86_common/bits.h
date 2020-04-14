@@ -33,7 +33,7 @@
 
 typedef uint32_t fusion_bits_t;
 
-#if defined(_MSC_VER)  /* MS compiler for MS Windows and UEFI */
+#if defined(_MSC_VER) /* MS compiler for MS Windows and UEFI */
 /**
  * @brief: returns 1 iff bit # v is set in *p else returns 0.
  */

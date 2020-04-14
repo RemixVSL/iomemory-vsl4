@@ -1,0 +1,86 @@
+﻿  cdev.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\port-internal.h(40,1): fatal error C1189: #error:  This file supports linux only
+  common_kinfo.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ufio.h(57,1): fatal error C1189: #error:  Unsupported OS
+  dbgset.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ufio.h(57,1): fatal error C1189: #error:  Unsupported OS
+  driver_init.c
+C:\Users\dcassidy\source\repos\linux-kernel\include\uapi\linux\types.h(5,10): fatal error C1083: Cannot open include file: 'asm/types.h': No such file or directory
+  errno.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\commontypes.h(51,1): fatal error C1189: #error:  Unsupported OS - if you are porting, try starting with a copy of stubs
+  kblock.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\commontypes.h(51,1): fatal error C1189: #error:  Unsupported OS - if you are porting, try starting with a copy of stubs
+  kcache.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kcache.c(29,1): fatal error C1189: #error:  This file supports linux only
+  kcondvar.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kcondvar.c(30,1): fatal error C1189: #error:  This file supports linux only
+  kcpu.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kcpu.c(31,1): fatal error C1189: #error:  This file supports linux only
+  kcsr.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\utypes.h(54,1): fatal error C1189: #error:  Unsupported OS - if you are porting, try starting with a copy of stubs
+  kfile.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kfile.c(30,1): fatal error C1189: #error:  This file supports linux only
+  kfio.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kfio.c(30,1): fatal error C1189: #error:  This file supports linux only
+  kfio_common.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kfio_common.c(31,1): fatal error C1189: #error:  This file supports linux only
+  khotplug.c
+C:\Users\dcassidy\source\repos\linux-kernel\include\uapi\linux\types.h(5,10): fatal error C1083: Cannot open include file: 'asm/types.h': No such file or directory
+  kinfo.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\port-internal-boss.h(40,1): fatal error C1189: #error:  This file supports linux only
+  kinit.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kinit.c(29,1): fatal error C1189: #error:  "This file supports Linux only"
+  kmem.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\kmem.c(30,1): fatal error C1189: #error:  This file supports linux only
+  kmsg.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\align.h(60,10): fatal error C1083: Cannot open include file: 'fio/port/windows/align.h': No such file or directory
+  kscatter.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\port-internal.h(40,1): fatal error C1189: #error:  This file supports linux only
+  kscsi.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+  Generating Code...
+  Compiling...
+  kscsi_host.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+  ktime.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\port-internal-boss.h(40,1): fatal error C1189: #error:  This file supports linux only
+  license.c
+C:\Users\dcassidy\source\repos\linux-kernel\include\uapi\linux\types.h(5,10): fatal error C1083: Cannot open include file: 'asm/types.h': No such file or directory
+  main.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\port-internal.h(40,1): fatal error C1189: #error:  This file supports linux only
+  module_param.c
+C:\Users\dcassidy\source\repos\linux-kernel\include\uapi\linux\types.h(5,10): fatal error C1083: Cannot open include file: 'asm/types.h': No such file or directory
+  pci.c
+C:\Users\dcassidy\source\repos\linux-kernel\include\uapi\linux\types.h(5,10): fatal error C1083: Cannot open include file: 'asm/types.h': No such file or directory
+  sched.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\port-internal.h(40,1): fatal error C1189: #error:  This file supports linux only
+  six_lock.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ufio.h(57,1): fatal error C1189: #error:  Unsupported OS
+  state.c
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\state.h(46,23): error C2146: syntax error: missing ';' before identifier 'state'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\state.h(46,23): error C2061: syntax error: identifier 'state'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\state.h(52,1): error C2059: syntax error: '}'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(194,1): warning C4005: 'FUSION_DEBUG': macro redefinition
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\port_config.h(182): message : see previous definition of 'FUSION_DEBUG'
+C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio\port\ufio.h(57,1): fatal error C1189: #error:  Unsupported OS
+  sysrq.c
+C:\Users\dcassidy\source\repos\linux-kernel\include\linux\compiler_types.h(39,1): error C2010: '.': unexpected in macro parameter list
+C:\Users\dcassidy\source\repos\linux-kernel\include\linux\compiler_types.h(197,1): error C2010: '.': unexpected in macro parameter list
+C:\Users\dcassidy\source\repos\linux-kernel\include\uapi\linux\errno.h(1,10): fatal error C1083: Cannot open include file: 'asm/errno.h': No such file or directory
+  Generating Code...

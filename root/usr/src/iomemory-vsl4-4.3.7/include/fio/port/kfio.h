@@ -37,9 +37,7 @@
 #include <fio/port/userspace/kfio.h>
 #elif defined(UEFI)
 #include <fio/port/uefi/kfio.h>
-#elif defined(__VMKAPI__)
-#include <fio/port/esxi6/kfio.h>
-#elif defined(__linux__) || defined(__VMKLNX__)
+#elif defined(__linux__)
 #include <fio/port/common-linux/kfio.h>
 #elif defined(__SVR4) && defined(__sun)
 #include <fio/port/bitops.h>

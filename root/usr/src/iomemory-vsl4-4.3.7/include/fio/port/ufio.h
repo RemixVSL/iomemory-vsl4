@@ -43,9 +43,7 @@
 # include <fio/port/userspace/ufio.h>
 #elif defined(UEFI)
 #include <fio/port/uefi/ufio.h>
-#elif defined(__ESXI6__) || defined(__VMKAPI__)
-#include <fio/port/esxi6/ufio.h>
-#elif defined(__linux__) || defined(__VMKLNX__)
+#elif defined(__linux__)
 #include <fio/port/common-linux/ufio.h>
 #elif defined(__SVR4) && defined(__sun)
 #include <fio/port/solaris/ufio.h>
@@ -98,7 +96,7 @@
 #define cinfprint(...)  printf(__VA_ARGS__)
 #define dbgkprint(...)  printf("fiodbg " __VA_ARGS__)
 #define cdbgkprint(...) printf(__VA_ARGS__)
-#if FUSION_INTERNAL
+#if FUSION_DEBUG
 # define engprint(...)  printf("fioeng " __VA_ARGS__)
 # define cengprint(...) printf(__VA_ARGS__)
 #else

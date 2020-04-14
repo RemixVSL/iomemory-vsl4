@@ -66,8 +66,8 @@ typedef struct kfio_disk kfio_disk_t;
 
 // Atomic write flag for linux bios
 // [31] collides with BIO_POOL_* bits in 4.3 kernel resizing of bio.bi_flags
-//#define FIO_REQ_ATOMIC      (1UL<<31)
-#define PORT_SUPPORTS_FIO_REQ_ATOMIC 0 // cannot be enabled until kernel support is provided
+#define FIO_REQ_ATOMIC      (1UL<<31)
+#define PORT_SUPPORTS_FIO_REQ_ATOMIC 1 // cannot be enabled until kernel support is provided
 
 typedef unsigned long kfio_get_cpu_t;
 typedef int kfio_numa_node_t;

@@ -22,6 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{0A8C31F9-25C4-4641-B2FE-C253F11B20FF}</ProjectGuid>
     <RootNamespace>ioMemoryvsl4</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -38,7 +39,7 @@
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>Makefile</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
@@ -70,9 +71,12 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
+    <IncludePath>C:\Users\dcassidy\source\repos\linux-kernel\include;C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
+    <NMakePreprocessorDefinitions>$(NMakePreprocessorDefinitions)</NMakePreprocessorDefinitions>
+    <NMakeIncludeSearchPath>C:\Users\dcassidy\source\repos\linux-kernel\include;C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include\fio;$(NMakeIncludeSearchPath)</NMakeIncludeSearchPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -84,7 +88,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>%(PreprocessorDefinitions);_DEBUG;_CONSOLE;__GNUC__;CONFIG_BLOCK;CONFIG_BLK_DEV_INTEGRITY;__linux__;__KERNEL__</PreprocessorDefinitions>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions);_DEBUG;_CONSOLE;CONFIG_BLOCK</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>C:\Users\dcassidy\source\repos\iomemory-vsl4\root\usr\src\iomemory-vsl4-4.3.7\include;C:\Users\dcassidy\source\repos\linux-kernel\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -180,6 +184,7 @@
     <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\kfio_config_add.sh" />
     <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\Makefile" />
     <None Include="..\root\usr\src\iomemory-vsl4-4.3.7\patch_module_version.sh" />
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\root\usr\src\iomemory-vsl4-4.3.7\include\fio\common\kinfo.h" />
