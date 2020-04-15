@@ -312,7 +312,7 @@ static inline bool rq_is_empty_flush(const struct request* req)
 static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
 {
     struct request* req = (struct request*)fbio->fbio_parameter;
-    kfio_disk_t* dp = req->q->queuedata;
+    struct kfio_disk* dp = req->q->queuedata;
     struct fio_atomic_list* entry;
     sector_t last_sector;
     int last_rw;
@@ -371,7 +371,7 @@ static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
     fusion_spin_unlock_irqrestore(&dp->queue_lock);
 }
 
-static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
+static kfio_bio_t* kfio_request_to_bio(struct kfio_disk* disk, struct request* req,
     bool can_block)
 {
     struct fio_bdev* bdev = disk->bdev;
@@ -954,7 +954,7 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 //TODO: this function as it stands does nothing unless queueing is disabled.
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
-    kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
+    struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
     struct gendisk* gd = disk->gd;
 
     if (disk == NULL || disk->use_workqueue != USE_QUEUE_NONE)
@@ -988,7 +988,7 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
 
 void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 {
-    kfio_disk_t *disk = (kfio_disk_t *)bdev->bdev_gd;
+    struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
     struct gendisk *gd;
 
     if (disk == NULL || disk->gd == NULL)
@@ -1651,7 +1651,7 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on)
  */
 void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending)
 {
-    kfio_disk_t *disk = bdev->bdev_gd;
+    struct kfio_disk *disk = bdev->bdev_gd;
     struct gendisk *gd;
     struct request_queue *q;
 
