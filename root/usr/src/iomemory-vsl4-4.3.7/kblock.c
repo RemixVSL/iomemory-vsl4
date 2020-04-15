@@ -548,12 +548,28 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
 *
 * kfio_disk should be unique per card. It gets saved in the hw ctx and is passed on to fio_queue_rq.
 */
-static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
+static int fio_init_request(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 {
     struct kfio_disk *disk = data;
 
     hctx->driver_data = disk;
     return 0;
+}
+
+static int fio_map_queues(struct blk_mq_tag_set* set)
+{
+    return blk_mq_map_queues(&set->map[HCTX_TYPE_DEFAULT]);
+}
+
+static void fio_commit_rqs(struct blk_mq_hw_ctx *hctx)
+{
+    kfio_disk   *disk = hctx->queue->queuedata;
+    kfio_disk   *disk = hctx->queue->queuedata;
+}
+
+static inline void fio_request_done(struct request* req)
+{
+    blk_mq_end_request(req, BLK_STS_OK);
 }
 
 static struct blk_mq_ops fio_mq_ops = {
@@ -562,11 +578,10 @@ static struct blk_mq_ops fio_mq_ops = {
      * It will be called by by the Kernel when there's data in the request_queue for us to process.
      */
     .queue_rq   = fio_queue_rq,
-
-    /*
-    * fio_init_hctx is called once during driver initialization.
-    */
-    .init_hctx  = fio_init_hctx
+    .commit_rqs = fio_commit_rqs,
+    .complete   = fio_request_done,
+    .init_hctx  = fio_init_request,
+    .map_queues = fio_map_queues
 };
 
 
@@ -648,6 +663,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     struct request_queue *rq;
     struct gendisk       *gd;
     struct kfio_blk_add_disk_param *param;
+    int err = 0;
 
     disk = bdev->bdev_gd;
     if (disk == NULL)
@@ -672,7 +688,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             *  all mean.
             *
             */
-
             disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
 
             if (IS_ERR(disk->rq))
@@ -680,8 +695,28 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
             // success: manually add our preferred NUMA node and driver data now.
             disk->tag_set.numa_node = bdev->bdev_numa_node;
+
+            memset(&disk->tag_set, 0, sizeof(disk->tag_set));
+            disk->tag_set.ops = &fio_mq_ops;
+            disk->tag_set.queue_depth = 256; // does it make sense to let this be user customizable?
+            disk->tag_set.numa_node = bdev->bdev_numa_node; // not sure if it makes sense to force us to a single NUMA node.
+            disk->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
+            disk->tag_set.nr_hw_queues = 1;
             disk->tag_set.cmd_size = 0;
             disk->tag_set.driver_data = disk;
+
+            err = blk_mq_alloc_tag_set(&disk->tag_set);
+            if (err == 0) // success
+            {
+                disk->rq = blk_mq_init_queue(&disk->tag_set);
+                if (IS_ERR(disk->rq))
+                {
+                    blk_mq_free_tag_set(&disk->tag_set);
+                    disk->rq = NULL;
+                    goto err;
+                }
+            }
+
             break;
         }
         case USE_QUEUE_NONE:
