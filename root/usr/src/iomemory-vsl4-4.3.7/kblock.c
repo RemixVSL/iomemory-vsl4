@@ -563,8 +563,7 @@ static int fio_map_queues(struct blk_mq_tag_set* set)
 
 static void fio_commit_rqs(struct blk_mq_hw_ctx *hctx)
 {
-    kfio_disk   *disk = hctx->queue->queuedata;
-    kfio_disk   *disk = hctx->queue->queuedata;
+    struct kfio_disk   *disk = hctx->queue->queuedata;
 }
 
 static inline void fio_request_done(struct request* req)
