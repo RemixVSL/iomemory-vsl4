@@ -688,14 +688,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             *  all mean.
             *
             */
-            disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
-
-            if (IS_ERR(disk->rq))
-                goto err; // maybe move error handler to another function with extra logging?
-
-            // success: manually add our preferred NUMA node and driver data now.
-            disk->tag_set.numa_node = bdev->bdev_numa_node;
-
             memset(&disk->tag_set, 0, sizeof(disk->tag_set));
             disk->tag_set.ops = &fio_mq_ops;
             disk->tag_set.queue_depth = 256; // does it make sense to let this be user customizable?
