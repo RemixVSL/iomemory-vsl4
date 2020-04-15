@@ -1613,7 +1613,11 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
     {
         rq->queuedata = dp;
         blk_queue_make_request(rq, kfio_make_request);
-        memcpy(&dp->queue_lock, &rq->queue_lock, sizeof(dp->queue_lock));
+
+        // TODO:
+        // if kfio_disk support spinlock_t instead of lame fusion_spinlock_t for queueu_lock
+        // dp->queue_lock = rq->queue_lock;
+        memcpy((void*) &dp->queue_lock, &rq->queue_lock, sizeof(dp->queue_lock));
     }
     return rq;
 }

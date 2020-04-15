@@ -75,10 +75,6 @@ extern const char *kfio_print_prefix[];
 #define errprint(fmt, ...)       C_ASSERT(0); // errprint has been deprecated
 #define infprint(fmt, args...)   kfio_kprint("fioinf ", fmt, KERN_PRINT_INFO, ##args)
 
-#if !defined(__VMKLNX__)    // cinfprint does not work properly on ESX
-#define cinfprint(fmt, args...)  kfio_kprint("",        fmt, KERN_PRINT_CONT, ##args)
-#endif
-
 #define dbgkprint(fmt, args...)  kfio_kprint("fiodbg ", fmt, KERN_PRINT_DEBUG, ##args)
 #define cdbgkprint(fmt, args...) kfio_kprint("",        fmt, KERN_PRINT_CONT, ##args)
 
@@ -105,15 +101,9 @@ extern void  kfio_iounmap(void *addr);
             (n) = kfio_div64_64((uint64_t)(n), __base);       \
         } while (0)
 
-// ESX-specific block-mode limit; capped at 2TB
-# if defined(__VMKLNX__) && (KFIO_SCSI_DEVICE==0)
-#  define PORT_FORMATTED_CAPACITY_BYTES_MAX (1ULL<<41)
-# endif
-
 #endif
 
 #if FUSION_INTERNAL
-# if !defined(__VMKLNX__) // ESX lacks kallsyms.h
 
 // Debug interface for saving a call stack and printing it at a later point.
 // This implementation is mostly gcc-specific; however, the symbol decode
@@ -200,7 +190,6 @@ C_ASSERT(MAX_SAVED_STACK_FRAMES == 16); // Else must fix implementation of kfio_
 /// uses printk() for output.
 extern void kfio_print_saved_call_stack(const kfio_saved_call_stack *stack);
 
-# endif // !defined(__VMKLNX__)
 #endif // FUSION_INTERNAL
 
 /**
