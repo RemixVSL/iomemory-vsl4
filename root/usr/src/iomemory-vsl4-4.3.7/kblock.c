@@ -304,21 +304,22 @@ static inline bool rq_is_empty_flush(const struct request* req)
     return ((blk_rq_bytes(req) == 0) && (req_op(req) == REQ_OP_FLUSH)) ? true : false;
 }
 
-/* 
+/*
  *  Callback on the completion of a bio by the HW
  *
  *
 */
 static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
 {
+    struct request* req = (struct request*)fbio->fbio_parameter;
+    kfio_disk_t* dp = req->q->queuedata;
+    struct fio_atomic_list* entry;
+    sector_t last_sector;
+    int last_rw;
+
     if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP))
         kfio_dump_fbio(fbio);
 
-    struct request* req = (struct request*)fbio->fbio_parameter;
-    struct kfio_disk* dp = req->q->queuedata;
-    struct fio_atomic_list* entry;
-    sector_t last_sector;
-    int      last_rw;
 
     /*
      * Save a local copy of the last sector in the request before putting
@@ -387,7 +388,7 @@ static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
 
     if (fbio == NULL)
         return NULL;
-    
+
     kassert(blk_rq_bytes(req) % bdev->bdev_block_size == 0);
 
     fbio->fbio_range.base = (blk_rq_pos(req) << 9) / bdev->bdev_block_size;
@@ -447,7 +448,7 @@ static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
             __rq_for_each_bio(lbio, req)
             {
                 error = kfio_sgl_map_bio(fbio->fbio_sgl, lbio);
-                
+
                 /* This should not happen. */
                 if (error != 0)
                 {
@@ -492,7 +493,7 @@ static kfio_bio_t* kfio_request_to_bio(kfio_disk_t* disk, struct request* req,
                 error = -EIO; /* Any non-zero value will serve. */
             }
 
-            
+
 
             kassert(kfio_bio_chain_size_bytes(fbio) == kfio_sgl_size(fbio->fbio_sgl));
         }
@@ -549,7 +550,7 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
 
 /*
 * Add a kfio_disk* to a blk_mq_hw_ctx->(void*)driver_data member.
-* 
+*
 * kfio_disk should be unique per card. It gets saved in the hw ctx and is passed on to fio_queue_rq.
 */
 static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
@@ -561,7 +562,7 @@ static int fio_init_hctx(struct blk_mq_hw_ctx *hctx, void *data, unsigned int i)
 }
 
 static struct blk_mq_ops fio_mq_ops = {
-    /* 
+    /*
      * fio_queue_rq is responsible for dispatching a request to the driver.
      * It will be called by by the Kernel when there's data in the request_queue for us to process.
      */
@@ -676,7 +677,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             *  all mean.
             *
             */
-            
+
             disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
 
             if (IS_ERR(disk->rq))
