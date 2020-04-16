@@ -49,10 +49,6 @@
 #include <fio/port/solaris/ufio.h>
 #elif defined(__FreeBSD__)
 #include <fio/port/freebsd/ufio.h>
-#elif defined(__OSX__)
-#include <fio/port/osx/ufio.h>
-#elif defined(WINNT) || defined(WIN32)
-#include <fio/port/windows/ufio.h>
 #else
 #error Unsupported OS
 #endif

@@ -74,25 +74,10 @@ typedef int kfio_numa_node_t;
 
 #define FIO_NUMA_NODE_NONE      -1
 
-/* FIXME - isn't there something like __WORDSIZE that can be used? */
-#if defined(__x86_64__) || defined(__PPC64__) || defined(__mips64)
+
 #define FIO_WORD_SIZE 8
 #define FIO_BITS_PER_LONG 64
-#elif defined(__i386__) || defined(__PPC__)
-#define FIO_WORD_SIZE 4
-#define FIO_BITS_PER_LONG 32
-#else
-#error Unsupported wordsize!
-#endif
-
-/** XXX the following need to come thru the porting layer */
-#if defined(__mips64)
-#define FUSION_PAGE_SHIFT           16
-#elif defined(__PPC64__)
-#define FUSION_PAGE_SHIFT           16
-#else
 #define FUSION_PAGE_SHIFT           12
-#endif
 #define FUSION_PAGE_SIZE            (1UL<<FUSION_PAGE_SHIFT)
 #define FUSION_PAGE_MASK            (~(FUSION_PAGE_SIZE-1))
 #define FUSION_PAGE_ALIGN_UP(addr)  ((char*)((((fio_uintptr_t)(addr))+FUSION_PAGE_SIZE-1)&FUSION_PAGE_MASK))
@@ -213,30 +198,12 @@ typedef int (*fusion_kthread_func_t)(void *);
 int fusion_create_kthread(fusion_kthread_func_t func, void *data, void *fusion_nand_device,
                           const char *fmt, ...);
 
-////#define kfio_page_address(pg)          page_address(pg)
-
-#if defined(__x86_64__)
 #define kfio_barrier()          asm volatile("mfence":::"memory")
 #define kfio_store_barrier()    asm volatile("sfence":::"memory")
 #define kfio_load_barrier()     asm volatile("lfence":::"memory")
 
-#else
-#define kfio_barrier()          __sync_synchronize()
-#endif
-
 // Returns true if we're running on what is considered a server OS
 #define fusion_is_server_os()     0
-
-#if defined(__i386__)
-
-static inline uint64_t kfio_rdtsc(void)
-{
-    uint64_t x;
-    __asm__ volatile (".byte 0x0f, 0x31" : "=A" (x));
-    return x;
-}
-
-#elif defined(__x86_64__)
 
 static inline uint64_t kfio_rdtsc(void)
 {
@@ -245,35 +212,9 @@ static inline uint64_t kfio_rdtsc(void)
     return ( (uint64_t)lo)|( ((uint64_t)hi)<<32 );
 }
 
-#elif defined(__powerpc__)
-
-static inline unsigned long long kfio_rdtsc(void)
-{
-    unsigned long long int result=0;
-    unsigned long int upper, lower,tmp;
-    __asm__ volatile(
-        "0:                  \n"
-        "\tmftbu   %0           \n"
-        "\tmftb    %1           \n"
-        "\tmftbu   %2           \n"
-        "\tcmpw    %2,%0        \n"
-        "\tbne     0b         \n"
-        : "=r"(upper),"=r"(lower),"=r"(tmp)
-        );
-    result = upper;
-    result = result<<32;
-    result = result|lower;
-
-    return(result);
-}
-
-#endif
-
 /* Linux port implements kinfo backend using sysctl. */
 #define KFIO_INFO_USE_OS_BACKEND 1
 
 /**
  * @}
  */
-
-#endif

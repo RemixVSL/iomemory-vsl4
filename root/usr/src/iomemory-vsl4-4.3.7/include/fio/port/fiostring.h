@@ -31,10 +31,5 @@
 
 #include <string.h>
 
-#if defined(WINNT) || defined(WIN32)
-    #define strcasecmp _stricmp
-    #define strncasecmp _strnicmp
-#endif
-
 
 #endif  // __FIO_STRINGS_H__

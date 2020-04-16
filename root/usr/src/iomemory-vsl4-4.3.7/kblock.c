@@ -1725,6 +1725,7 @@ static int holdoff_writes_under_pressure(struct kfio_disk *disk)
     return 1;
 }
 
+// TODO: why return void* instead of kfio_plug*?
 static void *kfio_should_plug(struct request_queue *q)
 {
     struct kfio_disk *disk = q->queuedata;

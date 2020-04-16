@@ -44,10 +44,6 @@
 #include <fio/port/solaris/kfio.h>
 #elif defined(__FreeBSD__)
 #include <fio/port/freebsd/kfio.h>
-#elif defined(__OSX__)
-#include <fio/port/osx/kfio.h>
-#elif defined(WINNT) || defined(WIN32)
-#include <fio/port/windows/kfio.h>
 #else
 #error Unsupported OS - if you are porting, try starting with a copy of stubs
 #endif

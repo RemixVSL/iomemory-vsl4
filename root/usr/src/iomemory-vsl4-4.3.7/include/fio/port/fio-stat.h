@@ -33,19 +33,3 @@
 
 #include <sys/types.h>
 #include <sys/stat.h>
-
-#if defined(WIN32) || defined(WINNT)
-    #define stat        _stat64
-
-    #define S_IFBLK     _S_IFBLK
-    #define S_IFCHR     _S_IFCHR
-    #define S_IFIFO     _S_IFIFO
-    #define S_IFREG     _S_IFREG
-    #define S_IFLNK     _S_IFLNK
-    #define S_IFSOCK    _S_IFSOCK
-
-    #define S_ISBLK(m)  (((m) & _S_IFMT) == (_S_IFCHR | _S_IFDIR))    // Maybe this is same as linux?
-    #define S_ISCHR(m)  (((m) & _S_IFMT) == _S_IFCHR)
-#endif
-
-#endif  // WIN32 || WINNT

@@ -39,10 +39,6 @@
 # include <fio/port/solaris/errno.h>
 #elif defined(__FreeBSD__)
 # include <fio/port/freebsd/errno.h>
-#elif defined(__OSX__)
-# include <fio/port/osx/errno.h>
-#elif defined(WIN32) || defined(WINNT)
-# include <fio/port/windows/win_errno.h>
 #endif
 
 #ifndef ENONE
