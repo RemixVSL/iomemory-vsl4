@@ -31,11 +31,7 @@
 #include <fio/port/compiler.h>
 #include <fio/port/dbgset.h>
 #include <fio/port/message_ids.h>
-#if KFIOC_USE_LINUX_UACCESS_H
-# include <linux/uaccess.h>
-#else
-# include <asm/uaccess.h>
-#endif
+#include <linux/uaccess.h>
 #include <linux/fs.h>
 #include <linux/err.h>
 #include <linux/sched.h>

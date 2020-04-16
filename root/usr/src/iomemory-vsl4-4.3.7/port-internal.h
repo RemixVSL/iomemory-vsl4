@@ -61,9 +61,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/notifier.h>
 #include <linux/pci.h>
-#if KFIOC_HAS_LINUX_SCATTERLIST_H
-  #include <linux/scatterlist.h>
-#endif
+#include <linux/scatterlist.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <stdbool.h>
