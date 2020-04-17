@@ -218,3 +218,5 @@ static inline uint64_t kfio_rdtsc(void)
 /**
  * @}
  */
+
+#endif /* __FIO_PORT_KTYPES_H__ */
