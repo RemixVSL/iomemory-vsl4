@@ -175,7 +175,7 @@ struct fio_bdev
 
     int  (*bdev_do_open)(struct fio_bdev *);
     void (*bdev_do_release)(struct fio_bdev *);
-    int  (*bdev_do_ioctl)(struct fio_bdev *, unsigned cmd, fio_uintptr_t arg);
+    int  (*bdev_do_ioctl)(struct fio_bdev *, unsigned cmd, uintptr_t arg);
     int  (*bdev_do_read)(struct fio_bdev *, struct kfio_bio *);
     int  (*bdev_do_flush)(struct fio_bdev *, struct kfio_bio *);
     int  (*bdev_do_modify)(struct fio_bdev *, struct kfio_bio *);
@@ -273,7 +273,7 @@ static inline void fio_bdev_release(struct fio_bdev *bdev)
 }
 
 /// @brief Perform an ioctl on the specified device
-static inline int fio_bdev_ioctl(struct fio_bdev *bdev, unsigned cmd, fio_uintptr_t arg)
+static inline int fio_bdev_ioctl(struct fio_bdev *bdev, unsigned cmd, uintptr_t arg)
 {
     if (bdev->bdev_do_ioctl == NULL)
     {
@@ -284,7 +284,7 @@ static inline int fio_bdev_ioctl(struct fio_bdev *bdev, unsigned cmd, fio_uintpt
 }
 
 /// @brief Return the number of bytes to be transferred by the specified operation.
-static inline uint64_t kfio_bio_chain_size_bytes(kfio_bio_t *bio)
+static inline uint64_t kfio_bio_chain_size_bytes(struct kfio_bio *bio)
 {
     return kfio_bio_chain_size_blocks(bio) * bio->fbio_bdev->bdev_block_size;
 }

@@ -72,11 +72,6 @@ static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_fli
 #define BI_SECTOR(bio) (bio->bi_iter.bi_sector)
 #define BI_IDX(bio) (bio->bi_iter.bi_idx)
 
-/*
- * Typeless container_of(), since we are abusing a different type for
- * our atomic list entry.
- */
-#define void_container(e, t, f) (t*)(((fio_uintptr_t)(t*)((char *)(e))-((fio_uintptr_t)&((t*)0)->f)))
 
 /******************************************************************************
  *   Block request and bio processing methods.                                *
@@ -84,7 +79,7 @@ static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_fli
 
 struct kfio_disk
 {
-    kfio_bio_t           *fbio;
+    struct kfio_bio           *fbio;
     struct fio_bdev      *bdev;
     struct gendisk       *gd;
     struct request_queue *rq;
@@ -259,7 +254,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_no
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
 
-static inline void kfio_set_comp_cpu(kfio_bio_t* fbio, struct bio* bio)
+static inline void kfio_set_comp_cpu(struct kfio_bio* fbio, struct bio* bio)
 {
     return kfio_bio_set_cpu(fbio, kfio_current_cpu());
 }
@@ -269,7 +264,7 @@ static inline void kfio_set_comp_cpu(kfio_bio_t* fbio, struct bio* bio)
  */
 static int complete_list_entries(struct request_queue* q, int error, struct kfio_disk* dp)
 {
-    kfio_bio_t* fbio;
+    struct kfio_bio* fbio;
     struct request* req;
     struct fio_atomic_list list;
     struct fio_atomic_list* entry, * tmp;
@@ -282,7 +277,7 @@ static int complete_list_entries(struct request_queue* q, int error, struct kfio
 
     fusion_atomic_list_for_each(entry, tmp, &list)
     {
-        fbio = (kfio_bio_t*)entry;
+        fbio = (struct kfio_bio*)entry;
         req = (struct request*)fbio->fbio_parameter;
         blk_mq_complete_request(req);
         completed++;
@@ -309,7 +304,7 @@ static inline bool rq_is_empty_flush(const struct request* req)
  *
  *
 */
-static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
+static void kfio_req_completor(struct kfio_bio* fbio, uint64_t bytes_done, int error)
 {
     struct request* req = (struct request*)fbio->fbio_parameter;
     struct kfio_disk* dp = req->q->queuedata;
@@ -371,11 +366,11 @@ static void kfio_req_completor(kfio_bio_t* fbio, uint64_t bytes_done, int error)
     fusion_spin_unlock_irqrestore(&dp->queue_lock);
 }
 
-static kfio_bio_t* kfio_request_to_bio(struct kfio_disk* disk, struct request* req,
+static struct kfio_bio* kfio_request_to_bio(struct kfio_disk* disk, struct request* req,
     bool can_block)
 {
     struct fio_bdev* bdev = disk->bdev;
-    kfio_bio_t* fbio;
+    struct kfio_bio* fbio;
 
     if (can_block)
     {
@@ -395,7 +390,7 @@ static kfio_bio_t* kfio_request_to_bio(struct kfio_disk* disk, struct request* r
     fbio->fbio_range.length = blk_rq_bytes(req) / bdev->bdev_block_size;
 
     fbio->fbio_completor = kfio_req_completor;
-    fbio->fbio_parameter = (fio_uintptr_t)req;
+    fbio->fbio_parameter = (uintptr_t)req;
 
     /* Detect flush barrier requests. */
     if (rq_is_empty_flush(req))
@@ -505,7 +500,7 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx, const struct blk_mq
 {
     struct kfio_disk *disk = hctx->driver_data;
     struct request *req = bd->rq;
-    kfio_bio_t *fbio;
+    struct kfio_bio *fbio;
     int rc;
 
     fbio = disk->fbio;
@@ -1057,7 +1052,7 @@ static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int er
     bio_endio(bio);
 }
 
-static void kfio_bio_completor(kfio_bio_t *fbio, uint64_t bytes_complete, int error)
+static void kfio_bio_completor(struct kfio_bio *fbio, uint64_t bytes_complete, int error)
 {
     struct bio *bio = (struct bio *)fbio->fbio_parameter;
     uint64_t bytes_completed = 0;
@@ -1106,7 +1101,7 @@ static fio_blen_t linux_bio_get_blen(struct fio_bdev *bdev, struct bio *bio)
  * does not mean error, it just means that the existing fbio should be
  * submitted and a new one allocated for this bio.
  */
-static int kfio_kbio_add_bio(kfio_bio_t *fbio, struct bio *bio)
+static int kfio_kbio_add_bio(struct kfio_bio *fbio, struct bio *bio)
 {
     struct fio_bdev  *bdev = fbio->fbio_bdev;
     fio_blen_t blen;
@@ -1225,11 +1220,11 @@ static int kfio_bio_chain_count(struct fio_bdev *bdev,
 ///
 /// @return             Zero for success, < 0 on error
 static int kfio_bio_chain_to_fbio_chain(struct fio_bdev *bdev,
-                                        kfio_bio_t *first_fbio,
+                                        struct kfio_bio *first_fbio,
                                         struct bio *first_bio)
 {
     struct bio *bio;
-    kfio_bio_t *fbio;
+    struct kfio_bio *fbio;
     int ret = 0;
 
     /*
@@ -1282,7 +1277,7 @@ static int complete_bio_chain(struct bio *bio, int error)
 }
 
 /// @brief completion callback for a chained atomic io
-static void fusion_handle_atomic_chain_completor(kfio_bio_t *fbio,
+static void fusion_handle_atomic_chain_completor(struct kfio_bio *fbio,
                                                  uint64_t bytes_complete,
                                                  int error)
 {
@@ -1307,7 +1302,7 @@ static void kfio_submit_atomic_chain(struct request_queue *queue,
 {
     struct kfio_disk *disk = queue->queuedata;
     struct fio_bdev  *bdev = disk->bdev;
-    kfio_bio_t       *first_fbio;
+    struct kfio_bio       *first_fbio;
     int ret = 0;
     int segments = 0;
 
@@ -1333,7 +1328,7 @@ static void kfio_submit_atomic_chain(struct request_queue *queue,
     segments = ret;
 
     first_fbio->fbio_completor = fusion_handle_atomic_chain_completor;
-    first_fbio->fbio_parameter = (fio_uintptr_t)first_bio;
+    first_fbio->fbio_parameter = (uintptr_t)first_bio;
     kfio_bio_submit(first_fbio);
     return;
 
@@ -1344,11 +1339,11 @@ fail:
     complete_bio_chain(first_bio, ret);
 }
 
-static kfio_bio_t *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio)
+static struct kfio_bio *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio)
 {
     struct kfio_disk *disk = queue->queuedata;
     struct fio_bdev  *bdev = disk->bdev;
-    kfio_bio_t       *fbio;
+    struct kfio_bio       *fbio;
     int error;
 #if ENABLE_LAT_RECORD
     uint64_t         ts = kfio_rdtsc();
@@ -1384,7 +1379,7 @@ static kfio_bio_t *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio
     fbio->fbio_range.length = linux_bio_get_blen(bdev, bio);
 
     fbio->fbio_completor = kfio_bio_completor;
-    fbio->fbio_parameter = (fio_uintptr_t)bio;
+    fbio->fbio_parameter = (uintptr_t)bio;
 
     kfio_set_comp_cpu(fbio, bio);
 
@@ -1430,7 +1425,7 @@ static kfio_bio_t *kfio_map_to_fbio(struct request_queue *queue, struct bio *bio
 static void kfio_kickoff_plugged_io(struct request_queue *q, struct bio *bio)
 {
     struct bio *tail, *next;
-    kfio_bio_t *fbio;
+    struct kfio_bio *fbio;
 
     tail = NULL;
     fbio = NULL;
@@ -1827,7 +1822,7 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
         /*
          * No posting/deferral, kick off now
          */
-        kfio_bio_t *fbio;
+        struct kfio_bio *fbio;
 
         fbio = kfio_map_to_fbio(queue, bio);
         if (fbio)

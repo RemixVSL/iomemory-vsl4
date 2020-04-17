@@ -71,7 +71,7 @@ extern int kfio_handle_atomic(struct fio_bdev *bdev, const struct kfio_iovec *io
 /*---------------------------------------------------------------------------*/
 
 typedef struct kfio_bio kfio_bio_t;
-typedef void (*kfio_bio_completor_t)(kfio_bio_t *bio, uint64_t bytes_complete, int error);
+typedef void (*kfio_bio_completor_t)(struct kfio_bio *bio, uint64_t bytes_complete, int error);
 
 #define BIO_DIR_READ        0
 #define BIO_DIR_WRITE       1
@@ -124,7 +124,7 @@ struct kfio_bio
     uint8_t                fbio_cmd;              //< The operation type for this bio
     kfio_cpu_t             fbio_cpu;              //< CPU affinity for this bio
     kfio_bio_completor_t   fbio_completor;        //< Callback on completion of this bio
-    fio_uintptr_t          fbio_parameter;        //< Opaque data usable by the completor
+    uintptr_t              fbio_parameter;        //< Opaque data usable by the completor
     uint64_t               fbio_start_time;       //< Microtime used by stats for R/W requests.
     struct fio_tsc         fbio_start_tsc;        //< The starting time stamp counter.
     uint64_t               fbio_read_zero_bytes;  //< Number of zero bytes read if read bio
@@ -154,9 +154,9 @@ extern int kfio_bio_submit(kfio_bio_t *bio);
 extern int kfio_bio_wait(kfio_bio_t *bio);
 
 // Count up the total number of blocks used for anything in a bio.
-static inline uint64_t kfio_bio_chain_size_blocks(kfio_bio_t *bio)
+static inline uint64_t kfio_bio_chain_size_blocks(struct kfio_bio *bio)
 {
-    kfio_bio_t *sub_bio;
+    struct kfio_bio *sub_bio;
     uint64_t retval = 0;
 
     kfio_bio_chain_for_each(sub_bio, bio)
@@ -180,14 +180,14 @@ extern void kfio_bio_endio(kfio_bio_t *bio, int error);
 
 extern void kfio_dump_fbio(kfio_bio_t *bio);
 
-static inline void fusion_lat_record_bio(kfio_bio_t *bio, uint32_t checkpoint)
+static inline void fusion_lat_record_bio(struct kfio_bio *bio, uint32_t checkpoint)
 {
 #if ENABLE_LAT_RECORD
     bio->perf_timestamps[checkpoint] = kfio_rdtsc();
 #endif
 }
 
-static inline void fusion_lat_set_bio(kfio_bio_t *bio, uint32_t checkpoint, uint64_t ts)
+static inline void fusion_lat_set_bio(struct kfio_bio *bio, uint32_t checkpoint, uint64_t ts)
 {
 #if ENABLE_LAT_RECORD
     bio->perf_timestamps[checkpoint] = ts;

@@ -29,7 +29,7 @@
 #ifndef __FUSION_LIST_H__
 #define __FUSION_LIST_H__
 
-#include <fio/port/kglobal.h> // fio_uintptr_t
+#include <fio/port/kglobal.h> // uintptr_t
 #include <fio/port/compiler.h>
 
 /*****************************************************
@@ -251,7 +251,7 @@ FIO_NONNULL_PARAMS static inline void fusion_list_splice_tail(fusion_list_t *lis
 }
 
 #ifndef container_of
-#define container_of(entry, type, field) (type*)(((fio_uintptr_t)(type*)((char *)(entry))-((fio_uintptr_t)&((type*)0)->field)))
+#define container_of(entry, type, field) (type*)(((uintptr_t)(type*)((char *)(entry))-((uintptr_t)&((type*)0)->field)))
 #endif
 
 #define fusion_list_entry(entry, type, field) container_of(entry, type, field)

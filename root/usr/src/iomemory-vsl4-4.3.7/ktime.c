@@ -170,7 +170,7 @@ void noinline fusion_init_timer(struct fusion_timer_list* timer)
  *
  */
 void noinline fusion_set_timer_function(struct fusion_timer_list* timer,
-    void (*f) (fio_uintptr_t))
+    void (*f) (uintptr_t))
 {
     // init_timer() interface is very old and deprecated.
     //((struct timer_list *) timer)->function = f;
@@ -179,7 +179,7 @@ void noinline fusion_set_timer_function(struct fusion_timer_list* timer,
 /**
  *
  */
-void noinline fusion_set_timer_data(struct fusion_timer_list* timer, fio_uintptr_t d)
+void noinline fusion_set_timer_data(struct fusion_timer_list* timer, uintptr_t d)
 {
     // init_timer() interface is very old and deprecated.
     //((struct timer_list *) timer)->data = d;

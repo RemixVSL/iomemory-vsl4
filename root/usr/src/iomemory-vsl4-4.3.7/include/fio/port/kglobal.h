@@ -82,55 +82,11 @@ typedef long fio_off_t;
 typedef long long fio_loff_t;
 typedef int fio_mode_t;
 
-#if defined(__linux__)
-typedef          long  fio_intptr_t;
-typedef unsigned long  fio_uintptr_t;
-typedef unsigned long  fio_size_t;
-typedef          long  fio_ssize_t;
-#elif defined(__SVR4) && defined(__sun)
-typedef          long  fio_intptr_t;
-typedef unsigned long  fio_uintptr_t;
-typedef unsigned long  fio_size_t;
-typedef          long  fio_ssize_t;
-#elif defined(__FreeBSD__)
-typedef          long  fio_intptr_t;
-typedef unsigned long  fio_uintptr_t;
-typedef unsigned long  fio_size_t;
-typedef          long  fio_ssize_t;
-#elif defined(__OSX__)
-typedef          long  fio_intptr_t;
-typedef unsigned long  fio_uintptr_t;
-typedef unsigned long  fio_size_t;
-typedef          long  fio_ssize_t;
-#elif defined(WINNT)|| defined(WIN32)
-#if defined(_WIN64)
-typedef          long long  fio_intptr_t;
-typedef unsigned long long  fio_uintptr_t;
-typedef unsigned long long  fio_size_t;
-typedef          long long  fio_ssize_t;
-#else
-typedef          long  fio_intptr_t;
-typedef unsigned long  fio_uintptr_t;
-typedef unsigned long  fio_size_t;
-typedef          long  fio_ssize_t;
-#endif
-#elif defined(UEFI)
-typedef          long long  fio_intptr_t;
-typedef unsigned long long  fio_uintptr_t;
-typedef unsigned long long  fio_size_t;
-typedef          long long  fio_ssize_t;
-#elif defined (USERSPACE_KERNEL)
-typedef          long  fio_intptr_t;
-typedef unsigned long  fio_uintptr_t;
-typedef unsigned long  fio_size_t;
-typedef          long  fio_ssize_t;
-#else
-#error Unsupported OS
-#endif
 
-#if defined (__ia64__)
-#error Unsupported OS
-#endif
+typedef          long  fio_intptr_t;
+typedef unsigned long  fio_uintptr_t;
+typedef unsigned long  fio_size_t;
+typedef          long  fio_ssize_t;
 
 /**
  * @typedef kfio_maa_t
@@ -140,11 +96,7 @@ typedef          long  fio_ssize_t;
  */
 typedef unsigned  kfio_maa_t;
 
-#if defined(__x86_64__) || defined(_WIN64) || defined(__PPC64__) || defined (__sparc__) || defined(__mips64) || defined(DMA64_OS32)
 typedef unsigned long long fusion_paddr_t;  /* dma_addr_t */
-#else
-typedef unsigned fusion_paddr_t;
-#endif
 
 
 #endif //__FIO_PORT_GLOBAL_H__

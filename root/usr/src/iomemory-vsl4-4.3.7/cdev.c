@@ -105,9 +105,9 @@ static int coms_control_release(struct inode *inode, struct file *filep)
 }
 
 #if KFIOC_FOPS_USE_LOCKED_IOCTL
-static int coms_control_ioctl_internal(struct inode *inode, struct file *file, unsigned int cmd, fio_uintptr_t arg)
+static int coms_control_ioctl_internal(struct inode *inode, struct file *file, unsigned int cmd, uintptr_t arg)
 #else
-static long coms_control_ioctl_internal(struct file *file, unsigned int cmd, fio_uintptr_t arg)
+static long coms_control_ioctl_internal(struct file *file, unsigned int cmd, uintptr_t arg)
 #endif
 {
     struct coms_cdev *cdev = (struct coms_cdev *)(file->private_data);
@@ -118,7 +118,7 @@ static long coms_control_ioctl_internal(struct file *file, unsigned int cmd, fio
 /*
  *  Needed for 32 bit apps to be able to ioctl a 64 bit driver
  */
-static long coms_control_compat_ioctl_internal(struct file *file, unsigned int cmd, fio_uintptr_t arg)
+static long coms_control_compat_ioctl_internal(struct file *file, unsigned int cmd, uintptr_t arg)
 {
     struct coms_cdev *cdev = (struct coms_cdev *)(file->private_data);
 

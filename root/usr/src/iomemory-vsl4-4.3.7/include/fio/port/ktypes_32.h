@@ -30,12 +30,12 @@
 #define _FIO_PORT_KTYPES_32_H
 
 
-#define ptr_to_u64(ptr) ((uint64_t)((fio_uintptr_t)(ptr)))
+#define ptr_to_u64(ptr) ((uint64_t)((uintptr_t)(ptr)))
 
 #define u64_to_ptr(u64, type) ({                \
             uint64_t _u64 = (u64);                \
             kassert(_u64 < 0xffffffffULL);        \
-            (type)((fio_uintptr_t)_u64);        \
+            (type)((uintptr_t)_u64);        \
         })
 
 #if !defined(INT64_C)

@@ -29,6 +29,7 @@
 
 #ifndef __FUSION_LINUX_KTYPES_H__
 #define __FUSION_LINUX_KTYPES_H__
+#endif
 
 #ifndef __FIO_PORT_KTYPES_H__
 #error Do not include this file directly - instead include <fio/port/ktypes.h>
@@ -80,8 +81,8 @@ typedef int kfio_numa_node_t;
 #define FUSION_PAGE_SHIFT           12
 #define FUSION_PAGE_SIZE            (1UL<<FUSION_PAGE_SHIFT)
 #define FUSION_PAGE_MASK            (~(FUSION_PAGE_SIZE-1))
-#define FUSION_PAGE_ALIGN_UP(addr)  ((char*)((((fio_uintptr_t)(addr))+FUSION_PAGE_SIZE-1)&FUSION_PAGE_MASK))
-#define FUSION_ROUND_TO_PAGES(size) ((fio_uintptr_t)FUSION_PAGE_ALIGN_UP(size))
+#define FUSION_PAGE_ALIGN_UP(addr)  ((char*)((((uintptr_t)(addr))+FUSION_PAGE_SIZE-1)&FUSION_PAGE_MASK))
+#define FUSION_ROUND_TO_PAGES(size) ((uintptr_t)FUSION_PAGE_ALIGN_UP(size))
 
 #if defined(__KERNEL__)
 #define S_IRWXU 00700

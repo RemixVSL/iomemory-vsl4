@@ -131,11 +131,7 @@ static inline uint32_t kfio_get_memory_range_num_pages(fio_uintptr_t start, size
 
 extern void *kfio_phys_to_virt(uint64_t paddr);
 
-#if defined(__ESXI5__) || defined(__ESXI6__)
-int kfio_prealloc_reserve(uint32_t preallocate_mb);
 
-void kfio_free_md_page(fusion_page_t pg);
-#else
 static inline int kfio_prealloc_reserve(uint32_t prealloc_mb)
 {
     // no-op in non-ESX ports
@@ -147,6 +143,6 @@ static inline void kfio_free_md_page(fusion_page_t pg)
 {
     kfio_free_page(pg);
 }
-#endif // ESXI port
+
 
 #endif //__FIO_PORT_KMEM_H__

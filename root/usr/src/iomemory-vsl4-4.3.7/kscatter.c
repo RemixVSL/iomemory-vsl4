@@ -222,8 +222,8 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
     int old_num;
     bool vmalloc_buffer;
 
-    vmalloc_buffer = (((fio_uintptr_t)buffer) >= VMALLOC_START &&
-                      ((fio_uintptr_t)buffer) < VMALLOC_END);
+    vmalloc_buffer = (((uintptr_t)buffer) >= VMALLOC_START &&
+                      ((uintptr_t)buffer) < VMALLOC_END);
     old_num = lsg->num_entries;
 
     while (size)
@@ -246,7 +246,7 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
             return -ENOMEM;
         }
 
-        page_offset    = (uint32_t)((fio_uintptr_t)bp % FUSION_PAGE_SIZE);
+        page_offset    = (uint32_t)((uintptr_t)bp % FUSION_PAGE_SIZE);
         page_remainder = FUSION_PAGE_SIZE - page_offset;
         mapped_bytes   = MIN(size, page_remainder);
 
@@ -258,11 +258,11 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
                  * Do extra casting to get rid of const not expected by
                  * vmalloc_to_page on older Linux kernels.
                  */
-                page = (fusion_page_t) vmalloc_to_page((void *)(fio_uintptr_t)bp);
+                page = (fusion_page_t) vmalloc_to_page((void *)(uintptr_t)bp);
             }
             else
             {
-                page = (fusion_page_t) virt_to_page((void *)(fio_uintptr_t)bp);
+                page = (fusion_page_t) virt_to_page((void *)(uintptr_t)bp);
             }
         }
         else
@@ -271,7 +271,7 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
 
             // XXX Do we need to widen the interface to allow non-writable here?
             down_read(&current->mm->mmap_sem);
-            retval = get_user_pages(GET_USER_PAGES_TASK (fio_uintptr_t)bp, 1, GET_USER_PAGES_FLAGS(1, 0), (struct page **)&page, NULL);
+            retval = get_user_pages(GET_USER_PAGES_TASK (uintptr_t)bp, 1, GET_USER_PAGES_FLAGS(1, 0), (struct page **)&page, NULL);
             up_read(&current->mm->mmap_sem);
             if (retval <= 0)
             {
