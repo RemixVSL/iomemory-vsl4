@@ -29,7 +29,7 @@
 
 #ifndef __FUSION_LINUX_KTYPES_H__
 #define __FUSION_LINUX_KTYPES_H__
-#endif
+
 
 #ifndef __FIO_PORT_KTYPES_H__
 #error Do not include this file directly - instead include <fio/port/ktypes.h>

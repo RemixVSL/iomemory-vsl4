@@ -53,11 +53,6 @@
 #elif defined(__FreeBSD__)
 #include <fio/port/bitops.h>
 #include <fio/port/freebsd/ktypes.h>
-#elif defined(__OSX__)
-#include <fio/port/bitops.h>
-#include <fio/port/osx/ktypes.h>
-#elif defined(WINNT) || defined(WIN32)
-#include <fio/port/windows/ktypes.h>
 #else
 #error "Unsupported OS - if you are porting, try starting with a copy of stubs"
 #endif
