@@ -210,17 +210,8 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     const uint32_t num_nodes = num_online_nodes();
     const uint32_t nodes_possible = num_possible_nodes();
     uint32_t node_ndx, node_counter;
-    uint32_t *node_hist, *node_map;
-    // uint32_t node_hist[nodes_possible], node_map[nodes_possible];
+    uint32_t node_hist[nodes_possible], node_map[nodes_possible];
     kfio_cpu_t cpu;
-
-    node_hist = kmalloc(sizeof(uint32_t)*nodes_possible, GFP_KERNEL);
-    if (!node_hist)
-      return 2;
-
-    node_map = kmalloc(sizeof(uint32_t)*nodes_possible, GFP_KERNEL);
-    if (!node_map)
-      return 2;
 
     dbgprint(DBGS_MULTQ,
              "%s: read_queues:%p read_queue_count:%u struct_hw_comp_queue_size:%lu\n",
@@ -231,8 +222,8 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     dbgprint(DBGS_MULTQ, "%s: num_online_cpus:%u num_online_nodes:%u\n",
              __func__, num_online_cpus(), num_online_nodes());
 
-    // kfio_memset(&node_hist_2, 0, sizeof(uint32_t)*nodes_possible);
-    kfio_memset(&node_hist, 0, sizeof(uint32_t)*nodes_possible);
+
+    kfio_memset(node_hist, 0, sizeof(uint32_t)*nodes_possible);
     for (cpu = 0; cpu < cpu_topology->numcpus; ++cpu)
     {
         node_hist[cpu_to_node(cpu)]++;
@@ -242,7 +233,7 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     for (node_ndx=0; node_ndx<nodes_possible; node_ndx++)
     {
         dbgprint(DBGS_MULTQ, "%s: CPU Node Histogram: %4u : %4u\n",
-                 __func__, node_ndx, &node_hist[node_ndx]);
+                 __func__, node_ndx, node_hist[node_ndx]);
     }
 #endif
 
@@ -254,18 +245,20 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     // value) and test and abort later if we end up with an unmapped CPU.
     // Or perhaps just restart the whole exercise?
     node_counter=0;
-    // kfio_memset(&node_map_2, 0, sizeof(uint32_t)*nodes_possible);
     kfio_memset(node_map, 0, sizeof(uint32_t)*nodes_possible);
     for (node_ndx=0; node_ndx<nodes_possible; node_ndx++)
     {
-        if (&node_hist[node_ndx] != 0)
+        if (node_hist[node_ndx] != 0)
         {
             node_map[node_ndx] = node_counter;
+
             // find the next node that has entries
-            while (&node_hist[++node_counter] == 0 && node_counter < num_nodes);
+            while (node_hist[++node_counter] == 0 && node_counter < num_nodes)
+                ;
         }
+
         dbgprint(DBGS_MULTQ, "%s: CPU Node Map: %4u : %4u\n",
-                 __func__, node_ndx, &node_map[node_ndx]);
+                 __func__, node_ndx, node_map[node_ndx]);
     }
 
     /*
@@ -363,8 +356,6 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
             }
         }
 
-        kfree(node_hist);
-        kfree(node_map);
         return (int)(cluster_count * queues_per_cluster);
     }
 }
