@@ -105,7 +105,7 @@ Adapter: ioMono  (driver 4.3.6)
 ```
 
 ## Support
+Join us on the Discord Server in the Wiki, or create a bug report
 
-https://discordapp.com/api/webhooks/701202224939925597
 ## Other notes
 Installing fio-util, fio-common, fio-preinstall and fio-sysvinit is recommended.
