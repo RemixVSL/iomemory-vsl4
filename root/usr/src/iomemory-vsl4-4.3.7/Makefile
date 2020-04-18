@@ -52,6 +52,7 @@ CCMAJOR ?= $(shell echo __GNUC__ | $(FIOCC) -E -xc - | tail -n 1)
 CCMINOR ?= $(shell echo __GNUC_MINOR__ | $(FIOCC) -E -xc - | tail -n 1)
 CCVER=$(CCMAJOR)$(CCMINOR)
 LAST_CCVER := $(shell ls -1 kfio | sed -n 's/.*_cc\([0-9][0-9]*\)_.*/\1/p' | tail -1)
+# Get the tag and push it in here too.... if not too long...
 MODULE_VERSION ?= $(shell git rev-parse --short HEAD)
 
 TARGET ?= $(FIOARCH)_cc$(CCMAJOR)$(CCMINOR)
@@ -105,12 +106,32 @@ check_target_kernel:
 
 .PHONY: add_module_version patch_module_version
 add_module_version patch_module_version:
-	@ret="$$("$(shell pwd)"/patch_module_version.sh "$(FIO_DRIVER_NAME)".ko "$(MODULE_VERSION)")" ; \
+	@ret="$$("$(shell pwd)"/module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)")" ; \
 	if [ -n "$$ret" ] ; then \
 		echo "" ; \
 		echo ""$$ret"" ; \
 		echo "" ; \
 	fi
+
+dkms:
+	@ret="$$("$(shell pwd)"/module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -d)" ; \
+	if [ -n "$$ret" ] ; then \
+		echo "" ; \
+		echo ""$$ret"" ; \
+		echo "" ; \
+	fi
+
+dpkg:
+	# patch fio_version, fio_short_version in debian/fio_values
+	cd $(shell git rev-parse --show-toplevel) && \
+		dpkg-buildpackage -rfakeroot --no-check-builddeps --no-sign
+
+# rpm:
+#	# patch fio_version in fio-driver.spec
+#	$(shell mkdir -p $HOME/rpmbuild/SOURCES)
+#	$(shell cd .. && tar -zcvf $HOME/rpmbuild/SOURCES/})
+#	cd $(shell git rev-parse --show-toplevel) && \
+#		rpmbuild -ba fio-driver.spec
 
 modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
