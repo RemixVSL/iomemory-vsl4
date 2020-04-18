@@ -1,61 +1,72 @@
 # IOMemory-VSL4
-
-This is an unsupported update of the original driver source for newer generation FusionIO cards. It comes with no warranty, it may cause DATA LOSS or CORRUPTION.
-Therefore it is NOT meant for production use, just for testing purposes.
-
-## Current version
-The current version is derived from iomemory-vsl-4.3.7.
-
-## Important notes!!!
-At this moment the driver has only been tested with kernel 5.3 on Ubuntu, and ext4fs, by installing / playing Goat Simulator from steam, and running the FIO tests from the iomemory-vsl test suite on a logical volume.
-
-The original driver does some GCC specific things and will not compile with -Werror, when turning warnings into errors, due to -Wvla (variable length arrays) and some other dirty bits. It still contains some unsavory things that need cleaning, it does however "work" in the setting described above.
+This is an "unsupported" updated, and cleaned up version of the original driver
+source for newer generation FusionIO cards. It comes with no warranty, it may
+cause DATA LOSS or CORRUPTION. Therefore it is NOT meant for production use,
+just for testing purposes.
 
 ## Background
 Driver support for FusionIO cards has been lagging behind kernel
-releases, effectively making also these cards an expensive paperweight
-when running a distribution like Ubuntu which supplies newer kernels.
-Deemed a trivial task to update the drivers and actually make them work
-with said newer kernels, and putting the expensive paperweight to use again
-so I could access my data..., set forking and fixing the code in motion
-quite a while ago originally on the older generation of FusionIO cards, due
-to community requests also the newer.
+releases, effectively making these cards an expensive paperweight
+when running a distribution like Ubuntu / Arch / Fedora / ProxMox which
+all supply newer kernels than supported.
+
+## Current version
+The current driver version is derived from iomemory-vsl-4.3.7.1205, and has
+gone through rigorous rewriting and cleaning of redundant, unused, and old code.
+This driver is aimed to only support Linux kernels from 5.0 and upwards.
+
+## Important notes!!!
+At this moment the driver has been tested with kernel 5.0 to 5.6. Tests are
+run on an LVM volume with an ext4 filesystem. Workload testing is done with
+VM's, Containers, FIO and normal desktop usage.
 
 ## Building
-### Source
+There are several ways to build and package the module.
+
+### From Source
 ```
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
-git checkout backport-iomemory-vsl
+git checkout <release-tag>
 cd root/usr/src/iomemory-vsl4-4.3.7
 make gpl
 sudo insmod iomemory-vsl4.ko
 ```
-### Ubuntu / Debian
 
-### CentOS / RHEL
-If you are on CentOS or similiar distribution simply run
+### .deb Ubuntu / Debian
 ```
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
-git checkout backport-iomemory-vsl
+git checkout <release-tag>
+cd root/usr/src/iomemory-vsl4-4.3.7
+make dpkg
+```
+
+### .rpm CentOS / RHEL
+```
+git clone https://github.com/snuf/iomemory-vsl4
+cd iomemory-vsl4/
+git checkout <release-tag>
 rpmbuild -ba fio-driver.spec
 ```
-Otherwise module building can be done according to the original README.
 
 ## Installation
-Installation can be done according to the original README.
+Installation can be done with created packages, DKMS or other options described
+in the original README.
 
 ## DKMS
-A dkms.conf file is supplied, so it should be plug and play:
+Dynamic Kernel Module Support automates away the requirement of having to
+repackage the kernel module with every kernel and headers update that takes
+place on the system.
 ```
-sudo cp -r iomemory-vsl4/root/usr/src/iomemory-vsl4-4.3.7 /usr/src/
-sudo mkdir -p /var/lib/dkms/iomemory-vsl4/4.3.7/build
-sudo ln -s /usr/src/iomemory-vsl4-4.3.7 /var/lib/dkms/iomemory-vsl4/4.3.7/source
-sudo dkms build -m iomemory-vsl4 -v 4.3.7
-sudo dkms install -m iomemory-vsl4 -v 4.3.7
-sudo modprobe iomemory-vsl4
+git clone https://github.com/snuf/iomemory-vsl4
+cd iomemory-vsl4/
+git checkout <release-tag>
+cd root/usr/src/iomemory-vsl4-4.3.7
+sudo make dkms
 ```
+
+# Utils
 With fio-utils installed you should see the following kind of...,:
 ```
 snuf@scipio:~/Documents/iodrive4/fio-util-4/usr/bin$ sudo ./fio-status -a
@@ -93,5 +104,8 @@ Adapter: ioMono  (driver 4.3.6)
 	Aux voltage: avg 1.80V, max 1.83V
 ```
 
+## Support
+
+https://discordapp.com/api/webhooks/701202224939925597
 ## Other notes
 Installing fio-util, fio-common, fio-preinstall and fio-sysvinit is recommended.

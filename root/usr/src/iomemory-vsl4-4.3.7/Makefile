@@ -113,14 +113,11 @@ add_module_version patch_module_version:
 		echo "" ; \
 	fi
 
+.PHONY: dkms
 dkms:
-	@ret="$$("$(shell pwd)"/module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -d)" ; \
-	if [ -n "$$ret" ] ; then \
-		echo "" ; \
-		echo ""$$ret"" ; \
-		echo "" ; \
-	fi
+	./module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -d
 
+.PHONY: dpkg
 dpkg:
 	# patch fio_version, fio_short_version in debian/fio_values
 	cd $(shell git rev-parse --show-toplevel) && \

@@ -4,7 +4,6 @@
 # and appends the first seven characters of the commit hash.
 #
 set -e
-set -x
 
 dkms_ver() {
     name=$1
@@ -133,12 +132,13 @@ usage() {
   -p flag: Patch module, files, license etc
   -d flag: Install module through DKMS
   -h flag: this help
+  -D flag: Debug, set -x
 "
 }
 
 PATCH=0
 DKMS=0
-while getopts ":n:v:pdh" opt; do
+while getopts ":n:v:pdhD" opt; do
     case ${opt} in
       n )
         MODULE_NAME=$OPTARG
@@ -151,6 +151,9 @@ while getopts ":n:v:pdh" opt; do
         ;;
       d )
         DKMS=1
+        ;;
+      D )
+        set -x
         ;;
       h )
         usage
