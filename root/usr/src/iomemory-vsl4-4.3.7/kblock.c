@@ -316,6 +316,11 @@ static void kfio_req_completor(struct kfio_bio* fbio, uint64_t bytes_done, int e
         kfio_dump_fbio(fbio);
     }
 
+    if (unlikely(!dp)) {
+        //wtf? this is not a retryable error.
+        kfail();
+    }
+ 
     /*
      * Save a local copy of the last sector in the request before putting
      * it onto atomic completion list. Once it is there, requests is up for
@@ -712,6 +717,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
                     disk->rq = NULL;
                     goto err;
                 }
+                disk->rq->queuedata = disk; // we need to add a reference back to ourselves here
             }
 
             break;
