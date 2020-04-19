@@ -40,14 +40,10 @@
 char       *numa_node_override[MAX_PCI_DEVICES];
 int         num_numa_node_override;
 
-#if PORT_SUPPORTS_NUMA_NODE_OVERRIDE
+
 MODULE_PARM_DESC(numa_node_override, "Override device to NUMA node binding");
-#  if KFIOC_MODULE_PARAM_ARRAY_NUMP
 module_param_array (numa_node_override, charp, &num_numa_node_override, S_IRUGO | S_IWUSR);
-#  else
-module_param_array (numa_node_override, charp, num_numa_node_override, S_IRUGO | S_IWUSR);
-#  endif
-#endif
+
 
 int use_workqueue = USE_QUEUE_NONE;
 module_param (use_workqueue, int, S_IRUGO | S_IWUSR);
