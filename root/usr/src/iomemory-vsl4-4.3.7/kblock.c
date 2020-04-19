@@ -259,34 +259,6 @@ static inline void kfio_set_comp_cpu(struct kfio_bio* fbio, struct bio* bio)
     return kfio_bio_set_cpu(fbio, kfio_current_cpu());
 }
 
-/*
- * Splice completion list to local list and handle them
- */
-static int complete_list_entries(struct request_queue* q, int error, struct kfio_disk* dp)
-{
-    struct kfio_bio* fbio;
-    struct request* req;
-    struct fio_atomic_list list;
-    struct fio_atomic_list* entry, * tmp;
-    int completed = 0;
-
-    fusion_atomic_list_init(&list);
-    fusion_atomic_list_splice(&dp->comp_list, &list);
-    if (fusion_atomic_list_empty(&list))
-        return completed;
-
-    fusion_atomic_list_for_each(entry, tmp, &list)
-    {
-        fbio = (struct kfio_bio*)entry;
-        req = (struct request*)fbio->fbio_parameter;
-        blk_mq_complete_request(req);
-        completed++;
-    }
-
-    kassert(dp->pending >= completed);
-    dp->pending -= completed;
-    return completed;
-}
 
 /// @brief determine if a block request is an empty flush.
 ///
@@ -307,69 +279,13 @@ static inline bool rq_is_empty_flush(const struct request* req)
 static void kfio_req_completor(struct kfio_bio* fbio, uint64_t bytes_done, int error)
 {
     struct request* req = (struct request*)fbio->fbio_parameter;
-    struct kfio_disk* dp = req->q->queuedata;
-    struct fio_atomic_list* entry;
-    sector_t last_sector;
-    int last_rw;
 
     if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP)) {
         kfio_dump_fbio(fbio);
+        blk_dump_rq_flags(req, FIO_DRIVER_NAME);
     }
 
-    if (unlikely(!dp)) {
-        //wtf? this is not a retryable error.
-        kfail();
-    }
- 
-    /*
-     * Save a local copy of the last sector in the request before putting
-     * it onto atomic completion list. Once it is there, requests is up for
-     * grabs for others completors and we cannot legally access its fields
-     * anymore.
-     */
-    last_sector = blk_rq_pos(req) + (blk_rq_bytes(req) >> 9);
-    last_rw = rq_data_dir(req); // READ or WRITE
-
-    /*
-     * Add this completion entry atomically to the shared completion
-     * list.
-     */
-    entry = (struct fio_atomic_list*) & dp->fbio;
-    fusion_atomic_list_init(entry);
-    fusion_atomic_list_add(entry, &dp->comp_list);
-
-    /*
-     * Next try and grab the queue_lock, which we need for completion.
-     * If we succeed, set that we are now doing completions with the
-     * KFIO_DISK_COMPLETION bit. If we fail, check if someone is already
-     * doing completions. If they are, we are golden. They will see our
-     * completion entry and do it in due time. If not, repeat the lock
-     * check and completion bit check.
-     */
-    while (!fusion_spin_trylock_irqsave(&dp->queue_lock)) {
-        if (fio_test_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state))
-            return; // someone else has the lock?
-
-        cpu_relax();
-    }
-
-    if (dp->last_dispatch == last_sector && dp->last_dispatch_rw == last_rw) {
-        dp->last_dispatch = 0;
-        dp->last_dispatch_rw = -1;
-    }
-
-    fio_set_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
-
-    // since we got the lock, complete all entries in the completion list.
-    if (complete_list_entries(req->q, error, dp)) {
-        /* In case queue is stopped waiting for more buffers. */
-            blk_mq_start_stopped_hw_queues(req->q, true);
-    }
-
-    fio_clear_bit_atomic(KFIO_DISK_COMPLETION, &dp->disk_state);
-
-    // release the queue lock
-    fusion_spin_unlock_irqrestore(&dp->queue_lock);
+    blk_mq_complete_request(req);
 }
 
 static struct kfio_bio* kfio_request_to_bio(struct kfio_disk* disk, struct request* req, int cmd)
