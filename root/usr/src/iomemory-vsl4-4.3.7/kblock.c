@@ -279,13 +279,19 @@ static inline bool rq_is_empty_flush(const struct request* req)
 static void kfio_req_completor(struct kfio_bio* fbio, uint64_t bytes_done, int error)
 {
     struct request* req = (struct request*)fbio->fbio_parameter;
+    bool rc;
 
     if (unlikely(fbio->fbio_flags & KBIO_FLG_DUMP)) {
         kfio_dump_fbio(fbio);
         blk_dump_rq_flags(req, FIO_DRIVER_NAME);
     }
 
-    blk_mq_complete_request(req);
+    rc = blk_mq_complete_request(req);
+
+    if (unlikely(!rc)) {
+        engprint("blk_mq returned false in kfio_req_completor! bytes_done %u, error %d\n",
+            bytes_done, error);
+    }
 }
 
 static struct kfio_bio* kfio_request_to_bio(struct kfio_disk* disk, struct request* req, int cmd)
@@ -433,6 +439,8 @@ static blk_status_t fio_queue_rq(struct blk_mq_hw_ctx *hctx,
             break;
         default:
             WARN_ON_ONCE(1);
+            engprint("Got unkown req_op %s\n",
+                (req_op(req));
             return BLK_STS_IOERR; // unknown request type
     }
 

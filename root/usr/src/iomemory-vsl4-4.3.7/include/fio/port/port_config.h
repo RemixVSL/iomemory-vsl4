@@ -179,7 +179,7 @@
 #define FUSION_COVERAGE 0
 
 /* Turn on debugging */
-#define FUSION_DEBUG 0
+#define FUSION_DEBUG 1
 
 /* Counts allocs and frees in cache pools */
 #define FUSION_DEBUG_CACHE 0
@@ -311,6 +311,6 @@
 #define TRACE_MEM_ALLOCS 0
 
 /* If true, use 1024 byte PCIe rx buffer. This improves performance but causes NMIs on some specific hardware. */
-#define USE_LARGE_PCIE_RX_BUFFER 0
+#define USE_LARGE_PCIE_RX_BUFFER 1
 
 #endif /* __GENERATED_PORT_CONFIG_H__ */
