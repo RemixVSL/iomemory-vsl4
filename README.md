@@ -15,6 +15,15 @@ The current driver version is derived from iomemory-vsl-4.3.7.1205, and has
 gone through rigorous rewriting and cleaning of redundant, unused, and old code.
 This driver is aimed to only support Linux kernels from 5.0 and upwards.
 
+### Releases
+Releases are tagged, and should be checked out by their tag. The release tags
+follow Linux Kernel versions. E.g. v5.6.0 (Danger Noodle) will work on all 5.x
+kernels that are 5.6 and lower, but is not guaranteed to work on 5.7.
+| Tag | Codename |
+| --- | --- |
+| v5.6.0 | Danger Noodle |
+
+
 ## Important notes!!!
 At this moment the driver has been tested with kernel 5.0 to 5.6. Tests are
 run on an LVM volume with an ext4 filesystem. Workload testing is done with
