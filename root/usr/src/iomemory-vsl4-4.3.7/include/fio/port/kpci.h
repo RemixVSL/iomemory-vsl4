@@ -35,18 +35,10 @@
 # define __FIO_PORT_PCI_DEV_T_DEFINED
 # if defined(UEFI)
 #  include <fio/port/uefi/kpci.h>
-# elif defined(__VMKAPI__)
-#  include <fio/port/esxi6/kpci.h>
-# elif defined(__linux__) || defined(__VMKLNX__)
+# elif defined(__linux__) 
 #  include <fio/port/common-linux/kpci.h>
 # elif defined(__FreeBSD__)
 #  include <fio/port/freebsd/kpci.h>
-# elif defined(__OSX__)
-#  include <fio/port/osx/kpci.h>
-# elif defined(__sun__)
-#  include <fio/port/solaris/kpci.h>
-# elif defined(WINNT) || defined(WIN32)
-#  include <fio/port/windows/kpci.h>
 # else
 #  undef __FIO_PORT_PCI_DEV_T_DEFINED
 # endif
@@ -156,38 +148,23 @@ void iodrive_intr_hq_disable(void *hq);
 int iodrive_is_work_pending_on_hq(void* hq);
 
 
-#if !defined(WIN32) && !defined(WINNT)
-
 extern int  kfio_request_irq(kfio_pci_dev_t *pdev, const char *devname,
                              void *iodrive_dev, int msi_enabled);
 extern void kfio_free_irq(kfio_pci_dev_t *pdev, void *dev);
 
-#endif /* !defined(WIN32) */
 
+static inline void kfio_pci_device_failed(kfio_pci_dev_t *pdev) {}
 
-#if !defined(WIN32) && !defined(WINNT)
-
-static inline void kfio_pci_device_failed(kfio_pci_dev_t *pdev)
-{
-}
-
-#else
-
-extern void kfio_pci_device_failed(kfio_pci_dev_t *pdev);
-
-#endif
 
 extern int  kfio_get_irq_number(kfio_pci_dev_t *pdev, uint32_t *irq);
 
 #if defined(PORT_SUPPORTS_MSIX)
 
-#if (!defined(WIN32) && !defined(WINNT)) || defined(UEFI)
 extern int  kfio_request_msix(kfio_pci_dev_t *pdev, const char *devname, void *iodrive_dev,
                               kfio_msix_t *msix, unsigned int vector);
 extern void kfio_free_msix(kfio_pci_dev_t *pdev, kfio_msix_t *msix, unsigned int vector, void *dev);
 extern unsigned int kfio_pci_enable_msix(kfio_pci_dev_t *pdev, kfio_msix_t *msix, unsigned int nr_vecs);
 extern void kfio_pci_disable_msix(kfio_pci_dev_t *pdev, kfio_msix_t *msix);
-#endif
 extern int  kfio_get_msix_number(kfio_pci_dev_t *pdev, kfio_msix_t *msix, uint32_t vec_ix, uint32_t *irq);
 
 #else
@@ -197,7 +174,7 @@ typedef struct kfio_msix
     DECLARE_RESERVE(1);
 } kfio_msix_t;
 
-#if !defined(WIN32) && !defined(WINNT)
+
 static inline int kfio_request_msix(kfio_pci_dev_t *pdev, const char *devname, void *iodrive_dev,
                                     kfio_msix_t *msix, unsigned int vector)
 {
@@ -217,7 +194,6 @@ static inline void kfio_free_msix(kfio_pci_dev_t *pdev, kfio_msix_t *msix, unsig
 {
 }
 
-#endif /* !defined(WIN32) */
 
 static inline int kfio_get_msix_number(kfio_pci_dev_t *pdev, kfio_msix_t *msix, uint32_t vec_ix, uint32_t *irq)
 {
@@ -266,30 +242,11 @@ extern kfio_pci_dev_t *kfio_pci_bus_self(kfio_pci_bus_t *bus);
 extern uint8_t kfio_pci_bus_number(kfio_pci_bus_t *bus);
 #endif
 
-#if  PORT_SUPPORTS_PCI_NUMA_INFO
+
 extern kfio_numa_node_t kfio_pci_get_node(kfio_pci_dev_t *pdev);
 extern void kfio_pci_set_node(kfio_pci_dev_t *pdev, kfio_numa_node_t node);
-#else
-static inline kfio_numa_node_t kfio_pci_get_node(kfio_pci_dev_t *pdev)
-{
-    return 0;
-}
-static inline void kfio_pci_set_node(kfio_pci_dev_t *pdev, kfio_numa_node_t node)
-{
-    return;
-}
-#endif
-
-#if PORT_SUPPORTS_NUMA_NODE_OVERRIDE
 extern int kfio_get_numa_node_override(kfio_pci_dev_t *pdev, const char *name,
                                        kfio_numa_node_t *nodep);
-#else
-static inline int kfio_get_numa_node_override(kfio_pci_dev_t *pdev, const char *name,
-                                              kfio_numa_node_t *nodep)
-{
-    return -ENOENT;
-}
-#endif
 extern uint64_t kfio_pci_get_bar_size(void);
 
 #endif /* __FIO_PORT_KPCI_H__ */
