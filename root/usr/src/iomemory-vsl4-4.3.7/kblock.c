@@ -118,9 +118,7 @@ int iodrive_barrier_sync = 0;
 
 extern int enable_discard;
 
-#ifndef bio_flags
 #define bio_flags(bio) ((bio)->bi_opf & REQ_OP_MASK)
-#endif
 
 #if KFIOC_HAS_RQ_POS_BYTES == 0
 #define blk_rq_pos(rq)    ((rq)->sector)
