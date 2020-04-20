@@ -123,20 +123,17 @@ int kfio_create_kthread_on_cpu(fusion_kthread_func_t func, void *data,
     return rc;
 }
 
-#if KFIOC_NUMA_MAPS
 static void __kfio_bind_task_to_cpumask(struct task_struct *tsk, cpumask_t *mask)
 {
     tsk->cpus_mask = *mask;
     tsk->nr_cpus_allowed = cpumask_weight(mask);
 }
-#endif
 
 /*
  * Will take effect on next schedule event
  */
 void kfio_bind_kthread_to_node(kfio_numa_node_t node)
 {
-#if KFIOC_NUMA_MAPS
     if (node != FIO_NUMA_NODE_NONE)
     {
         cpumask_t *cpumask = (cpumask_t *) cpumask_of_node(node);
@@ -144,9 +141,9 @@ void kfio_bind_kthread_to_node(kfio_numa_node_t node)
         if (cpumask && cpumask_weight(cpumask))
             __kfio_bind_task_to_cpumask(current, cpumask);
     }
-#endif
 }
 
+// TODO: should revisit and see if we can cleanup or consolidate.
 int kfio_fill_cpu_topology(struct kfio_cpu_topology *top)
 {
 #if defined(ENABLE_TOPO_DEFINES) || !defined(CONFIG_XEN)
