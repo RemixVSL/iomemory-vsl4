@@ -84,15 +84,7 @@ struct linux_dma_cookie
 
 C_ASSERT(sizeof(struct linux_dma_cookie) < sizeof(kfio_dma_cookie_t));
 
-#define GET_USER_PAGES_TASK
-
-/* Newer kernels combine the write and force flags into a single parameter */
-#if KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
-    #define GET_USER_PAGES_FLAGS(write, force) (write? FOLL_WRITE : 0 | force? FOLL_FORCE : 0)
-#else
-    #define GET_USER_PAGES_FLAGS(write, force) write, force
-#endif
-
+#define GET_USER_PAGES_FLAGS(write, force) (write? FOLL_WRITE : 0 | force? FOLL_FORCE : 0)
 
 int kfio_dma_cookie_create(kfio_dma_cookie_t *_cookie, kfio_pci_dev_t *pcidev, int nvecs)
 {
@@ -271,7 +263,7 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
 
             // XXX Do we need to widen the interface to allow non-writable here?
             down_read(&current->mm->mmap_sem);
-            retval = get_user_pages(GET_USER_PAGES_TASK (uintptr_t)bp, 1, GET_USER_PAGES_FLAGS(1, 0), (struct page **)&page, NULL);
+            retval = get_user_pages((uintptr_t)bp, 1, GET_USER_PAGES_FLAGS(1, 0), (struct page **)&page, NULL);
             up_read(&current->mm->mmap_sem);
             if (retval <= 0)
             {
