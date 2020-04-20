@@ -180,58 +180,28 @@ int noinline fusion_spin_is_irqsaved(fusion_spinlock_t *s)
  * Mutex wrappers
  */
 
-#ifdef DEFINE_MUTEX
-# define KFIOC_HAS_MUTEX_SUBSYSTEM 1
-#else
-# define KFIOC_HAS_MUTEX_SUBSYSTEM 0
-#endif
-
-#if !KFIOC_HAS_MUTEX_SUBSYSTEM
-#include <asm/semaphore.h>
-#endif
-
 void fusion_mutex_init(fusion_mutex_t *lock, const char *name)
 {
-#if KFIOC_HAS_MUTEX_SUBSYSTEM
     mutex_init((struct mutex *)lock);
-#else
-    init_MUTEX((struct semaphore *)lock);
-#endif
 }
 
 void fusion_mutex_destroy(fusion_mutex_t *lock)
 {
-#if KFIOC_HAS_MUTEX_SUBSYSTEM
     //  mutex_destroy((struct mutex *)lock);
-#else
-    do { } while(0);
-#endif
 }
 
 int fusion_mutex_trylock(fusion_mutex_t *lock)
 {
-#if KFIOC_HAS_MUTEX_SUBSYSTEM
     return mutex_trylock((struct mutex *)lock) ? 1 : 0;
-#else
-    return !down_trylock((struct semaphore *)lock);
-#endif
 }
 void fusion_mutex_lock(fusion_mutex_t *lock)
 {
-#if KFIOC_HAS_MUTEX_SUBSYSTEM
     mutex_lock((struct mutex *)lock);
-#else
-    down((struct semaphore *)lock);
-#endif
 }
 
 void fusion_mutex_unlock(fusion_mutex_t *lock)
 {
-#if KFIOC_HAS_MUTEX_SUBSYSTEM
     mutex_unlock((struct mutex *)lock);
-#else
-    up((struct semaphore *)lock);
-#endif
 }
 
 /*
@@ -280,9 +250,7 @@ void fusion_rwsem_up_write(fusion_rwsem_t *x)
 C_ASSERT(sizeof(fusion_spinlock_t) >= sizeof(linux_spinlock_t));
 C_ASSERT(sizeof(fusion_rwspin_t) >= sizeof(rwlock_t));
 C_ASSERT(sizeof(fusion_rwsem_t) >= sizeof(struct rw_semaphore));
-#if KFIOC_HAS_MUTEX_SUBSYSTEM
 C_ASSERT(sizeof(fusion_mutex_t) >= sizeof(struct mutex));
-#endif
 
 /**
  * @}
