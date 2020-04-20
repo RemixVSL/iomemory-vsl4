@@ -350,15 +350,9 @@ int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *pbio)
     struct linux_sgl *lsg = sgl;
     struct scatterlist *sl, *old_sl;
 
-#if KFIOC_HAS_BIOVEC_ITERATORS
     struct bio_vec vec;
     struct bvec_iter bv_i;
 #define BIOV_MEMBER(vec, member) (vec.member)
-#else
-    struct bio_vec *vec;
-    int bv_i;
-#define BIOV_MEMBER(vec, member) (vec->member)
-#endif
 
     uint32_t old_len, old_sgl_size, old_sgl_len;
     int rval = 0;
