@@ -90,7 +90,7 @@ clean modules_clean:
 		clean
 	rm -rf include/fio/port/linux/kfio_config.h kfio_config
 
-include/fio/port/linux/kfio_config.h: kfio_config.sh
+include/fio/port/linux/kfio_config.h: kfio_config.sh kfio_config_add.sh
 	./$< -a $(FIOARCH) -o $@ -k $(KERNEL_BUILD) -p -d $(CURDIR)/kfio_config -l $(FUSION_DEBUG) -s $(KERNEL_SRC)
 
 .PHONY: check_target_kernel
@@ -122,13 +122,6 @@ dpkg:
 	# patch fio_version, fio_short_version in debian/fio_values
 	cd $(shell git rev-parse --show-toplevel) && \
 		dpkg-buildpackage -rfakeroot --no-check-builddeps --no-sign
-
-# rpm:
-#	# patch fio_version in fio-driver.spec
-#	$(shell mkdir -p $HOME/rpmbuild/SOURCES)
-#	$(shell cd .. && tar -zcvf $HOME/rpmbuild/SOURCES/})
-#	cd $(shell git rev-parse --show-toplevel) && \
-#		rpmbuild -ba fio-driver.spec
 
 modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \

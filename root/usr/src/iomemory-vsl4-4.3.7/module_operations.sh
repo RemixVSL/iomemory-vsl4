@@ -36,7 +36,7 @@ dkms_install() {
 
 get_rel_ver() {
     version=$1
-    release=$(git tag)
+    release=$(git describe --tag)
     if [ "$version" == "" ]; then
         tag=$(git rev-parse --short HEAD)
     fi
