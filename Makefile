@@ -1,18 +1,18 @@
 all: help
 
 .PHONY: dkms
-dkms:
+dkms: clean
 	cd root/usr/src/$(shell ls root/usr/src) && \
 		$(MAKE) dkms
 
 .PHONY: dpkg
-dpkg:
+dpkg: clean
 	# patch fio_version, fio_short_version in debian/fio_values
 	cd $(shell git rev-parse --show-toplevel) && \
 		dpkg-buildpackage -rfakeroot --no-check-builddeps --no-sign
 
 .PHONY: rpm
-rpm:
+rpm: clean
 	#	patch fio_version in fio-driver.spec
 	mkdir -p ~/rpmbuild/SOURCES && \
 	tar -zcvf ~/rpmbuild/SOURCES/iomemory-vsl4-4.3.7.1205.tar.gz \
@@ -22,7 +22,7 @@ rpm:
 			rpmbuild -ba fio-driver.spec
 
 .PHONY: module
-module:
+module: clean
 	cd root/usr/src/$(shell ls root/usr/src) && \
   	$(MAKE) gpl
 
