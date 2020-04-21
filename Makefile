@@ -13,7 +13,13 @@ dpkg:
 
 .PHONY: rpm
 rpm:
-	@echo cough
+	#	patch fio_version in fio-driver.spec
+	mkdir -p ~/rpmbuild/SOURCES && \
+	tar -zcvf ~/rpmbuild/SOURCES/iomemory-vsl4-4.3.7.1205.tar.gz \
+		--transform s/iomemory-vsl4/iomemory-vsl4-4.3.7.1205/ \
+		../iomemory-vsl4 && \
+	cd $(shell git rev-parse --show-toplevel) && \
+			rpmbuild -ba fio-driver.spec
 
 .PHONY: module
 module:

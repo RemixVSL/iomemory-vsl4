@@ -123,13 +123,6 @@ dpkg:
 	cd $(shell git rev-parse --show-toplevel) && \
 		dpkg-buildpackage -rfakeroot --no-check-builddeps --no-sign
 
-# rpm:
-#	# patch fio_version in fio-driver.spec
-#	$(shell mkdir -p $HOME/rpmbuild/SOURCES)
-#	$(shell cd .. && tar -zcvf $HOME/rpmbuild/SOURCES/})
-#	cd $(shell git rev-parse --show-toplevel) && \
-#		rpmbuild -ba fio-driver.spec
-
 modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
     -j$(NCPUS) \

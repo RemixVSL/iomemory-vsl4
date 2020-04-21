@@ -5,7 +5,6 @@
 %define fio_sourcedir      /usr/src
 %define fio_driver_name    iomemory-vsl4
 
-
 %define has_kver %{?rpm_kernel_version: 1} %{?!rpm_kernel_version: 0}
 %if !%{has_kver}
 %define rpm_kernel_version %(uname -r)
@@ -94,15 +93,17 @@ touch -a "driver_source/Module.symvers"
 cp "driver_source/Module.symvers" "${RPM_BUILD_ROOT}/usr/src/iomemory-vsl4-4.3.7/"
 cp "driver_source/include/fio/port/linux/kfio_config.h" "${RPM_BUILD_ROOT}/usr/src/iomemory-vsl4-4.3.7/include/fio/port/linux/"
 
+%clean
+make clean
 
 %pre
 %ifarch i386
 wrong_version() {
     echo "iomemory-vsl4 requires the i686 kernel to be installed.  Due to problems with architecture detection in anaconda, "
     echo "it appears that the wrong kernel is installed.  Please see"
-    echo 
+    echo
     echo "http://fedoraproject.org/wiki/Bugs/FC6Common#head-e0676100ebd965b92fbaa7111097983a3822f143"
-    echo 
+    echo
     echo "for more information."
     echo
     exit -1
@@ -116,7 +117,7 @@ fi
 
 if [ `rpm -q --queryformat="%{ARCH}\\n" kernel | sort -u` == 'i586' ] ; then
     echo "Found via rpm (uname reports i686):"
-    echo 
+    echo
     wrong_version
 fi
 
@@ -126,6 +127,7 @@ fi
 %package -n %{name}-%{rpm_kernel_version}
 Summary: Driver for SanDisk Fusion ioMemory devices
 Group: System Environment/Kernel
+%define _wrong_version_format_terminate_build 0
 Provides: iomemory-vsl4, iomemory-vsl, libvsl, kernel-modules = %{rpm_kernel_version}
 Provides: iomemory-vsl4-%{fio_version}
 Obsoletes: iodrive-driver, fio-driver
@@ -230,7 +232,6 @@ Source to build driver for SanDisk Fusion ioMemory devices
 /usr/src/iomemory-vsl4-4.3.7/driver_init.c
 /usr/src/iomemory-vsl4-4.3.7/check_target_kernel.sh
 /usr/src/iomemory-vsl4-4.3.7/errno.c
-/usr/src/iomemory-vsl4-4.3.7/iomemory-vsl4.mod.c
 /usr/src/iomemory-vsl4-4.3.7/kblock.c
 /usr/src/iomemory-vsl4-4.3.7/kcache.c
 /usr/src/iomemory-vsl4-4.3.7/kcondvar.c
@@ -259,6 +260,10 @@ Source to build driver for SanDisk Fusion ioMemory devices
 /usr/src/iomemory-vsl4-4.3.7/six_lock.c
 /usr/src/iomemory-vsl4-4.3.7/state.c
 /usr/src/iomemory-vsl4-4.3.7/sysrq.c
+/usr/src/iomemory-vsl4-4.3.7/*.conf
+/usr/src/iomemory-vsl4-4.3.7/kfio_config_add.sh
+/usr/src/iomemory-vsl4-4.3.7/module_operations.sh
+/usr/src/iomemory-vsl4-4.3.7/kfio/*
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/arch/ppc/atomic.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/arch/ppc/bits.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/arch/ppc/cache.h
