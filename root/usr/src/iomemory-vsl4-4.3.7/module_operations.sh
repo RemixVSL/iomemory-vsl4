@@ -26,7 +26,10 @@ dkms_install() {
     name=$1
     ver=$2
     echo "Adding, buidling and installing $name/$ver with DKMS"
-    dkms add $name/$ver
+
+    if [ "$(dkms status | grep $name | grep added)" == "" ]; then
+      dkms add $name/$ver
+    fi
     dkms build $name/$ver
     dkms install $name/$ver --force
 }
