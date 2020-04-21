@@ -118,14 +118,7 @@ int iodrive_barrier_sync = 0;
 
 extern int enable_discard;
 
-#ifndef bio_flags
 #define bio_flags(bio) ((bio)->bi_opf & REQ_OP_MASK)
-#endif
-
-#if KFIOC_HAS_RQ_POS_BYTES == 0
-#define blk_rq_pos(rq)    ((rq)->sector)
-#define blk_rq_bytes(rq)  ((rq)->nr_sectors << 9)
-#endif
 
 extern int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *bio);
 

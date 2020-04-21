@@ -104,11 +104,8 @@ static int coms_control_release(struct inode *inode, struct file *filep)
     return 0;
 }
 
-#if KFIOC_FOPS_USE_LOCKED_IOCTL
-static int coms_control_ioctl_internal(struct inode *inode, struct file *file, unsigned int cmd, uintptr_t arg)
-#else
+
 static long coms_control_ioctl_internal(struct file *file, unsigned int cmd, uintptr_t arg)
-#endif
 {
     struct coms_cdev *cdev = (struct coms_cdev *)(file->private_data);
 
@@ -129,11 +126,7 @@ static struct file_operations coms_control_ops =
 {
     open:    coms_control_open,
     release: coms_control_release,
-#if KFIOC_FOPS_USE_LOCKED_IOCTL
-    ioctl:   coms_control_ioctl_internal,
-#else
     unlocked_ioctl: coms_control_ioctl_internal,
-#endif
     compat_ioctl: coms_control_compat_ioctl_internal,
     poll:    coms_control_ioctl_poll,
 };

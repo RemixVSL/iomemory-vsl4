@@ -7,7 +7,7 @@ set -e
 
 dkms_ver() {
     name=$1
-    ver=$(dkms status | grep $name | cut -d, -f2 | sed -e s/\ //)
+    ver=$(dkms status | grep $name | grep -v added | cut -d, -f2 | sed -e s/\ //)
     if [ "$?" != "0" ]; then
         echo "DKMS problem"
         exit 1
@@ -26,7 +26,10 @@ dkms_install() {
     name=$1
     ver=$2
     echo "Adding, buidling and installing $name/$ver with DKMS"
-    dkms add $name/$ver
+
+    if [ "$(dkms status | grep $name | grep added)" == "" ]; then
+      dkms add $name/$ver
+    fi
     dkms build $name/$ver
     dkms install $name/$ver --force
 }

@@ -140,9 +140,7 @@ void noinline kfio_free_page(fusion_page_t pg)
  */
 fusion_page_t noinline kfio_page_from_virt(void *vaddr)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,25)
     kassert(!is_vmalloc_addr(vaddr));
-#endif
     return (fusion_page_t)virt_to_page(vaddr);
 }
 
