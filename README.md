@@ -17,11 +17,11 @@ This driver is aimed to only support Linux kernels from 5.0 and upwards.
 
 ### Releases
 Releases are tagged, and should be checked out by their tag. The release tags
-follow Linux Kernel versions. E.g. v5.6.0 (Danger Noodle) will work on all 5.x
+follow Linux Kernel versions. E.g. v5.6.1 (Danger Noodle) will work on all 5.x
 kernels that are 5.6 and lower, but is not guaranteed to work on 5.7.
 | Tag | Codename |
 | --- | --- |
-| v5.6.0 | Danger Noodle |
+| v5.6.1 | Danger Noodle |
 
 
 ## Important notes!!!
@@ -47,8 +47,7 @@ sudo insmod iomemory-vsl4.ko
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
 git checkout <release-tag>
-cd root/usr/src/iomemory-vsl4-4.3.7
-make dpkg
+dpkg-buildpackage -uc -us
 ```
 
 ### .rpm CentOS / RHEL
@@ -56,7 +55,7 @@ make dpkg
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
 git checkout <release-tag>
-rpmbuild -ba fio-driver.spec
+make rpm
 ```
 
 ## Installation
@@ -71,8 +70,7 @@ place on the system.
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
 git checkout <release-tag>
-cd root/usr/src/iomemory-vsl4-4.3.7
-sudo make dkms
+make dkms
 ```
 
 # Utils
