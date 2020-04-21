@@ -125,7 +125,12 @@ int kfio_create_kthread_on_cpu(fusion_kthread_func_t func, void *data,
 
 static void __kfio_bind_task_to_cpumask(struct task_struct *tsk, cpumask_t *mask)
 {
+
+#if KFIOC_X_TASK_HAS_CPUS_MASK
     tsk->cpus_mask = *mask;
+#else
+    tsk->cpus_allowed = *mask;
+#endif
     tsk->nr_cpus_allowed = cpumask_weight(mask);
 }
 
