@@ -1,3 +1,4 @@
 .vs
 ioMemory-vsl*
 root/.vs
+root/usr/src/iomemory-vsl4-4.3.7/license.c
