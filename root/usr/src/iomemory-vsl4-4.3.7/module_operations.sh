@@ -128,6 +128,14 @@ sanity_check() {
     fi
 }
 
+install_libvsl() {
+    target_dir="/usr/lib/fio"
+    mkdir -p $target_dir
+    src_dir=$(git rev-parse --show-toplevel)
+    libvsl=$(find ${src_dir}/root/usr/lib/fio -type f| grep libvsl)
+    cp $libvsl $target_dir
+}
+
 usage() {
     echo "${0##*/}:
   -n <module name>
@@ -211,4 +219,5 @@ elif [ "$DKMS" == "1" ]; then
         patchFile $DKMS_DIR/kfio/$LIB $RELEASE_VER $MODULE_VER
     done
     dkms_install $MODULE_NAME $RELEASE_VER
+    install_libvsl $MODULE_NAME
 fi
