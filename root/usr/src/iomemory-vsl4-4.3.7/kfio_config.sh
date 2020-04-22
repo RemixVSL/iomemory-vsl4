@@ -47,7 +47,8 @@ FAILED_TESTS=""
 TIMEOUT_DELTA=${TIMEOUT_DELTA:-120}
 TIMEOUT_TIME=$(($(date "+%s")+$TIMEOUT_DELTA))
 FUSION_DEBUG=0
-
+NCPUS=$(grep -c ^processor /proc/cpuinfo)
+TEST_RATE=$(expr $NCPUS "*" 2)
 
 # These are exit codes from include/sysexits.h
 EX_OK=0
@@ -71,14 +72,90 @@ EX_OSFILE=72
 # architecture.
 
 KFIOC_TEST_LIST="
-KFIOC_HAS_GLOBAL_REGS_POINTER
-KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
-KFIOC_FOPS_USE_LOCKED_IOCTL
-KFIOC_HAS_RQ_POS_BYTES
-KFIOC_NUMA_MAPS
-KFIOC_HAS_SCSI_QD_CHANGE_FN
+KFIOC_X_HAS_COARSE_REAL_TS
+KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+KFIOC_X_TASK_HAS_CPUS_MASK
 "
 
+
+#
+# Experimenting with the removal of tests, hard code the exit to 0....
+#
+KFIOC_REMOVE_TESTS=""
+
+for remove in $KFIOC_REMOVE_TESTS; do
+    echo "Hardcode $remove result to 0"
+    eval "${remove}() {
+      set_kfioc_status $remove 0 exit
+      set_kfioc_status $remove 0 result
+    }"
+done
+
+#
+# Actual test procedures for determining Kernel capabilities
+#
+####
+# flag:          KFIOC_X_TASK_HAS_CPUS_MASK
+# usage:         1   Task struct has CPUs allowed as mask 5.2 and up
+#                0   5.0, 5.1 and 5.2 don't have this
+KFIOC_X_TASK_HAS_CPUS_MASK()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/sched.h>
+void kfioc_check_task_has_cpus_mask(void)
+{
+    cpumask_t *cpu_mask = NULL;
+    struct task_struct *tsk = NULL;
+    tsk->cpus_mask = *cpu_mask;
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror
+}
+
+# flag:            KFIOC_X_HAS_COARSE_REAL_TS
+# usage:           1 kernel exports ktime_get_coarse_real_ts64()
+#                  0 old kernel with current_kernel_time()
+# kernel version:  Added in 4.18 to provide a 64 bit time interface
+#                  commit: "timekeeping: Standardize on ktime_get_*() naming"
+KFIOC_X_HAS_COARSE_REAL_TS()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/timekeeping.h>
+
+void test_has_coarse_real_ts(void)
+{
+    struct timespec64 ts;
+    ktime_get_coarse_real_ts64(&ts);
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1
+}
+
+# flag:           KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
+# usage:          undef for automatic selection by kernel version
+#                 0     if the kernel does not have the proc_create_data function
+#                 1     if the kernel has the function
+# description:    Between 5.3 and 5.6 the 4th option for proc_create_data changes.
+#                 It went from a "const struct file_operations *" to a
+#                 const struct proc_ops *.
+#                 https://elixir.bootlin.com/linux/v5.3/source/include/linux/proc_fs.h#L44
+#                 https://elixir.bootlin.com/linux/v5.6.3/source/include/linux/proc_fs.h#L59
+KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/proc_fs.h>
+
+void *kfioc_has_proc_create_data(struct inode *inode)
+{
+    const struct proc_ops *pops;
+    return proc_create_data(NULL, 0, NULL, pops, NULL);
+}
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
+}
 
 #
 # General functions
@@ -276,7 +353,6 @@ start_test()
     $test_name $test_name
 }
 
-
 start_tests()
 {
     local kfioc_test=
@@ -294,9 +370,14 @@ start_tests()
         # Each test has an absolute time deadline for completion from when it is started.
         # A test can depend on another test so it needs a timeout to decide that the other
         # test may have failed.
-        update_timeout
         start_test $kfioc_test &
         KFIOC_PROCS="$KFIOC_PROCS $kfioc_test:$!"
+        KFIOC_COUNT=$( pgrep -fc "kfio_config.sh -a" )
+        while [ $KFIOC_COUNT -gt $TEST_RATE ]
+        do
+            sleep .01
+            KFIOC_COUNT=$( pgrep -fc "kfio_config.sh -a" )
+        done
     done
 
     printf "Started tests, waiting for completions...\n"
@@ -305,7 +386,6 @@ start_tests()
     TIMEOUT_DELTA=$(($TIMEOUT_DELTA+$TIMEOUT_DELTA/2))
     update_timeout
 }
-
 
 finished()
 {
@@ -454,424 +534,6 @@ kfioc_has_include()
     kfioc_test "$test_code" "$kfioc_flag" 1
 }
 
-
-#
-# Actual test procedures for determining Kernel capabilities
-#
-
-# flag:           KFIOC_HAS_PCI_ERROR_HANDLERS
-# values:
-#                 0     for older kernels
-#                 1     For kernels that have pci error handlers.
-# git commit:     392a1ce761bc3b3a5d642ee341c1ff082cbb71f0
-# kernel version: >= 2.6.18
-KFIOC_HAS_PCI_ERROR_HANDLERS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/pci.h>
-
-void kfioc_test_pci_error_handlers(void) {
-    struct pci_error_handlers e;
-    (void)e;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_HAS_GLOBAL_REGS_POINTER
-# values:
-#                 0     for older kernel that pass pt_regs arguments to handlers
-#                 1     for kernels that have a global regs pointer.
-# git commit:     7d12e780e003f93433d49ce78cfedf4b4c52adc5
-# comments:       The change in IRQ arguments causes an ABI incompatibility.
-KFIOC_HAS_GLOBAL_REGS_POINTER()
-{
-    local test_flag="$1"
-    local test_code='
-#include <asm/irq_regs.h>
-
-struct pt_regs *kfioc_set_irq_regs(void) {
-    return get_irq_regs();
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK
-# values:
-#                 0     for older kernels that removed enable_mask in struct sysrq_key_op
-#                 1     for kernels that have enable_mask member in struct sysrq_key_op
-#                 in struct sysrq_key_op.
-# git commit:     NA
-# kernel version: >= 2.6.12
-# comments:       Structure size change causes ABI incompatibility.
-KFIOC_HAS_SYSRQ_KEY_OP_ENABLE_MASK()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/sysrq.h>
-
-int kfioc_test_sysrq_key_op(void) {
-    struct sysrq_key_op op = {};
-    return op.enable_mask;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-
-# flag:           KFIOC_HAS_LINUX_SCATTERLIST_H
-# values:
-#                 0     for older kernels that had asm/scatterlist.h
-#                 1     for kernels that have linux/scatterlist.h
-# git commit:     NA
-# comments:
-KFIOC_HAS_LINUX_SCATTERLIST_H()
-{
-    local test_flag="$1"
-    local test_code='
-#include <asm/scatterlist.h>
-#include <linux/mm.h>
-#include <linux/scatterlist.h>
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_HAS_BIOVEC_ITERATORS
-# values:
-#                 0     for kernel doesn't support biovec_iter and immuatable biovecs
-#                 1     for kernel that supports biovec_iter and immutable biovecs
-# comments:       Introduced in 3.14
-KFIOC_HAS_BIOVEC_ITERATORS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_has_biovec_iterators(void) {
-        struct bvec_iter bvec_i;
-        bvec_i.bi_sector = 0;
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_USE_LINUX_UACCESS_H
-# values:
-#                 0     for kernels that use asm/uaccess.h
-#                 1     for kernels that use linux/uaccess.h
-KFIOC_USE_LINUX_UACCESS_H()
-{
-    local test_flag="$1"
-    kfioc_has_include "linux/uaccess.h" "$test_flag"
-}
-
-# flag:           KFIOC_MODULE_PARAM_ARRAY_NUMP
-# values:
-#                 0     for kernels that don't take a nump pointer as the fourth argument
-#                       to the module_param_array_named() macro (and module_param_array())
-#                 1     for kernels that take nump pointer parameters.
-# git commit:     Pre-dates git
-# comments:
-KFIOC_MODULE_PARAM_ARRAY_NUMP()
-{
-    local test_flag="$1"
-    local test_code='
-char *test[10];
-
-module_param_array(test, charp, NULL, 0);
-'
-
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
-# flag:           KFIOC_FOPS_USE_LOCKED_IOCTL
-#                 1     if the driver should use fops->ioctl()
-#                 0     if the driver should use fops->unlocked_ioctl()
-#                 Change introduced in 2.6.36
-KFIOC_FOPS_USE_LOCKED_IOCTL()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/fs.h>
-void foo(void)
-{
-    struct file_operations fops;
-    fops.ioctl = NULL;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_HAS_RQ_POS_BYTES
-#                 1     if the driver should use
-#                 0     if the driver should use
-#                 Change introduced in 2e46e8b27aa57c6bd34b3102b40ee4d0144b4fab
-KFIOC_HAS_RQ_POS_BYTES()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-void foo(void)
-{
-    struct request *req = NULL;
-    sector_t foo;
-
-    foo = blk_rq_pos(req);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:          KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR
-# usage:         1   pci_request_regions(..) has a const second parameter.
-#                0   pci_request_regions() has no const second parameter.
-KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/pci.h>
-int kfioc_pci_request_regions_const_param(void)
-{
-    return pci_request_regions(NULL, (const char *) "foo");
-}
-'
-    kfioc_test "$test_code" KFIOC_PCI_REQUEST_REGIONS_CONST_CHAR 1 -Werror
-}
-
-# flag:          KFIOC_NUMA_MAPS
-# usage:         1   Kernel exports enough NUMA knowledge for us to bind
-#                0   It does not
-KFIOC_NUMA_MAPS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/sched.h>
-#include <linux/cpumask.h>
-const cpumask_t *kfioc_check_numa_maps(void)
-{
-    return cpumask_of_node(0);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:          KFIOC_PCI_HAS_NUMA_INFO
-# usage:         1   Kernel populates NUMA info for PCI devices
-#                0   It does not
-KFIOC_PCI_HAS_NUMA_INFO()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/pci.h>
-#include <linux/device.h>
-int kfioc_pci_has_numa_info(void)
-{
-    struct pci_dev pdev = { };
-
-    return dev_to_node(&pdev.dev);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_HAS_SCSI_QD_CHANGE_FN
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the SCSI change queue depth function
-#                 1     if the kernel has the functions
-KFIOC_HAS_SCSI_QD_CHANGE_FN()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_device.h>
-struct scsi_device *sdev;
-
-void kfioc_has_scsi_qd_fns(void)
-{
-    scsi_change_queue_depth(sdev, 64);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-
-# flag:           KFIOC_HAS_SCSI_SG_FNS
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the SCSI sg functions
-#                 1     if the kernel has the functions
-KFIOC_HAS_SCSI_SG_FNS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_cmnd.h>
-struct scatterlist;
-
-void kfioc_has_scsi_sg_fns(void)
-{
-    struct scsi_cmnd *scmd = NULL;
-    struct scatterlist *one = scsi_sglist(scmd);
-    unsigned two = scsi_sg_count(scmd);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_SCSI_SG_COPY_FNS
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the SCSI sg copy functions
-#                 1     if the kernel has the functions
-KFIOC_HAS_SCSI_SG_COPY_FNS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_cmnd.h>
-
-void kfioc_has_scsi_sg_copy_fns(void)
-{
-    struct scsi_cmnd *scmd = NULL;
-    int one = scsi_sg_copy_from_buffer(scmd, NULL, 0);
-    int two = scsi_sg_copy_to_buffer(scmd, NULL, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_HAS_SCSI_RESID_FNS
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have the SCSI resid functions
-#                 1     if the kernel has the functions
-KFIOC_HAS_SCSI_RESID_FNS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <scsi/scsi_cmnd.h>
-struct scatterlist;
-
-void kfioc_has_scsi_resid_fns(void)
-{
-    struct scsi_cmnd *scmd = NULL;
-    scsi_set_resid(scmd, 0);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:           KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG
-# values:
-#                 0     32-bit version of acpi_evaluate_integer present
-#                 1     64-bit version of acpi_evaluate_integer present
-# git commit:     27663c5855b10af9ec67bc7dfba001426ba21222
-# kernel version: >= 2.6.27.15
-KFIOC_ACPI_EVAL_INT_TAKES_UNSIGNED_LONG_LONG()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/acpi.h>
-
-void kfioc_acpi_eval_int_takes_unsigned_long_long(void)
-{
-    unsigned long long data = 0;
-    acpi_evaluate_integer(NULL, NULL, NULL, &data);
-}
-'
-
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:           KFIOC_BIO_HAS_SEG_SIZE
-# usage:          undef for automatic selection by kernel version
-#                 0     if the kernel does not have bio seg_front/back_size
-#                 1     if the kernel has structure elements
-# kernel version: >= 2.6.27.15
-KFIOC_BIO_HAS_SEG_SIZE()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/bio.h>
-
-void kfioc_test_bio_seg_size(void) {
-	struct bio bio;
-	bio.bi_seg_front_size=0;
-	bio.bi_seg_back_size=0;
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
-}
-
-# flag:            KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS
-# usage:           1 get_user_pages has a combined gup_flags parameter
-#                  0 get_user_pages has separate write and force parameters
-# git commit:      c164154f66f0c9b02673f07aa4f044f1d9c70274 <- changed API
-#
-# kernel version: v4.10
-KFIOC_GET_USER_PAGES_HAS_GUP_FLAGS()
-{
-    local test_flag="$1"
-    local result=0
-
-    grep -A3 -E "(long|int) get_user_pages\(" "$KERNELSOURCEDIR/include/linux/mm.h" | grep "gup_flags" || result=$?
-    result=$((! $result))
-
-    set_kfioc_status "$test_flag" 0 exit
-    set_kfioc_status "$test_flag" "$result" result
-}
-
-# flag:            KFIOC_HAS_PCI_ENABLE_MSIX_EXACT
-# usage:           1 pci_enable_msix_exact() function exists
-#                  0 Use the older pci_enable_msix() function.
-# git commit:      kernel 4.8 added new API
-#                  kernel 4.12 removed old function
-# kernel version: v4.8 and 4.12
-KFIOC_HAS_PCI_ENABLE_MSIX_EXACT()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/pci.h>
-
-void test_pcie_enable_msix_exact(struct pci_dev* pdev, struct msix_entry* msi)
-{
-    unsigned int nr_vecs = 1;
-
-    pci_enable_msix_exact(pdev, msi, nr_vecs);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-# flag:            KFIOC_HAS_BLK_QUEUE_SPLIT2
-# usage:           1 blk_queue_split() with two parameters exists
-#                  0 function does not exist, or is the older 3-parameter version.
-# kernel version:  Added in 4.3 with three parameters, changed to 2 parameters in 4.13.
-#                   This checks for the two-parameter version, since it appears that
-#                   the kernel quit honoring segment limits in about 4.13, requiring us
-#                   to have to split bios given to us with too many segments.
-KFIOC_HAS_BLK_QUEUE_SPLIT2()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/blkdev.h>
-
-void test_has_blk_queue_split2(struct request_queue *rq, struct bio **bio)
-{
-    blk_queue_split(rq, bio);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1 -Werror
-}
-
-
 ###############################################################################
 
 usage()
@@ -988,8 +650,6 @@ EOF
         echo "Please make sure your kernel development package is installed."
         exit $EX_OSFILE;
     fi
-
-    . ./kfio_config_add.sh
 
     start_tests
 
