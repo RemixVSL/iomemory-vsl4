@@ -112,6 +112,7 @@ patchLicenseVersion() {
     tag=$1
     src=license.c
     echo "Adding module version $tag to source $src"
+    set +e
     grep -q MODULE_VERSION $src
     if [ "$?" == "0" ]; then
         replace=$(perl -sne 'print "s/$2/$tag/\n" if /(MODULE_VERSION)\(\"([\d\w\._-]+)\"\)/' -- -tag=$tag $src | head -1)
@@ -119,6 +120,7 @@ patchLicenseVersion() {
     else
         echo "MODULE_VERSION(\""$tag"\");" >> $src
     fi
+    set -e
 }
 
 sanity_check() {
