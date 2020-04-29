@@ -76,7 +76,7 @@ debian/control: FORCE
 		cp "$$file" "$$new_file"; \
 	done
 	# Add the kernel version to our UEFI Ubuntu driver injection disk
-	sed -r -i -e 's/^XB-Kernel-Version:/XB-Kernel-Version: $(deb_kernel_version)/;' $@
+	sed -r -i -e 's/^XB-Kernel-Version:.*/XB-Kernel-Version: $(deb_kernel_version)/;' $@
 	cp -r $(CURDIR)/debian/$(fio_driver_name).postinst "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version).postinst"
 	echo depmod $(deb_kernel_version) >> "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version).postinst"
 	cp -r $(CURDIR)/debian/$(fio_driver_name).postrm "$(CURDIR)/debian/$(fio_driver_name)-$(deb_kernel_version).postrm"

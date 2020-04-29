@@ -62,7 +62,7 @@ LAST_KFIO_LIB := $(shell ls -1 kfio | sort | tail -1)
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 
-all: modules patch_module_version
+all: fake_license modules patch_module_version
 
 gpl: fake_license modules patch_module_version
 

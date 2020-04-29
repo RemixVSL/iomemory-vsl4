@@ -142,7 +142,6 @@ usr/src/iomemory-vsl4-4.3.7/kcondvar.c
 usr/src/iomemory-vsl4-4.3.7/module_param.c
 usr/src/iomemory-vsl4-4.3.7/cdev.c
 usr/src/iomemory-vsl4-4.3.7/Makefile
-usr/src/iomemory-vsl4-4.3.7/kfio_config_add.sh
 usr/src/iomemory-vsl4-4.3.7/kscsi_host.c
 usr/src/iomemory-vsl4-4.3.7/kscsi.c
 usr/src/iomemory-vsl4-4.3.7/license.c
