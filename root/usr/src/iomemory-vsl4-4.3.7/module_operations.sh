@@ -118,6 +118,8 @@ patchLicenseVersion() {
         replace=$(perl -sne 'print "s/$2/$tag/\n" if /(MODULE_VERSION)\(\"([\d\w\._-]+)\"\)/' -- -tag=$tag $src | head -1)
         sed -i "$replace" $src
     else
+        echo "#include \"linux/module.h\"" > $src
+        echo "MODULE_LICENSE(\"GPL\");" >> $src
         echo "MODULE_VERSION(\""$tag"\");" >> $src
     fi
     set -e
