@@ -39,7 +39,7 @@ Package: iomemory-vsl4-di-5.3.0-45-generic
 Package-Type: udeb
 Architecture: amd64
 Depends:
-XB-Kernel-Version: 5.3.0-45-generic 5.3.0-45-generic 5.3.0-45-generic 5.3.0-45-generic 5.3.0-45-generic 5.3.0-45-generic 5.3.0-45-generic 5.3.0-45-generic 5.3.0-42-generic 5.3.0-42-generic
+XB-Kernel-Version: 5.3.0-45-generic
 Section: debian-installer
 Description: Source to build driver for SanDisk Fusion ioMemory devices
  Source to build driver for SanDisk Fusion ioMemory devices

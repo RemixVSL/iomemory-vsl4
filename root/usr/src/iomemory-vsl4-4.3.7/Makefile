@@ -62,7 +62,7 @@ LAST_KFIO_LIB := $(shell ls -1 kfio | sort | tail -1)
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 
-all: modules patch_module_version
+all: fake_license modules patch_module_version
 
 gpl: fake_license modules patch_module_version
 
@@ -88,7 +88,7 @@ clean modules_clean:
 		EXTRA_CFLAGS+="$(CFLAGS)" \
 		KFIO_LIB=$(KFIO_LIB) \
 		clean
-	rm -rf include/fio/port/linux/kfio_config.h kfio_config
+	rm -rf include/fio/port/linux/kfio_config.h kfio_config license.c
 
 include/fio/port/linux/kfio_config.h: kfio_config.sh
 	./$< -a $(FIOARCH) -o $@ -k $(KERNEL_BUILD) -p -d $(CURDIR)/kfio_config -l $(FUSION_DEBUG) -s $(KERNEL_SRC)
@@ -121,7 +121,13 @@ dkms:
 dpkg:
 	# patch fio_version, fio_short_version in debian/fio_values
 	cd $(shell git rev-parse --show-toplevel) && \
-		dpkg-buildpackage -rfakeroot --no-check-builddeps --no-sign
+			$(MAKE) dpkg
+
+.PHONY: dpkg
+rpm:
+		# patch fio_version, fio_short_version in debian/fio_values
+		cd $(shell git rev-parse --show-toplevel) && \
+			$(MAKE) rpm
 
 modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
