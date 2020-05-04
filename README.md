@@ -23,6 +23,12 @@ kernels that are 5.6 and lower, but is not guaranteed to work on 5.7.
 | --- | --- |
 | v5.6.1 | Danger Noodle |
 
+| Supported Hardware |
+| --- |
+| ioMemory SX300 |
+| ioMemory SX350 |
+| ioMemory PX600 |
+
 
 ## Important notes!!!
 At this moment the driver has been tested with kernel 5.0 to 5.6. Tests are
