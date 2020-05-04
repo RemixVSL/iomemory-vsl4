@@ -23,12 +23,31 @@ kernels that are 5.6 and lower, but is not guaranteed to work on 5.7.
 | --- | --- |
 | v5.6.1 | Danger Noodle |
 
-| Supported Hardware |
+### Supported Hardware
+Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB card, and was able to crossflash back to OEM. The rest below all seem to be SX350s or PX600s. While they should all work, we don't have any PX or SX300 cards to test with.
+
+| OEM Models |
 | --- |
 | ioMemory SX300 |
 | ioMemory SX350 |
 | ioMemory PX600 |
 
+| HPE PCIe Workload Accelerators | Part Number | Capacity | Notes |
+| --- | --- | --- | --- |
+| HP Value Endurance (VE) Workload Accelerator | 763834-B21 | 1.3TB | Likely SX350 |
+| HP Value Endurance (VE) Workload Accelerator | 763836-B21 | 3.2TB | Rebranded SX350 |
+| HP Value Endurance (VE) Workload Accelerator | 763840-B21 | 6.4TB | Likely SX350 |
+
+| Cisco UCS Storage Accelerators | Part Number | Capacity | Notes |
+| --- | --- | --- | --- |
+| UCS Rack PCIe Storage 1300 GB SanDisk SX350 Medium Endurance | UCSC-F-S13002 | 1.3TB | 
+| UCS Rack PCIe Storage 1600 GB SanDisk SX350 Medium Endurance | UCSC-F-S16002 | 1.6TB |
+| UCS Rack PCIe Storage 3200 GB SanDisk SX350 Medium Endurance | UCSC-F-S32002 | 3.2TB |
+| UCS Rack PCIe Storage 6400 GB SanDisk SX350 Medium Endurance | UCSC-F-S64002 | 6.4TB |
+| UCS 1000 GB Fusion ioMemory3 PX Performance line for Rack M4 | UCSC-F-FIO-1000PS | 1.0TB | PX600 |
+| UCS 1300 GB Fusion ioMemory3 PX Performance line for Rack M4 | UCSC-F-FIO-1300PS | 1.3TB | PX600 |
+| UCS 2600 GB Fusion ioMemory3 PX Performance line for Rack M4 | UCSC-F-FIO-2600PS | 2.6TB | PX600 |
+| UCS 5200 GB Fusion ioMemory3 PX Performance line for Rack M4 | UCSC-F-FIO-5200PS | 5.2TB | PX600 |
 
 ## Important notes!!!
 At this moment the driver has been tested with kernel 5.0 to 5.6. Tests are
@@ -36,6 +55,7 @@ run on an LVM volume with an ext4 filesystem. Workload testing is done with
 VM's, Containers, FIO and normal desktop usage.
 
 ## Building
+| UCS Rack PCIe Storage 3200 GB SanDisk SX350 Medium Endurance |
 There are several ways to build and package the module.
 
 ### From Source
