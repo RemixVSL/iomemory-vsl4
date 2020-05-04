@@ -55,7 +55,6 @@ run on an LVM volume with an ext4 filesystem. Workload testing is done with
 VM's, Containers, FIO and normal desktop usage.
 
 ## Building
-| UCS Rack PCIe Storage 3200 GB SanDisk SX350 Medium Endurance |
 There are several ways to build and package the module.
 
 ### From Source
