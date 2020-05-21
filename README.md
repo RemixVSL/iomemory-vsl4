@@ -34,6 +34,7 @@ Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB 
 
 | HPE PCIe Workload Accelerators | Part Number | Capacity | Notes |
 | --- | --- | --- | --- |
+| HP Light Endurance (LE) Workload Accelerator | 775666-B21 | 1.0TB | Unkown |
 | HP Value Endurance (VE) Workload Accelerator | 763834-B21 | 1.3TB | Likely SX350 |
 | HP Value Endurance (VE) Workload Accelerator | 763836-B21 | 3.2TB | Rebranded SX350 |
 | HP Value Endurance (VE) Workload Accelerator | 763840-B21 | 6.4TB | Likely SX350 |
