@@ -22,11 +22,10 @@ assignees: ''
 ### How to reproduce
 <!-- What are the steps to reproduce the reported issue 
 ```
-git clone https://github.com/snuf/iomemory-vsl.git
+git clone https://github.com/snuf/iomemory-vsl4.git
 cd iomemory-vsl4
 git checkout <tag or some-branch>
-cd root/usr/src/iomemory-vsl-3.2.16
-make
+make module
 ** poof, broken token **
 -->
 
@@ -37,7 +36,7 @@ make
  <!-- Information about the system the module is used on
 1. Linux kernel compiled against (uname -a)
 2. The C compiler version used (gcc --version)
-3. distribution, and version 
+3. distribution, and version (cat /etc/os-release)
 4. Tag or Branch of iomemory-vsl4 that is being compiled
 5. FIO device used, if applicable
    * fio-status
