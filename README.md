@@ -4,6 +4,9 @@ source for newer generation FusionIO cards. It comes with no warranty, it may
 cause DATA LOSS or CORRUPTION. Therefore it is NOT meant for production use,
 just for testing purposes.
 
+# IOMemory-VSL (3)
+For the iomemory-vsl driver please go to the [iomemory-vsl](https://github.com/snuf/iomemory-vsl4) repo.
+
 ## Background
 Driver support for FusionIO cards has been lagging behind kernel
 releases, effectively making these cards an expensive paperweight
