@@ -187,7 +187,7 @@ sanity_check
 MODULE_DIR=${PWD##*/}
 MODULE_VER=${MODULE_DIR##*-}
 MODULE_FILE=${MODULE_NAME}.ko
-RELEASE_VER=$(get_rel_ver $VERSION)
+RELEASE_VER=$(get_rel_ver $VERSION | sed -e s/^v// | sed -e s/-/_/g)
 
 if [ "$MODULE_NAME" == "" ]; then
     usage
