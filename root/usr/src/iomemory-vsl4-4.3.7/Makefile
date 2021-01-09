@@ -35,8 +35,7 @@ KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
-# We don't want the -Wvla errors for now
-#   CFLAGS += -Werror
+#    CFLAGS += -Werror
 endif
 
 # Set FUSION_DEBUG=0 to compile without debugging symbols
@@ -58,7 +57,8 @@ MODULE_VERSION ?= $(shell git rev-parse --short HEAD)
 TARGET ?= $(FIOARCH)_cc$(CCMAJOR)$(CCMINOR)
 
 KFIO_LIB ?= kfio/$(TARGET)_libkfio.o_shipped
-LAST_KFIO_LIB := $(shell ls -1 kfio | sort | tail -1)
+LAST_KFIO_LIB := $(shell ls -1 kfio | grep $(LAST_CCVER) | sort | tail -1)
+KFIO_LIB_CMD ?= kfio/.$(TARGET)_libkfio.o.cmd
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 
@@ -77,6 +77,7 @@ check_n_fix_kfio_ccver:
 			cp kfio/${LAST_KFIO_LIB} ${KFIO_LIB}; \
 		fi \
 	fi
+	$(shell touch ${KFIO_LIB_CMD})
 
 clean modules_clean:
 	$(MAKE) \
@@ -129,7 +130,7 @@ rpm:
 		cd $(shell git rev-parse --show-toplevel) && \
 			$(MAKE) rpm
 
-modules modules_install: check_n_fix_kfio_ccver check_target_kernel include/fio/port/linux/kfio_config.h add_module_version
+modules modules_install: check_target_kernel check_n_fix_kfio_ccver include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
     -j$(NCPUS) \
 	-C $(KERNEL_BUILD) \
