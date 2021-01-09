@@ -770,7 +770,7 @@ struct pci_device_id iodrive_ids[] = {
 
 
 static pci_ers_result_t
-iodrive_pci_error_detected (struct pci_dev *dev, enum pci_channel_state error)
+iodrive_pci_error_detected (struct pci_dev *dev, pci_channel_state_t error)
 {
     errprint_lbl(pci_name(dev), ERRID_CMN_LINUX_PCI_ERR, "iodrive: PCI Error detected: %d\n", error);
     return PCI_ERS_RESULT_DISCONNECT;

@@ -241,14 +241,13 @@ static struct block_device_operations fio_bdev_ops =
     .open =         kfio_open,
     .release =      kfio_release,
     .ioctl =        kfio_ioctl,
-    .compat_ioctl = kfio_compat_ioctl
+    .compat_ioctl = kfio_compat_ioctl,
 #if ! KFIOC_X_HAS_MAKE_REQUEST_FN
-    .submit_bio =   kfio_submit_bio,
+    .submit_bio =   kfio_submit_bio
 #endif
 };
 
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
 
 static inline void kfio_set_comp_cpu(struct kfio_bio* fbio, struct bio* bio)
@@ -1600,7 +1599,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
 
     test_safe_plugging(); // not sure if this is needed now.
 
-    rq = blk_alloc_queue_node(GFP_NOIO, node);
+    rq = BLK_ALLOC_QUEUE;
     if (rq != NULL)
     {
         rq->queuedata = dp;
