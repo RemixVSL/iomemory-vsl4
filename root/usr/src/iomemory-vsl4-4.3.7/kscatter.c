@@ -260,11 +260,8 @@ int kfio_sgl_map_bytes_gen(kfio_sg_list_t *sgl, const void *buffer, uint32_t siz
         else
         {
             int retval;
+            retval = get_user_pages_fast((uintptr_t)bp, 1, GET_USER_PAGES_FLAGS(1, 0), (struct page **) &page);
 
-            // XXX Do we need to widen the interface to allow non-writable here?
-            down_read(&current->mm->mmap_sem);
-            retval = get_user_pages((uintptr_t)bp, 1, GET_USER_PAGES_FLAGS(1, 0), (struct page **)&page, NULL);
-            up_read(&current->mm->mmap_sem);
             if (retval <= 0)
             {
                 // Release the pages that worked up until now and return the error.

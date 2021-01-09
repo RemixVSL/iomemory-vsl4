@@ -53,11 +53,9 @@
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
 #include <linux/blk-mq.h>
+#include <kblock_meta.h>
 
-
-extern int use_workqueue;
-static int fio_major;
-
+/* should these not be in a header file? */
 static void linux_bdev_name_disk(struct fio_bdev *bdev);
 static int  linux_bdev_create_disk(struct fio_bdev *bdev);
 static int  linux_bdev_expose_disk(struct fio_bdev *bdev);
@@ -68,10 +66,12 @@ static void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending);
 static void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration);
 static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight);
 
+extern int use_workqueue;
+static int fio_major;
+
 #define BI_SIZE(bio) (bio->bi_iter.bi_size)
 #define BI_SECTOR(bio) (bio->bi_iter.bi_sector)
 #define BI_IDX(bio) (bio->bi_iter.bi_idx)
-
 
 /******************************************************************************
  *   Block request and bio processing methods.                                *
@@ -99,7 +99,9 @@ struct kfio_disk
     struct list_head      retry_list;
     unsigned int          retry_cnt;
     fusion_atomic32_t     ref_count;
+#if KFIOC_X_HAS_MAKE_REQUEST_FN
     make_request_fn      *make_request_fn;
+#endif
     int                   use_workqueue;
     struct blk_mq_tag_set tag_set;
 };
@@ -121,7 +123,6 @@ extern int enable_discard;
 #define bio_flags(bio) ((bio)->bi_opf & REQ_OP_MASK)
 
 extern int kfio_sgl_map_bio(kfio_sg_list_t *sgl, struct bio *bio);
-
 
 /******************************************************************************
  *   Functions required to register and unregister fio block device driver    *
@@ -240,11 +241,13 @@ static struct block_device_operations fio_bdev_ops =
     .open =         kfio_open,
     .release =      kfio_release,
     .ioctl =        kfio_ioctl,
-    .compat_ioctl = kfio_compat_ioctl
+    .compat_ioctl = kfio_compat_ioctl,
+#if ! KFIOC_X_HAS_MAKE_REQUEST_FN
+    .submit_bio =   kfio_submit_bio
+#endif
 };
 
 static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp, kfio_numa_node_t node);
-static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio);
 static void __kfio_bio_complete(struct bio *bio, uint32_t bytes_complete, int error);
 
 static inline void kfio_set_comp_cpu(struct kfio_bio* fbio, struct bio* bio)
@@ -1596,12 +1599,13 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
 
     test_safe_plugging(); // not sure if this is needed now.
 
-    rq = blk_alloc_queue_node(GFP_NOIO, node);
+    rq = BLK_ALLOC_QUEUE;
     if (rq != NULL)
     {
         rq->queuedata = dp;
+#if KFIOC_X_BLK_ALLOC_QUEUE_NODE_EXISTS
         blk_queue_make_request(rq, kfio_make_request);
-
+#endif
         // TODO:
         // if kfio_disk support spinlock_t instead of lame fusion_spinlock_t for queueu_lock
         // dp->queue_lock = rq->queue_lock;
@@ -1779,9 +1783,16 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
     return ret;
 }
 
+#if KFIOC_X_HAS_MAKE_REQUEST_FN
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio)
+#else
+blk_qc_t kfio_submit_bio(struct bio *bio)
+#endif
 #define FIO_MFN_RET 0
 {
+#if ! KFIOC_X_HAS_MAKE_REQUEST_FN
+    struct request_queue *queue = bio->bi_disk->queue;
+#endif
     struct kfio_disk *disk = queue->queuedata;
     void *plug_data;
 
@@ -1796,7 +1807,7 @@ static unsigned int kfio_make_request(struct request_queue *queue, struct bio *b
     //   and re-submit the remainder to the request queue. blk_queue_split() does all that for us.
     // It appears the kernel quit honoring the blk_queue_max_segments() in about 4.13.
     if (bio_segments(bio) >= queue_max_segments(queue))
-        blk_queue_split(queue, &bio);
+      BLK_QUEUE_SPLIT;
 
     /*
      * The atomic chains have more overhead (using atomic contexts etc) so
