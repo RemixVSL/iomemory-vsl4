@@ -20,10 +20,11 @@ This driver is aimed to only support Linux kernels from 5.0 and upwards.
 
 ### Releases
 Releases are tagged, and should be checked out by their tag. The release tags
-follow Linux Kernel versions. E.g. v5.6.1 (Danger Noodle) will work on all 5.x
-kernels that are 5.6 and lower, but is not guaranteed to work on 5.7.
+follow Linux Kernel versions. E.g. v5.10.0 (Spicy Nope Rope) will work on all 5.x
+kernels that are 5.10 and lower, but is not guaranteed to work on 5.11.
 | Tag | Codename |
 | --- | --- |
+| v5.10.0 | Spicy Nope Rope |
 | v5.6.1 | Danger Noodle |
 
 ### Supported Hardware
