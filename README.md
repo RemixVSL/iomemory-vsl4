@@ -68,6 +68,7 @@ There are several ways to build and package the module.
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
 git checkout <release-tag>
+make module
 cd root/usr/src/iomemory-vsl4-4.3.7
 sudo insmod iomemory-vsl4.ko
 ```
