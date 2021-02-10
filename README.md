@@ -69,7 +69,6 @@ git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
 git checkout <release-tag>
 cd root/usr/src/iomemory-vsl4-4.3.7
-make gpl
 sudo insmod iomemory-vsl4.ko
 ```
 
@@ -78,7 +77,7 @@ sudo insmod iomemory-vsl4.ko
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
 git checkout <release-tag>
-dpkg-buildpackage -uc -us
+make dpkg
 ```
 
 ### .rpm CentOS / RHEL
