@@ -805,7 +805,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->gd != NULL)
     {
-        linux_bdev = bdget_disk(disk->gd, 0);
+        linux_bdev = GET_BDEV;
 
         if (linux_bdev != NULL)
         {
@@ -957,18 +957,18 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
     case BIO_DIR_WRITE:
     {
         part_stat_lock();
-        part_stat_inc(&gd->part0, ios[1]);
-        part_stat_add(&gd->part0, sectors[1], totalsize >> 9);
-        part_stat_add(&gd->part0, nsecs[1], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
+        part_stat_inc(GD_PART0, ios[1]);
+        part_stat_add(GD_PART0, sectors[1], totalsize >> 9);
+        part_stat_add(GD_PART0, nsecs[1], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
         part_stat_unlock();
         break;
     }
     case BIO_DIR_READ:
     {
         part_stat_lock();
-        part_stat_inc(&gd->part0, ios[0]);
-        part_stat_add(&gd->part0, sectors[0], totalsize >> 9);
-        part_stat_add(&gd->part0, nsecs[0], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
+        part_stat_inc(GD_PART0, ios[0]);
+        part_stat_add(GD_PART0, sectors[0], totalsize >> 9);
+        part_stat_add(GD_PART0, nsecs[0], kfio_div64_64(duration * HZ, FIO_USEC_PER_SEC));
         part_stat_unlock();
         break;
     }
@@ -991,7 +991,7 @@ void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 
     if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
     {
-        part_stat_set_all(&gd->part0, in_flight);
+        part_stat_set_all(GD_PART0, in_flight);
     }
 }
 
