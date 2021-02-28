@@ -45,7 +45,7 @@ Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB 
 | HP Value Endurance (VE) Workload Accelerator | 763840-B21 | 6.4TB | Likely SX350 | Unknown |
 
 | Cisco UCS Storage Accelerators | Part Number | Capacity | Notes |
-| --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | 
 | UCS Rack PCIe Storage 1300 GB SanDisk SX350 Medium Endurance | UCSC-F-S13002 | 1.3TB | 
 | UCS Rack PCIe Storage 1600 GB SanDisk SX350 Medium Endurance | UCSC-F-S16002 | 1.6TB |
 | UCS Rack PCIe Storage 3200 GB SanDisk SX350 Medium Endurance | UCSC-F-S32002 | 3.2TB |
