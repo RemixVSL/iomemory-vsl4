@@ -36,16 +36,16 @@ Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB 
 | ioMemory SX350 |
 | ioMemory PX600 |
 
-| HPE PCIe Workload Accelerators | Part Number | Capacity | Notes |
-| --- | --- | --- | --- |
-| HP Light Endurance (LE) Workload Accelerator | 775666-B21 | 1.0TB | Unknown |
-| HP Light Endurance (LE) Workload Accelerator | 775672-B21 | 5.2TB | Unknown |
-| HP Value Endurance (VE) Workload Accelerator | 763834-B21 | 1.3TB | Likely SX350 |
-| HP Value Endurance (VE) Workload Accelerator | 763836-B21 | 3.2TB | Rebranded SX350 |
-| HP Value Endurance (VE) Workload Accelerator | 763840-B21 | 6.4TB | Likely SX350 |
+| HPE PCIe Workload Accelerators | Part Number | Capacity | Notes | tested firmware |
+| --- | --- | --- | --- | --- |
+| HP Light Endurance (LE) Workload Accelerator | 775666-B21 | 1.0TB | Unknown | gen3_tangerine_fusion |
+| HP Light Endurance (LE) Workload Accelerator | 775672-B21 | 5.2TB | Unknown | Unknown |
+| HP Value Endurance (VE) Workload Accelerator | 763834-B21 | 1.3TB | Likely SX350 | Unknown |
+| HP Value Endurance (VE) Workload Accelerator | 763836-B21 | 3.2TB | Rebranded SX350 | gen3_tangerine_fusion |
+| HP Value Endurance (VE) Workload Accelerator | 763840-B21 | 6.4TB | Likely SX350 | Unknown |
 
 | Cisco UCS Storage Accelerators | Part Number | Capacity | Notes |
-| --- | --- | --- | --- |
+| --- | --- | --- | --- | --- |
 | UCS Rack PCIe Storage 1300 GB SanDisk SX350 Medium Endurance | UCSC-F-S13002 | 1.3TB | 
 | UCS Rack PCIe Storage 1600 GB SanDisk SX350 Medium Endurance | UCSC-F-S16002 | 1.6TB |
 | UCS Rack PCIe Storage 3200 GB SanDisk SX350 Medium Endurance | UCSC-F-S32002 | 3.2TB |
