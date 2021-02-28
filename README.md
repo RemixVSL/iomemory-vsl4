@@ -105,6 +105,8 @@ make dkms
 ```
 
 # Utils
+.deb https://www.dropbox.com/s/d18dokktt0g2aau/fio-util_4.3.7.1205-1.0_amd64.deb
+.rpm https://www.dropbox.com/s/ba2vcxhmf9p2pb2/fio-util-4.3.7.1205-1.el7.x86_64.rpm
 With fio-utils installed you should see the following kind of...,:
 ```
 snuf@scipio:~/Documents/iodrive4/fio-util-4/usr/bin$ sudo ./fio-status -a
