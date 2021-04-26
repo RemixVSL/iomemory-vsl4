@@ -101,7 +101,9 @@ uint64_t noinline fusion_HZ(void)
  */
 uint32_t noinline kfio_get_seconds(void)
 {
-    return get_seconds();
+    // this hurts...till we can patch the binary .so we just do this
+    // means we are toast in 2038 though....
+    return (uint32_t) ktime_get_real_seconds();
 }
 
 /**
