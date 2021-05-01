@@ -72,13 +72,13 @@ EX_OSFILE=72
 # architecture.
 
 KFIOC_TEST_LIST="
-KFIOC_X_HAS_COARSE_REAL_TS
 KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
 KFIOC_X_TASK_HAS_CPUS_MASK
 KFIOC_X_LINUX_HAS_PART_STAT_H
 KFIOC_X_BLK_ALLOC_QUEUE_NODE_EXISTS
 KFIOC_X_HAS_MAKE_REQUEST_FN
 KFIOC_X_GENHD_PART0_IS_A_POINTER
+KFIOC_X_BIO_HAS_BI_BDEV
 "
 
 
@@ -104,6 +104,27 @@ done
 ## to documentation describing the change in the kernel.
 ##
 ####
+# flag:            KFIOC_X_BIO_HAS_BI_BDEV
+# usage:           1   bio->bi_bdev exists
+#                  0   it doesn't and we assume bio->bi_disk is a thing
+# kernel_version:  5.12
+# description:     bio->bi_disk was dropped and was moved to
+#                  bio->bi_bdev->bd_disk
+KFIOC_X_BIO_HAS_BI_BDEV()
+{
+    local test_flag="$1"
+    local test_code='
+#include <linux/blkdev.h>
+void kfioc_bio_has_bi_bdev(void)
+ {
+  struct bio *bio = NULL;
+  struct gendisk *disk = bio->bi_bdev->bd_disk;
+  set_disk_ro(disk, 1);
+ }
+'
+    kfioc_test "$test_code" "$test_flag" 1 -Werror
+}
+
 # flag:            KFIOC_X_GENHD_PART0_IS_A_POINTER
 # usage:           1   genhd disk part is a pointer
 #                  0   genhd disk part is not a pointer
@@ -202,26 +223,6 @@ void kfioc_check_task_has_cpus_mask(void)
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
 
-# flag:            KFIOC_X_HAS_COARSE_REAL_TS
-# usage:           1 kernel exports ktime_get_coarse_real_ts64()
-#                  0 old kernel with current_kernel_time()
-# kernel version:  Added in 4.18 to provide a 64 bit time interface
-#                  commit: "timekeeping: Standardize on ktime_get_*() naming"
-KFIOC_X_HAS_COARSE_REAL_TS()
-{
-    local test_flag="$1"
-    local test_code='
-#include <linux/timekeeping.h>
-
-void test_has_coarse_real_ts(void)
-{
-    struct timespec64 ts;
-    ktime_get_coarse_real_ts64(&ts);
-}
-'
-    kfioc_test "$test_code" "$test_flag" 1
-}
-
 # flag:           KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS
 # usage:          undef for automatic selection by kernel version
 #                 0     if the kernel does not have the proc_create_data function
@@ -263,7 +264,7 @@ update_timeout()
 open_log()
 {
     FIFO_DIR=$CONFIGDIR
-    FIFO_DIR=/tmp
+    # FIFO_DIR=/tmp
     # The tee processes will die when this process exits.
     rm -f "$FIFO_DIR/kfio_config.stdout" "$FIFO_DIR/kfio_config.stderr" "$FIFO_DIR/kfio_config.log"
     exec 3>&1 4>&2
