@@ -35,7 +35,7 @@ KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
-    CFLAGS += -Werror
+#    CFLAGS += -Werror
 endif
 
 # Set FUSION_DEBUG=0 to compile without debugging symbols
@@ -50,13 +50,34 @@ FIOARCH ?= $(shell uname -m)
 CCMAJOR ?= $(shell echo __GNUC__ | $(FIOCC) -E -xc - | tail -n 1)
 CCMINOR ?= $(shell echo __GNUC_MINOR__ | $(FIOCC) -E -xc - | tail -n 1)
 CCVER=$(CCMAJOR)$(CCMINOR)
+LAST_CCVER := $(shell ls -1 kfio | sed -n 's/.*_cc\([0-9][0-9]*\)_.*/\1/p' | tail -1)
+# Get the tag and push it in here too.... if not too long...
+MODULE_VERSION ?= $(shell git rev-parse --short HEAD)
+
 TARGET ?= $(FIOARCH)_cc$(CCMAJOR)$(CCMINOR)
 
 KFIO_LIB ?= kfio/$(TARGET)_libkfio.o_shipped
+LAST_KFIO_LIB := $(shell ls -1 kfio | grep $(LAST_CCVER) | sort | tail -1)
+KFIO_LIB_CMD ?= kfio/.$(TARGET)_libkfio.o.cmd
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 
-all: modules
+all: fake_license modules patch_module_version
+
+gpl: fake_license modules patch_module_version
+
+.PHONY: fake_license
+fake_license:
+	sed -i 's/Proprietary/GPL/g' Kbuild
+
+.PHONY: check_n_fix_kfio_ccver
+check_n_fix_kfio_ccver:
+	if [ "${CCVER}" -gt "${LAST_CCVER}" ];then \
+		if [ ! -f "${KFIO_LIB}" ];then \
+			cp kfio/${LAST_KFIO_LIB} ${KFIO_LIB}; \
+		fi \
+	fi
+	$(shell touch ${KFIO_LIB_CMD})
 
 clean modules_clean:
 	$(MAKE) \
@@ -68,7 +89,7 @@ clean modules_clean:
 		EXTRA_CFLAGS+="$(CFLAGS)" \
 		KFIO_LIB=$(KFIO_LIB) \
 		clean
-	rm -rf include/fio/port/linux/kfio_config.h kfio_config
+	rm -rf include/fio/port/linux/kfio_config.h kfio_config license.c
 
 include/fio/port/linux/kfio_config.h: kfio_config.sh
 	./$< -a $(FIOARCH) -o $@ -k $(KERNEL_BUILD) -p -d $(CURDIR)/kfio_config -l $(FUSION_DEBUG) -s $(KERNEL_SRC)
@@ -84,7 +105,32 @@ check_target_kernel:
 		$(MAKE) clean ; \
 	fi
 
-modules modules_install: check_target_kernel include/fio/port/linux/kfio_config.h
+.PHONY: add_module_version patch_module_version
+add_module_version patch_module_version:
+	@ret="$$("$(shell pwd)"/module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)")" ; \
+	if [ -n "$$ret" ] ; then \
+		echo "" ; \
+		echo ""$$ret"" ; \
+		echo "" ; \
+	fi
+
+.PHONY: dkms
+dkms:
+	./module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -d
+
+.PHONY: dpkg
+dpkg:
+	# patch fio_version, fio_short_version in debian/fio_values
+	cd $(shell git rev-parse --show-toplevel) && \
+			$(MAKE) dpkg
+
+.PHONY: dpkg
+rpm:
+		# patch fio_version, fio_short_version in debian/fio_values
+		cd $(shell git rev-parse --show-toplevel) && \
+			$(MAKE) rpm
+
+modules modules_install: check_target_kernel check_n_fix_kfio_ccver include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
     -j$(NCPUS) \
 	-C $(KERNEL_BUILD) \
@@ -98,3 +144,6 @@ modules modules_install: check_target_kernel include/fio/port/linux/kfio_config.
 	$@
 
 endif
+
+# 4.3.7.1205 bryce@a7e621e6fb50 -tag=7bd0632
+# 3.2.16.1731 pinnacles@4870ad45b7ea

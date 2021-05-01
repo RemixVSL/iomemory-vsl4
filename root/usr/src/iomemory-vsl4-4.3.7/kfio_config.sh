@@ -47,7 +47,8 @@ FAILED_TESTS=""
 TIMEOUT_DELTA=${TIMEOUT_DELTA:-120}
 TIMEOUT_TIME=$(($(date "+%s")+$TIMEOUT_DELTA))
 FUSION_DEBUG=0
-
+NCPUS=$(grep -c ^processor /proc/cpuinfo)
+TEST_RATE=$(expr $NCPUS "*" 2)
 
 # These are exit codes from include/sysexits.h
 EX_OK=0
@@ -415,6 +416,12 @@ start_tests()
         update_timeout
         start_test $kfioc_test &
         KFIOC_PROCS="$KFIOC_PROCS $kfioc_test:$!"
+        KFIOC_COUNT=$( pgrep -fc "kfio_config.sh -a" )
+        while [ $KFIOC_COUNT -gt $TEST_RATE ]
+        do
+            sleep .01
+            KFIOC_COUNT=$( pgrep -fc "kfio_config.sh -a" )
+        done  
     done
 
     printf "Started tests, waiting for completions...\n"
