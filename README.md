@@ -1,11 +1,28 @@
+<br />
+<p align="center">
+
+  <!-- <a href="https://github.com/snuf/iomemory-docs">
+    <img src="https://github.com/snuf/iomemory-docs/images/logo.png" alt="Logo" width="80" height="80">
+  </a> -->
+
+  <h3 align="center"></h3>
+
+  <p align="center">
+    <a href="../../wiki">Wiki</a>
+    .
+    <a href="../../issues">Report Bug</a>
+    ·
+    <a href="../../issues">Request Feature</a>
+  </p>
+</p>
+
 # IOMemory-VSL4
 This is an "unsupported" updated, and cleaned up version of the original driver
 source for newer generation FusionIO cards. It comes with no warranty, it may
-cause DATA LOSS or CORRUPTION. Therefore it is NOT meant for production use,
-just for testing purposes.
+cause DATA LOSS or CORRUPTION.
 
-# IOMemory-VSL (3)
-For the iomemory-vsl driver please go to the [iomemory-vsl](https://github.com/snuf/iomemory-vsl4) repo.
+# IOMemory-VSL(3)
+For the iomemory-vsl driver please go to the [iomemory-vsl](https://github.com/snuf/iomemory-vsl) repo.
 
 ## Background
 Driver support for FusionIO cards has been lagging behind kernel
@@ -16,16 +33,20 @@ all supply newer kernels than supported.
 ## Current version
 The current driver version is derived from iomemory-vsl-4.3.7.1205, and has
 gone through rigorous rewriting and cleaning of redundant, unused, and old code.
-This driver is aimed to only support Linux kernels from 5.0 and upwards.
+This driver is aimed to only support Linux kernels from 5.0 and upwards. 
+The v4.20.0 branch is provided for convencience and is not actively maintained.
 
 ### Releases
 Releases are tagged, and should be checked out by their tag. The release tags
 follow Linux Kernel versions. E.g. v5.10.0 (Spicy Nope Rope) will work on all 5.x
 kernels that are 5.10 and lower, but is not guaranteed to work on 5.11.
+v4.20.0 - Big Ole Nope Rope supports most kernels that pre-date 5.0 and is not
+actively maintained.
 | Tag | Codename |
 | --- | --- |
 | v5.10.0 | Spicy Nope Rope |
 | v5.6.1 | Danger Noodle |
+| v4.20.0 | Big Ole Nope Rope |
 
 ### Supported Hardware
 Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB card, and was able to crossflash back to OEM. The rest below all seem to be SX350s or PX600s. While they should all work, we don't have any PX or SX300 cards to test with.
@@ -144,6 +165,28 @@ Adapter: ioMono  (driver 4.3.6)
 	Internal voltage: avg 1.01V, max 1.02V
 	Aux voltage: avg 1.80V, max 1.83V
 ```
+
+# Acknowledgements
+The support and maintenance of this driver is made possible by the people that actively contribute or contributed to its code base or by supporting the project in other ways.
+
+| Name | Discord |  |
+|---|---|---|
+| Demetrius Cassidy | @Tourman | Long nights of cleaning the codebase, setting up the Discord channel and guiding people through firmware upgrades |
+| Vince Fleming |  | Donating a 1.2TB IoDrive2 for debugging problems |
+
+Obviously all the regulars on the Discord channel, notably @bplein, @AcquaCow and @Tear.
+
+Oh yes and the folks that were at <b>Fusion IO</b> for creating this product that was way ahead of its time and delivering the integration shim sources with the driver core.
+
+## Resources
+Tools and resources often used to figure out what changed, and why things are not working as they are supposed to.
+| Source | |
+| --- | --- |
+| [Elixir](https://elixir.bootlin.com/linux/latest/source) | Making the Linux source code browsable and easy to compare changes over time | 
+| [ZOL](https://zfsonlinux.org/) |  A source of inspiration for changes in the block layers of the linux kernel that we get to deal with | 
+| [LKML](https://lkml.org/) | Sometimes the first or last resort to figure out why something changed in the kernel, or where |
+| [The Nvidia Forum](https://forums.developer.nvidia.com/c/gpu-unix-graphics/linux/148) | Because they are hot to trot they encounter problems before we do, so we get to ride on their coat tails.... sometimes....though  often not | 
+| [Ghidra](https://ghidra-sre.org/) | The Ghidra project from the NSA that allows a look under the covers to figure out things inside non-sourcy libs|
 
 ## Support
 Join us on the Discord Server in the Wiki, or create a bug report
