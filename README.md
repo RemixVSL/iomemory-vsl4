@@ -38,12 +38,13 @@ The v4.20.0 branch is provided for convencience and is not actively maintained.
 
 ### Releases
 Releases are tagged, and should be checked out by their tag. The release tags
-follow Linux Kernel versions. E.g. v5.10.0 (Spicy Nope Rope) will work on all 5.x
-kernels that are 5.10 and lower, but is not guaranteed to work on 5.11.
+follow Linux Kernel versions. E.g. v5.12.0 (Boop Noodle) will work on all 5.x
+kernels that are 5.12 and lower, but is not guaranteed to work on 5.13.
 v4.20.0 - Big Ole Nope Rope supports most kernels that pre-date 5.0 and is not
 actively maintained.
 | Tag | Codename |
 | --- | --- |
+| v5.12.0 | Boop Noodle |
 | v5.10.0 | Spicy Nope Rope |
 | v5.6.1 | Danger Noodle |
 | v4.20.0 | Big Ole Nope Rope |
