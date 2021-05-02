@@ -991,7 +991,6 @@ void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 
     if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
     {
-        part_stat_set_all(GD_PART0, in_flight);
     }
 }
 
