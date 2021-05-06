@@ -40,14 +40,14 @@ The v4.20.0 branch is provided for convencience and is not actively maintained.
 Releases are tagged, and should be checked out by their tag. The release tags
 follow Linux Kernel versions. E.g. v5.12.0 (Boop Noodle) will work on all 5.x
 kernels that are 5.12 and lower, but is not guaranteed to work on 5.13.
-v4.20.0 - Big Ole Nope Rope supports most kernels that pre-date 5.0 and is not
+v4.20.1 - Big Ole Nope Rope supports most kernels that pre-date 5.0 and is not
 actively maintained.
 | Tag | Codename |
 | --- | --- |
 | v5.12.0 | Boop Noodle |
 | v5.10.0 | Spicy Nope Rope |
 | v5.6.1 | Danger Noodle |
-| v4.20.0 | Big Ole Nope Rope |
+| v4.20.1 | Big Ole Nope Rope |
 
 ### Supported Hardware
 Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB card, and was able to crossflash back to OEM. The rest below all seem to be SX350s or PX600s. While they should all work, we don't have any PX or SX300 cards to test with.
