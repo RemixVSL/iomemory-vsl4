@@ -10,7 +10,6 @@ usr/src/iomemory-vsl4-4.3.7/dbgset.c
 usr/src/iomemory-vsl4-4.3.7/driver_init.c
 usr/src/iomemory-vsl4-4.3.7/check_target_kernel.sh
 usr/src/iomemory-vsl4-4.3.7/errno.c
-usr/src/iomemory-vsl4-4.3.7/iomemory-vsl4.mod.c
 usr/src/iomemory-vsl4-4.3.7/kblock.c
 usr/src/iomemory-vsl4-4.3.7/kcache.c
 usr/src/iomemory-vsl4-4.3.7/kcondvar.c
@@ -126,5 +125,7 @@ usr/src/iomemory-vsl4-4.3.7/include/fio/port/linux/utypes.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/gcc/align.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/gcc/compiler.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/public/fioapi.h
-usr/src/iomemory-vsl4-4.3.7/kfio/.x86_64_cc48_libkfio.o.cmd
-usr/src/iomemory-vsl4-4.3.7/kfio/x86_64_cc48_libkfio.o_shipped
+usr/src/iomemory-vsl4-4.3.7/kfio/x86_64_cc*
+usr/src/iomemory-vsl4-4.3.7/check_target_kernel.conf
+usr/src/iomemory-vsl4-4.3.7/module_operations.sh
+usr/src/iomemory-vsl4-4.3.7/dkms.conf
