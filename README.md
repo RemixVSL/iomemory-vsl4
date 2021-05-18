@@ -172,7 +172,7 @@ The support and maintenance of this driver is made possible by the people that a
 
 | Name | Discord |  |
 |---|---|---|
-| Demetrius Cassidy | @Tourman | Long nights of cleaning the codebase, setting up the Discord channel and guiding people through firmware upgrades |
+| Demetrius Cassidy | | Long nights of cleaning the codebase, setting up the Discord channel and guiding people through firmware upgrades |
 | Vince Fleming |  | Donating a 1.2TB IoDrive2 for debugging problems |
 
 Obviously all the regulars on the Discord channel, notably @bplein, @AcquaCow and @Tear.
