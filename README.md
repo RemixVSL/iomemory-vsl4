@@ -24,6 +24,9 @@ cause DATA LOSS or CORRUPTION.
 # IOMemory-VSL(3)
 For the iomemory-vsl driver please go to the [iomemory-vsl](https://github.com/snuf/iomemory-vsl) repo.
 
+# How to Identify your Fusion-io Card (including VSL version)
+ Please refer to the [Fusion-io and OEM Part Numbers Matrix](https://docs.google.com/spreadsheets/d/e/2PACX-1vQMd40liekOCeftUYQx6GeofHgjU5SSDT-jHWid03JCfswQxHAhVee3rW-04baqKg1qN2fp7wEzuFm6/pubhtml).
+
 ## Background
 Driver support for FusionIO cards has been lagging behind kernel
 releases, effectively making these cards an expensive paperweight
