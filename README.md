@@ -52,6 +52,20 @@ actively maintained.
 | v5.6.1 | Danger Noodle |
 | v4.20.1 | Big Ole Nope Rope |
 
+## Important Note for newer Linux Kernels
+Starting with Linux kernel 5.4.0, significant changes to the kernel were made that require additional boot time kernel flags for this driver to work. These affect AMD CPUs starting with 5.4.0, and Intel CPUs after about kernel 5.8.0. 
+
+Add the following to your /etc/default/grub:
+For AMD systems:
+```
+amd_iommu=on iommu=pt
+```
+For Intel system:
+```
+iommu=pt
+```
+
+
 ### Supported Hardware
 Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB card, and was able to crossflash back to OEM. The rest below all seem to be SX350s or PX600s. While they should all work, we don't have any PX or SX300 cards to test with.
 
