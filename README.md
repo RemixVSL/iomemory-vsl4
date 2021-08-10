@@ -184,6 +184,10 @@ Adapter: ioMono  (driver 4.3.6)
 	Aux voltage: avg 1.80V, max 1.83V
 ```
 
+# How to Get Help
+- Open an issue in this Github repo
+- Join our Discord server at https://discord.gg/EAcujJkt
+
 # Acknowledgements
 The support and maintenance of this driver is made possible by the people that actively contribute or contributed to its code base or by supporting the project in other ways.
 
@@ -205,9 +209,6 @@ Tools and resources often used to figure out what changed, and why things are no
 | [LKML](https://lkml.org/) | Sometimes the first or last resort to figure out why something changed in the kernel, or where |
 | [The Nvidia Forum](https://forums.developer.nvidia.com/c/gpu-unix-graphics/linux/148) | Because they are hot to trot they encounter problems before we do, so we get to ride on their coat tails.... sometimes....though  often not | 
 | [Ghidra](https://ghidra-sre.org/) | The Ghidra project from the NSA that allows a look under the covers to figure out things inside non-sourcy libs|
-
-## Support
-Join us on the Discord Server in the Wiki, or create a bug report
 
 ## Other notes
 Installing fio-util, fio-common, fio-preinstall and fio-sysvinit is recommended.
