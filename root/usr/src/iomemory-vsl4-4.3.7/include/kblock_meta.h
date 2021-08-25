@@ -30,7 +30,12 @@
 #else /* KFIOC_X_HAS_MAKE_REQUEST_FN */
   blk_qc_t kfio_submit_bio(struct bio *bio);
 
-  #define BLK_ALLOC_QUEUE blk_alloc_queue(node);
+  #if KFIOC_X_BLK_ALLOC_DISK_EXISTS
+    #define BLK_ALLOC_QUEUE __blk_alloc_disk(node)->queue;
+  #else
+    #define BLK_ALLOC_QUEUE blk_alloc_queue(node);
+  #endif
+
   #define BLK_QUEUE_SPLIT blk_queue_split(&bio);
 #endif /* KFIOC_X_HAS_MAKE_REQUEST_FN */
 #if KFIOC_X_GENHD_PART0_IS_A_POINTER
