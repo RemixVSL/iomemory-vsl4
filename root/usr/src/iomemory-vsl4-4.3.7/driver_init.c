@@ -48,6 +48,10 @@ module_param_array (numa_node_override, charp, &num_numa_node_override, S_IRUGO 
 int use_workqueue = USE_QUEUE_NONE;
 module_param (use_workqueue, int, S_IRUGO | S_IWUSR);
 
+int iodrive_scan_nv_data = 1; // IODRIVE_SCAN_NV_DATA;
+module_param(iodrive_scan_nv_data, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(iodrive_scan_nv_data, "N/A");
+
 // TODO: do we need any of this?
 #if FUSION_MEDIA_TEST_TOOL
 #if FUSION_INTERNAL || FUSION_DEBUG
