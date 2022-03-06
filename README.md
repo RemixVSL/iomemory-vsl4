@@ -102,6 +102,8 @@ VM's, Containers, FIO and normal desktop usage.
 ## Building
 There are several ways to build and package the module.
 
+Note! For many systems, the best option is to use DKMS, using the [DKMS instructions below](https://github.com/RemixVSL/iomemory-vsl4/blob/main/README.md#dkms). If you prefer to build the module directly, or to create a dpkg or rpm package, you can proceed with these options:
+
 ### From Source
 ```
 git clone https://github.com/snuf/iomemory-vsl4
@@ -136,6 +138,17 @@ in the original README.
 Dynamic Kernel Module Support automates away the requirement of having to
 repackage the kernel module with every kernel and headers update that takes
 place on the system.
+
+Try building from `main` first as it works with most modern kernels up to about 5.14:
+
+```
+git clone https://github.com/snuf/iomemory-vsl4
+cd iomemory-vsl4/
+make dkms
+```
+
+If you know you need to build a specific branch based on a specific recommendation, use:
+
 ```
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
