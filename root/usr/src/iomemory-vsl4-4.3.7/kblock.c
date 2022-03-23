@@ -871,16 +871,16 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
          */
         if (linux_bdev != NULL)
         {
-            infprint("%s: Shutting down block device %s: major: %d minor: %d sector size: %d...\n",
-                    fio_bdev_get_bus_name(bdev), disk->gd->disk_name, disk->gd->major,
-                    disk->gd->first_minor, bdev->bdev_block_size);
             /*
              * Wait for openere to go away before tearing the disk down. Skip waiting
              * if the system is being shut down - if we happen to hold the root system
              * or swap, last close will never happen.
-             *-/
+             */
             if ((opflags & KFIO_DISK_OP_SHUTDOWN) == 0)
             {
+                infprint("%s: Shutting down block device %s: major: %d minor: %d sector size: %d...\n",
+                    fio_bdev_get_bus_name(bdev), disk->gd->disk_name, disk->gd->major,
+                    disk->gd->first_minor, bdev->bdev_block_size);
                 /*
                  * Tricky: lock and unlock sequence ensures that there is
                  * no parallel open or close operation happening. All opens
@@ -889,11 +889,9 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  * as dead above. The bd_openers count can now only go down from
                  * here and no concurrent open-close operation can race with the
                  * wait below.
-                 *-/
+                 */
                  mutex_lock(&linux_bdev->bd_mutex);
                  mutex_unlock(&linux_bdev->bd_mutex);
-
-                 fusion_cv_lock_irq(&disk->state_lk);
 
                  fusion_cv_lock_irq(&disk->state_lk);
                  while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
@@ -904,17 +902,20 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
              }
              else
              {
+                infprint("%s: System Shutting down block device %s: major: %d minor: %d sector size: %d...\n",
+                    fio_bdev_get_bus_name(bdev), disk->gd->disk_name, disk->gd->major,
+                    disk->gd->first_minor, bdev->bdev_block_size);
                 /*
                  * System is being torn down, we do not expect anyone to try and open
                  * or close this device now. Just release all of the outstanding references
                  * to the parent device, if any. This allows lower levels of the driver to
                  * finish tearing the underlying infrastructure down.
-                 *-/
+                 */
                 if (fusion_atomic32_decr(&disk->ref_count) > 0)
                 {
                     fio_bdev_release(bdev);
                 }
-            } */
+            }
         }
         put_disk(disk->gd);
 
