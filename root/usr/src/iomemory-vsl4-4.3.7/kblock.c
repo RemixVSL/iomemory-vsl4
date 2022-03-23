@@ -582,7 +582,7 @@ static void kfio_blk_add_disk(fusion_work_struct_t *work)
     struct kfio_blk_add_disk_param *param = container_of(work, struct kfio_blk_add_disk_param, work);
     struct kfio_disk *disk = param->disk;
 
-    add_disk(disk->gd);
+    ADD_DISK
 
     /* Tell waiter we are done. */
     fusion_cv_lock_irq(&disk->state_lk);
@@ -669,7 +669,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             *
             */
 
-            disk->rq = blk_mq_init_sq_queue(&disk->tag_set, &fio_mq_ops, 256, BLK_MQ_F_SHOULD_MERGE);
+            disk->rq = blk_mq_init_queue(&disk->tag_set);
 
             if (IS_ERR(disk->rq))
                 goto err; // maybe move error handler to another function with extra logging?
@@ -678,6 +678,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             disk->tag_set.numa_node = bdev->bdev_numa_node;
             disk->tag_set.cmd_size = 0;
             disk->tag_set.driver_data = disk;
+            disk->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
+            disk->tag_set.ops = &fio_mq_ops;
+            // on NVME this is 32 - 2, the command size is the size of the struct they send
+            // my guess is this is really inneficient?
+            disk->tag_set.queue_depth = 256;
             break;
         }
         case USE_QUEUE_NONE:
@@ -713,7 +718,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     /* Disable device global entropy contribution */
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
 
-    disk->gd = gd = alloc_disk(FIO_NUM_MINORS);
+    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
     if (disk->gd == NULL)
     {
         linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
@@ -790,9 +795,9 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     return 0;
 
 err:
-/* Undo work done so far. */
-linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
-return -ENOMEM;
+    /* Undo work done so far. */
+    linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
+    return -ENOMEM;
 }
 
 static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
@@ -805,7 +810,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->gd != NULL)
     {
-        linux_bdev = GET_BDEV;
+	    linux_bdev = disk->gd->part0;
 
         if (linux_bdev != NULL)
         {
@@ -866,11 +871,14 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
          */
         if (linux_bdev != NULL)
         {
+            infprint("%s: Shutting down block device %s: major: %d minor: %d sector size: %d...\n",
+                    fio_bdev_get_bus_name(bdev), disk->gd->disk_name, disk->gd->major,
+                    disk->gd->first_minor, bdev->bdev_block_size);
             /*
              * Wait for openere to go away before tearing the disk down. Skip waiting
              * if the system is being shut down - if we happen to hold the root system
              * or swap, last close will never happen.
-             */
+             *-/
             if ((opflags & KFIO_DISK_OP_SHUTDOWN) == 0)
             {
                 /*
@@ -881,34 +889,33 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  * as dead above. The bd_openers count can now only go down from
                  * here and no concurrent open-close operation can race with the
                  * wait below.
-                 */
-                mutex_lock(&linux_bdev->bd_mutex);
-                mutex_unlock(&linux_bdev->bd_mutex);
+                 *-/
+                 mutex_lock(&linux_bdev->bd_mutex);
+                 mutex_unlock(&linux_bdev->bd_mutex);
 
-                fusion_cv_lock_irq(&disk->state_lk);
-                while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
-                {
-                    fusion_condvar_wait(&disk->state_cv, &disk->state_lk);
-                }
-                fusion_cv_unlock_irq(&disk->state_lk);
-            }
-            else
-            {
+                 fusion_cv_lock_irq(&disk->state_lk);
+
+                 fusion_cv_lock_irq(&disk->state_lk);
+                 while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
+                 {
+                     fusion_condvar_wait(&disk->state_cv, &disk->state_lk);
+                 }
+                 fusion_cv_unlock_irq(&disk->state_lk);
+             }
+             else
+             {
                 /*
                  * System is being torn down, we do not expect anyone to try and open
                  * or close this device now. Just release all of the outstanding references
                  * to the parent device, if any. This allows lower levels of the driver to
                  * finish tearing the underlying infrastructure down.
-                 */
+                 *-/
                 if (fusion_atomic32_decr(&disk->ref_count) > 0)
                 {
                     fio_bdev_release(bdev);
                 }
-            }
-
-            bdput(linux_bdev);
+            } */
         }
-
         put_disk(disk->gd);
 
         disk->gd = NULL;
@@ -1602,7 +1609,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
     if (rq != NULL)
     {
         rq->queuedata = dp;
-#if (KFIOC_X_BLK_ALLOC_QUEUE_EXISTS || KFIOC_X_BLK_ALLOC_QUEUE_NODE_EXISTS) && KFIOC_X_HAS_MAKE_REQUEST_FN
+#if (KFIOC_X_BLK_ALLOC_QUEUE_NODE_EXISTS && KFIOC_X_HAS_MAKE_REQUEST_FN)
         blk_queue_make_request(rq, kfio_make_request);
 #endif
         // TODO:
@@ -1785,7 +1792,7 @@ static struct bio *kfio_add_bio_to_plugged_list(void *data, struct bio *bio)
 #if KFIOC_X_HAS_MAKE_REQUEST_FN
 static unsigned int kfio_make_request(struct request_queue *queue, struct bio *bio)
 #else
-blk_qc_t kfio_submit_bio(struct bio *bio)
+KFIO_SUBMIT_BIO
 #endif
 #define FIO_MFN_RET 0
 {
@@ -1799,7 +1806,7 @@ blk_qc_t kfio_submit_bio(struct bio *bio)
     {
         kassert_once(!"timed out waiting for queue to unstall.");
         __kfio_bio_complete(bio, 0, -EIO);
-        return FIO_MFN_RET;
+	KFIO_SUBMIT_BIO_RC
     }
 
     // Split the incomming bio if it has more segments than we have scatter-gather DMA vectors,
@@ -1816,7 +1823,7 @@ blk_qc_t kfio_submit_bio(struct bio *bio)
     if (bio->bi_next && __kfio_bio_atomic(bio) && bio_data_dir(bio) == WRITE)
     {
         kfio_submit_atomic_chain(queue, bio);
-        return FIO_MFN_RET;
+	KFIO_SUBMIT_BIO_RC
     }
 
     plug_data = kfio_should_plug(queue);
@@ -1856,7 +1863,7 @@ blk_qc_t kfio_submit_bio(struct bio *bio)
         }
     }
 
-    return FIO_MFN_RET;
+    KFIO_SUBMIT_BIO_RC
 }
 
 /******************************************************************************

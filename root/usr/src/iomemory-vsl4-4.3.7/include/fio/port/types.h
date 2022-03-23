@@ -46,8 +46,6 @@
 
 #include <fio/port/fio-port.h>
 
-#include <stdbool.h>
-
 ///
 /// Macro to provide a count of the number of elements in a statically defined array x.
 ///
