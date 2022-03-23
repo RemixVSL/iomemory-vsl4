@@ -810,7 +810,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->gd != NULL)
     {
-	    linux_bdev = disk->gd->part0;
+	    linux_bdev = GET_BDEV;
 
         if (linux_bdev != NULL)
         {
