@@ -16,8 +16,6 @@
   </p>
 </p>
 
-# &#x1F534;  WARNING: Significant Linux kernel changes in 5.15 have broken this driver for now. We suggest using kernel 5.14 or older if you can.
-
 # IOMemory-VSL4
 This is an "unsupported" updated, and cleaned up version of the original driver
 source for newer generation FusionIO cards. It comes with no warranty, it may
@@ -42,13 +40,13 @@ This driver is aimed to only support Linux kernels from 5.0 and upwards.
 The v4.20.0 branch is provided for convencience and is not actively maintained.
 
 ### Releases
-Releases are tagged, and should be checked out by their tag. The release tags
-follow Linux Kernel versions. E.g. v5.12.1 (Boop Noodle) will work on all 5.x
-kernels that are 5.12 and lower, but is not guaranteed to work on 5.13.
-v4.20.1 - Big Ole Nope Rope supports most kernels that pre-date 5.0 and is not
-actively maintained.
+We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**. The latest working tested kernel is **5.16.14**.
+
+Historically releases were tagged, and were be checked out by their tag. The release tags follow Linux Kernel versions. E.g. **v5.12.1 (Boop Noodle)** will work on all 5.x kernels that are 5.12 and lower, but is not guaranteed to work on 5.13. **v4.20.2 - Big Ole Nope Rope** supports most kernels that pre-date 5.0. Again this way of following kernel releases has been abandoned. Please follow **main**.
+
 | Tag | Codename |
 | --- | --- |
+| main | |
 | v5.12.1 | Boop Noodle |
 | v5.10.0 | Spicy Nope Rope |
 | v5.6.1 | Danger Noodle |
