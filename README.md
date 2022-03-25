@@ -95,8 +95,8 @@ Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB 
 | UCS 5200 GB Fusion ioMemory3 PX Performance line for Rack M4 | UCSC-F-FIO-5200PS | 5.2TB | PX600 |
 
 ## Important notes!!!
-At this moment the driver has been tested with kernel 5.0 to 5.6. Tests are
-run on an LVM volume with an ext4 filesystem. Workload testing is done with
+At this moment the driver has been tested over time with different kernel version. 
+Tests are run on an LVM volume with an ext4 filesystem. Workload testing is done with
 VM's, Containers, FIO and normal desktop usage.
 
 ## Building
