@@ -64,5 +64,4 @@
 #include <linux/scatterlist.h>
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
-#include <stdbool.h>
 

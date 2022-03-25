@@ -47,8 +47,6 @@
 
 
 
-// this include comes from gcc, not from linux kernel
-#include <stdarg.h>
 
 /**
  * @ingroup PORT_COMMON_LINUX

@@ -61,7 +61,7 @@
 #include <fio/port/byteswap.h>
 #include <fio/port/unaligned.h>
 
-#include <stddef.h>
+#include <linux/stddef.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

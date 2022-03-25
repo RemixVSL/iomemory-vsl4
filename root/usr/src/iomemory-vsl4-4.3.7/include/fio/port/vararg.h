@@ -39,7 +39,12 @@ extern "C" {
 #include <fio/port/uefi/vararg.h>
 
 #else
-#include <stdarg.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,16,0)
+#include <linux/stdarg.h>
+#else
+#include "stdarg.h"
+#endif
 #endif //!UEFI
 #ifdef __cplusplus
 }
