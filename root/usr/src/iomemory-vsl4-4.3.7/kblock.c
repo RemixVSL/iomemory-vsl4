@@ -890,8 +890,8 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  * here and no concurrent open-close operation can race with the
                  * wait below.
                  */
-                 mutex_lock(&linux_bdev->bd_mutex);
-                 mutex_unlock(&linux_bdev->bd_mutex);
+                 mutex_lock(SHUTDOWN_MUTEX);
+                 mutex_unlock(SHUTDOWN_MUTEX);
 
                  fusion_cv_lock_irq(&disk->state_lk);
                  while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
