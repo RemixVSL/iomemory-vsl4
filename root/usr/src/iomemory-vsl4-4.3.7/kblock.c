@@ -651,7 +651,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    disk->rq = NULL;
+    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
 
     switch(use_workqueue)
     {
@@ -694,7 +694,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             goto err; // this should not happen
     }
 
-    rq = disk->rq;
+    rq = disk->gd->queue;
 
     blk_limits_io_min(&rq->limits, bdev->bdev_block_size);
     blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
@@ -718,7 +718,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     /* Disable device global entropy contribution */
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
 
-    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
     if (disk->gd == NULL)
     {
         linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
@@ -810,7 +809,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->gd != NULL)
     {
-	    linux_bdev = GET_BDEV;
+        linux_bdev = GET_BDEV;
 
         if (linux_bdev != NULL)
         {
