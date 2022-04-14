@@ -694,7 +694,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             goto err; // this should not happen
     }
 
-    rq = disk->gd->queue;
+    if (disk->gd->queue) {
+      rq = disk->gd->queue;
+    } else {
+      rq = disk->rq;
+    }
 
     blk_limits_io_min(&rq->limits, bdev->bdev_block_size);
     blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
@@ -985,19 +989,6 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
 
 void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 {
-    struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
-    struct gendisk *gd;
-
-    if (disk == NULL || disk->gd == NULL)
-    {
-        return;
-    }
-
-    gd = disk->gd;
-
-    if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
-    {
-    }
 }
 
 /**

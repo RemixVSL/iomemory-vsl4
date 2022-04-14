@@ -56,7 +56,7 @@
   #define BLK_QUEUE_SPLIT blk_queue_split(&bio);
 #endif /* KFIOC_X_HAS_MAKE_REQUEST_FN */
 
-
+// should check for hd_struct vs gendisk
 #if KFIOC_X_GENHD_PART0_IS_A_POINTER
   #define GD_PART0 disk->gd->part0
   #define GET_BDEV disk->gd->part0
