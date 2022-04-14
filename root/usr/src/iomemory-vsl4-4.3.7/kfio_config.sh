@@ -353,7 +353,7 @@ void *kfioc_has_proc_create_data(struct inode *inode)
     return proc_create_data(NULL, 0, NULL, pops, NULL);
 }
 '
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
+    kfioc_test "$test_code" "$test_flag" 1 "-Werror-implicit-function-declaration -Werror"
 }
 
 #
