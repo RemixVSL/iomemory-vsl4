@@ -651,7 +651,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    disk->rq = NULL;
+    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
 
     switch(use_workqueue)
     {
@@ -694,7 +694,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             goto err; // this should not happen
     }
 
-    rq = disk->rq;
+    if (disk->gd->queue) {
+      rq = disk->gd->queue;
+    } else {
+      rq = disk->rq;
+    }
 
     blk_limits_io_min(&rq->limits, bdev->bdev_block_size);
     blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
@@ -718,7 +722,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     /* Disable device global entropy contribution */
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
 
-    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
     if (disk->gd == NULL)
     {
         linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
@@ -810,7 +813,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->gd != NULL)
     {
-	    linux_bdev = GET_BDEV;
+        linux_bdev = GET_BDEV;
 
         if (linux_bdev != NULL)
         {
@@ -890,8 +893,8 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  * here and no concurrent open-close operation can race with the
                  * wait below.
                  */
-                 mutex_lock(&linux_bdev->bd_mutex);
-                 mutex_unlock(&linux_bdev->bd_mutex);
+                 mutex_lock(SHUTDOWN_MUTEX);
+                 mutex_unlock(SHUTDOWN_MUTEX);
 
                  fusion_cv_lock_irq(&disk->state_lk);
                  while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
@@ -954,7 +957,6 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
     struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
-    struct gendisk* gd = disk->gd;
 
     if (disk == NULL || disk->use_workqueue != USE_QUEUE_NONE)
     {
@@ -987,19 +989,6 @@ void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize,
 
 void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight)
 {
-    struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
-    struct gendisk *gd;
-
-    if (disk == NULL || disk->gd == NULL)
-    {
-        return;
-    }
-
-    gd = disk->gd;
-
-    if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
-    {
-    }
 }
 
 /**
