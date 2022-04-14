@@ -953,7 +953,6 @@ static void linux_bdev_destroy_disk(struct fio_bdev *bdev)
 void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration)
 {
     struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
-    struct gendisk* gd = disk->gd;
 
     if (disk == NULL || disk->use_workqueue != USE_QUEUE_NONE)
     {
