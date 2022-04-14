@@ -349,11 +349,11 @@ KFIOC_X_PROC_CREATE_DATA_WANTS_PROC_OPS()
 
 void *kfioc_has_proc_create_data(struct inode *inode)
 {
-    const struct proc_ops *pops;
+    const struct proc_ops *pops = NULL;
     return proc_create_data(NULL, 0, NULL, pops, NULL);
 }
 '
-    kfioc_test "$test_code" "$test_flag" 1 -Werror-implicit-function-declaration
+    kfioc_test "$test_code" "$test_flag" 1 "-Werror-implicit-function-declaration -Werror"
 }
 
 #
