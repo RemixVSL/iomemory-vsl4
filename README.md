@@ -55,7 +55,7 @@ Historically releases were tagged, and were be checked out by their tag. The rel
 ## Important Note for newer Linux Kernels
 Starting with Linux kernel 5.4.0, significant changes to the kernel were made that require additional boot time kernel flags for this driver to work. These affect AMD CPUs starting with 5.4.0, and Intel CPUs after about kernel 5.8.0. 
 
-Add the following to your /etc/default/grub:
+Add the following to your /etc/default/grub by looking for `GRUB_CMDLINE_LINUX_DEFAULT=""` and adding additional parameters inside the quotes.
 For AMD systems:
 ```
 amd_iommu=on iommu=pt
@@ -65,6 +65,8 @@ For Intel system:
 iommu=pt
 ```
 
+Example:
+```GRUB_CMDLINE_LINUX_DEFAULT="quiet iommu=pt"```
 
 ### Supported Hardware
 Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB card, and was able to crossflash back to OEM. The rest below all seem to be SX350s or PX600s. While they should all work, we don't have any PX or SX300 cards to test with.
