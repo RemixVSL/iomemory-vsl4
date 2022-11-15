@@ -78,6 +78,7 @@ struct linux_sgl
 
 struct linux_dma_cookie
 {
+    // ditto as below
     struct pci_dev *pci_dev;
     int             pci_dir;
 };
@@ -89,7 +90,7 @@ C_ASSERT(sizeof(struct linux_dma_cookie) < sizeof(kfio_dma_cookie_t));
 int kfio_dma_cookie_create(kfio_dma_cookie_t *_cookie, kfio_pci_dev_t *pcidev, int nvecs)
 {
     struct linux_dma_cookie *cookie = (struct linux_dma_cookie *)_cookie;
-
+    // force to device instead of pci_device *cough*
     cookie->pci_dev = (struct pci_dev *)pcidev;
     cookie->pci_dir = -1;
 
@@ -445,8 +446,8 @@ int kfio_sgl_dma_map(kfio_sg_list_t *sgl, kfio_dma_cookie_t *_cookie, kfio_dma_m
         }
     }
 
-    i = pci_map_sg(cookie->pci_dev, lsg->sl, lsg->num_entries,
-                    dir == IODRIVE_DMA_DIR_READ ? PCI_DMA_FROMDEVICE : PCI_DMA_TODEVICE);
+    i = dma_map_sg(&cookie->pci_dev->dev, lsg->sl, lsg->num_entries,
+                    dir == IODRIVE_DMA_DIR_READ ? DMA_FROM_DEVICE : DMA_TO_DEVICE);
     lsg->num_mapped = i;
     if (i < lsg->num_entries)
     {
@@ -489,8 +490,8 @@ int kfio_sgl_dma_unmap(kfio_sg_list_t *sgl, kfio_dma_cookie_t *_cookie)
         sge = &lsg->sge[i];
         sl = &lsg->sl[i];
     }
-    pci_unmap_sg(cookie->pci_dev, lsg->sl, lsg->num_entries,
-                 cookie->pci_dir == IODRIVE_DMA_DIR_READ ? PCI_DMA_FROMDEVICE : PCI_DMA_TODEVICE);
+    dma_unmap_sg(&cookie->pci_dev->dev, lsg->sl, lsg->num_entries,
+                 cookie->pci_dir == IODRIVE_DMA_DIR_READ ? DMA_FROM_DEVICE : DMA_TO_DEVICE);
     lsg->num_mapped = 0;
 
     cookie->pci_dir = -1;

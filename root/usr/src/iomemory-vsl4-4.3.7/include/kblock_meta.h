@@ -7,6 +7,7 @@
 #ifndef __FIO_KBLOCK_META_H__
 #define __FIO_KBLOCK_META_H__
 
+#include <linux/version.h>
 
 #if KFIOC_X_LINUX_HAS_PART_STAT_H
 #include <linux/part_stat.h>
@@ -78,5 +79,47 @@
 #else
 #define SHUTDOWN_MUTEX &linux_bdev->bd_mutex
 #endif
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
+#define _PDE_DATA pde_data(ip)
+#else
+#define _PDE_DATA PDE_DATA(ip)
+// 5.17 moved GD to explicitly do this by default
+// in kblock.c, this line can go
+// gd->flags = GENHD_FL_EXT_DEVT;
+#endif
+
+
+#if LINUX_VERSION_CODE >- KERNEL_VERSION(5,18,0)
+// pci_map_sg -> dma_map_sg
+// removed pci_map_sg in 5.18 and up, dma_map_sg since 5.0
+// pci_set_dma_mask also left in pci.c -> dma_set_mask, but need device not pci_dev...
+#endif
+
+// This is in bklock.c
+// https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
+#if LINUX_VERSION_CODE >- KERNEL_VERSION(5,19,0)
+#define xxx
+#else
+#define QUEUE_FLAG_DISCARD
+// while (atomic_read(&linux_bdev->bd_openers) > 0 && linux_bdev->bd_disk == disk->gd)
+// 5.19 changed bd_openers from int to atomic_t in kblock.c
+#endif
+
+/*
+/home/funs/Documents/Projects/fusion/iomemory-vsl4/root/usr/src/iomemory-vsl4-4.3.7/kcpu.c:214:5: warning: ISO C90 forbids variable length array ‘node_hist’ [-Wvla]
+  214 |     uint32_t node_hist[nodes_possible], node_map[nodes_possible];
+      |     ^~~~~~~~
+/home/funs/Documents/Projects/fusion/iomemory-vsl4/root/usr/src/iomemory-vsl4-4.3.7/kcpu.c:214:5: warning: ISO C90 forbids variable length array ‘node_map’ [-Wvla]
+???
+ UBSAN: array-index-out-of-bounds in /home/funs/Documents/Projects/fusion/iomemory-vsl4/root/usr/src/iomemory-vsl4-4.3.7/kcpu.c:257:29
+Nov 14 19:51:13 cipher kernel: [ 1229.568587] index 1 is out of range for type 'uint32_t [*]'
+Nov 14 19:51:13 cipher kernel: [ 1229.568590] CPU: 15 PID: 10419 Comm: insmod Tainted: P           OE     5.19.0-23-generic #24-Ubuntu
+Nov 14 19:51:13 cipher kernel: [ 1229.568593] Hardware name: Gigabyte Technology Co., Ltd. X570 AORUS PRO WIFI/X570 AORUS PRO WIFI, BIOS F36c 05/12/2022
+[snip]
+Nov 14 19:51:13 cipher kernel: [ 1229.568628]  kfio_map_cpus_to_read_queues+0x1ed/0x690 [iomemory_vsl4]
+Nov 14 19:51:21 cipher kernel: [ 1237.539908] Spurious interrupt (vector 0xef) on CPU#0. Acked
+
+*/
 
 #endif /* __FIO_KBLOCK_META_H__ */

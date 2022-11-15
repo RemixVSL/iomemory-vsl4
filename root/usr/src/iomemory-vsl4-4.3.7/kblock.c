@@ -709,7 +709,8 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     if (enable_discard)
     {
-        blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
+        // https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
+        // blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
         // XXXXXXX !!! WARNING - power of two sector sizes only !!! (always true in standard linux)
         blk_queue_max_discard_sectors(rq, (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9);
         rq->limits.discard_granularity = bdev->bdev_block_size;
@@ -734,7 +735,8 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->fops = &fio_bdev_ops;
     gd->queue = rq;
     gd->private_data = bdev;
-    gd->flags = GENHD_FL_EXT_DEVT;
+    // 5.17 moved GD to explicitly do this by default
+    // gd->flags = GENHD_FL_EXT_DEVT;
 
     fio_bdev_ops.owner = THIS_MODULE;
 
@@ -897,7 +899,8 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  mutex_unlock(SHUTDOWN_MUTEX);
 
                  fusion_cv_lock_irq(&disk->state_lk);
-                 while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
+                 // 5.19 changed bd_openers from int to atomic_t
+                 while (atomic_read(&linux_bdev->bd_openers) > 0 && linux_bdev->bd_disk == disk->gd)
                  {
                      fusion_condvar_wait(&disk->state_cv, &disk->state_lk);
                  }

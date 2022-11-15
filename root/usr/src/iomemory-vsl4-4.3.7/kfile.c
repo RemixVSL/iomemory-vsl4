@@ -144,7 +144,7 @@ void noinline kfio_seq_commit(fusion_seq_file *sp, int num)
 */
 void *noinline kfio_inode_data(fusion_inode *ip)
 {
-    return PDE_DATA(ip);
+    return pde_data(ip);
 }
 
 /**
