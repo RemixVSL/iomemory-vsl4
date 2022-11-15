@@ -710,6 +710,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     if (enable_discard)
     {
         // https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
+        SET_QUEUE_FLAG_DISCARD;
         // blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
         // XXXXXXX !!! WARNING - power of two sector sizes only !!! (always true in standard linux)
         blk_queue_max_discard_sectors(rq, (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9);

@@ -81,9 +81,6 @@
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
-#define KFIO_PDE_DATA pde_data(ip)
-#else
-#define KFIO_PDE_DATA PDE_DATA(ip)
 // 5.17 moved GD to explicitly do this by default
 // in kblock.c, this line can go
 // gd->flags = GENHD_FL_EXT_DEVT;
