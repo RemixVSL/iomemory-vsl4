@@ -900,7 +900,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
                  fusion_cv_lock_irq(&disk->state_lk);
                  // 5.19 changed bd_openers from int to atomic_t
-                 while (atomic_read(&linux_bdev->bd_openers) > 0 && linux_bdev->bd_disk == disk->gd)
+                 while ((BD_OPENERS) > 0 && linux_bdev->bd_disk == disk->gd)
                  {
                      fusion_condvar_wait(&disk->state_cv, &disk->state_lk);
                  }

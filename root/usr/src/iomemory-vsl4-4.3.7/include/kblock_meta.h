@@ -81,9 +81,9 @@
 #endif
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
-#define _PDE_DATA pde_data(ip)
+#define KFIO_PDE_DATA pde_data(ip)
 #else
-#define _PDE_DATA PDE_DATA(ip)
+#define KFIO_PDE_DATA PDE_DATA(ip)
 // 5.17 moved GD to explicitly do this by default
 // in kblock.c, this line can go
 // gd->flags = GENHD_FL_EXT_DEVT;
@@ -96,14 +96,15 @@
 // pci_set_dma_mask also left in pci.c -> dma_set_mask, but need device not pci_dev...
 #endif
 
-// This is in bklock.c
-// https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
-#if LINUX_VERSION_CODE >- KERNEL_VERSION(5,19,0)
-#define xxx
-#else
-#define QUEUE_FLAG_DISCARD
 // while (atomic_read(&linux_bdev->bd_openers) > 0 && linux_bdev->bd_disk == disk->gd)
 // 5.19 changed bd_openers from int to atomic_t in kblock.c
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,19,0)
+#define BD_OPENERS atomic_read(&linux_bdev->bd_openers)
+#define SET_QUEUE_FLAG_DISCARD
+#else
+#define BD_OPENERS linux_bdev->bd_openers
+// https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
+#define SET_QUEUE_FLAG_DISCARD blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
 #endif
 
 /*
