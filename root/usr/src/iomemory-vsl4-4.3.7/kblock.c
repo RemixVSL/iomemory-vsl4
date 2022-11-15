@@ -736,8 +736,9 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->fops = &fio_bdev_ops;
     gd->queue = rq;
     gd->private_data = bdev;
-    // 5.17 moved GD to explicitly do this by default
-    // gd->flags = GENHD_FL_EXT_DEVT;
+    #ifdef KFIO_GENHD_FL_EXT_DEVT
+    gd->flags = GENHD_FL_EXT_DEVT;
+    #endif
 
     fio_bdev_ops.owner = THIS_MODULE;
 

@@ -71,21 +71,18 @@
 #define ADD_DISK add_disk(disk->gd);
 #else
 #define ADD_DISK if (add_disk(disk->gd)) { infprint("Error while adding disk!"); }
-#endif
-
+#endif /* KFIOC_X_VOID_ADD_DISK */
 
 #if KFIOC_X_DISK_HAS_OPEN_MUTEX
 #define SHUTDOWN_MUTEX &disk->gd->open_mutex
 #else
 #define SHUTDOWN_MUTEX &linux_bdev->bd_mutex
-#endif
+#endif /* KFIOC_X_DISK_HAS_OPEN_MUTEX */
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
 // 5.17 moved GD to explicitly do this by default
-// in kblock.c, this line can go
-// gd->flags = GENHD_FL_EXT_DEVT;
+#define KFIO_GENHD_FL_EXT_DEVT 1
 #endif
-
 
 #if LINUX_VERSION_CODE >- KERNEL_VERSION(5,18,0)
 // pci_map_sg -> dma_map_sg
