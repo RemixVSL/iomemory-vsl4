@@ -211,7 +211,8 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     const uint32_t num_nodes = num_online_nodes();
     const uint32_t nodes_possible = num_possible_nodes();
     uint32_t node_ndx, node_counter;
-    uint32_t node_hist[nodes_possible], node_map[nodes_possible];
+    uint32_t *node_hist = kfio_malloc(nodes_possible * sizeof(uint32_t));
+    uint32_t *node_map = kfio_malloc(nodes_possible * sizeof(uint32_t));
     kfio_cpu_t cpu;
 
     dbgprint(DBGS_MULTQ,

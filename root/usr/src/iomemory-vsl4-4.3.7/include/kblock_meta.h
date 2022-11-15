@@ -115,6 +115,10 @@ Nov 14 19:51:13 cipher kernel: [ 1229.568593] Hardware name: Gigabyte Technology
 Nov 14 19:51:13 cipher kernel: [ 1229.568628]  kfio_map_cpus_to_read_queues+0x1ed/0x690 [iomemory_vsl4]
 Nov 14 19:51:21 cipher kernel: [ 1237.539908] Spurious interrupt (vector 0xef) on CPU#0. Acked
 
+184 times on two card loading, equates to 184 / 8 = 23 (my core count)...
+254 (0xfe) - Local APIC error interrupt (generated when the local APIC detects an erroneous condition)
+
+
 */
 
 #endif /* __FIO_KBLOCK_META_H__ */
