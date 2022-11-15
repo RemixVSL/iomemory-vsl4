@@ -1,3 +1,9 @@
+/*
+  This "meta" file is supposed to abstract things that change in kfile.c
+  and should provide simplified defines that are named after their function.
+  Both aimed at making the code cleaner, more readable and perhaps more
+  maintainable. Blocks should be isolated and only cover one item.
+ */
 #ifndef __FIO_KFILE_META_H__
 #define __FIO_KFILE_META_H__
 

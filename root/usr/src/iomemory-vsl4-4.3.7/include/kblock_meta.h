@@ -93,7 +93,7 @@
 #if LINUX_VERSION_CODE >- KERNEL_VERSION(5,18,0)
 // pci_map_sg -> dma_map_sg
 // removed pci_map_sg in 5.18 and up, dma_map_sg since 5.0
-// pci_set_dma_mask also left in pci.c -> dma_set_mask, but need device not pci_dev...
+// pci_set_dma_mask also left in pci.c -> dma_set_mask became a thing since 5.18
 #endif
 
 // while (atomic_read(&linux_bdev->bd_openers) > 0 && linux_bdev->bd_disk == disk->gd)
