@@ -81,7 +81,7 @@
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,17,0)
 // 5.17 moved GD to explicitly do this by default
-#define KFIO_GENHD_FL_EXT_DEVT 1
+#define KFIO_DISABLE_GENHD_FL_EXT_DEVT 1
 #endif
 
 #if LINUX_VERSION_CODE >- KERNEL_VERSION(5,18,0)

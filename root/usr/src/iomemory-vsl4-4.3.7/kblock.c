@@ -736,7 +736,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->fops = &fio_bdev_ops;
     gd->queue = rq;
     gd->private_data = bdev;
-    #ifdef KFIO_GENHD_FL_EXT_DEVT
+    #ifndef KFIO_DISABLE_GENHD_FL_EXT_DEVT
     gd->flags = GENHD_FL_EXT_DEVT;
     #endif
 
