@@ -718,7 +718,13 @@ int iodrive_pci_probe(struct pci_dev *linux_pci_dev, const struct pci_device_id 
         goto exit_disable_device;
     }
 
-    kfio_pci_set_dma_mask(pci_dev, 0xFFFFFFFFFFFFFFFFULL);
+    result = kfio_pci_set_dma_mask(pci_dev, 0xFFFFFFFFFFFFFFFFULL);
+    if (result)
+    {
+        errprint_lbl(kfio_pci_name(pci_dev), ERRID_CMN_LINUX_PCI_MEM_REGION,
+                     "ioMemory: no suitable DMA available\n");
+        goto exit_disable_device;
+    }
 
     result = iodrive_pci_attach(pci_dev);
     if (result < 0)
