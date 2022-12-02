@@ -224,7 +224,6 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     dbgprint(DBGS_MULTQ, "%s: num_online_cpus:%u num_online_nodes:%u\n",
              __func__, num_online_cpus(), num_online_nodes());
 
-
     kfio_memset(node_hist, 0, sizeof(uint32_t)*nodes_possible);
     for (cpu = 0; cpu < cpu_topology->numcpus; ++cpu)
     {
