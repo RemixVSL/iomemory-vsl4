@@ -163,7 +163,7 @@ static int kfio_open_disk(struct fio_bdev *bdev)
     struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
     int retval = 0;
 
-    if (test_bit(QUEUE_FLAG_DEAD, &disk->rq->queue_flags))
+    if (test_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags))
     {
         return -ENXIO;
     }
@@ -191,7 +191,7 @@ static void kfio_close_disk(struct fio_bdev *bdev)
     {
         fio_bdev_release(bdev);
 
-        if (test_bit(QUEUE_FLAG_DEAD, &disk->rq->queue_flags))
+        if (test_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags))
         {
             fusion_cv_lock_irq(&disk->state_lk);
             fusion_condvar_broadcast(&disk->state_cv);
@@ -829,7 +829,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
         fusion_spin_lock_irqsave(&disk->queue_lock);
 
         /* Stop delivery of new io from user. */
-        set_bit(QUEUE_FLAG_DEAD, &disk->rq->queue_flags);
+        set_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags);
 
         /*
          * Prevent request_fn callback from interfering with
@@ -845,12 +845,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
          * coming to it anymore. Fetch remaining already queued requests
          * and fail them.
          */
-        if (disk->use_workqueue == USE_QUEUE_RQ || disk->use_workqueue == USE_QUEUE_MQ)
-        {
-            // I don't see a corresponding function in blk_mq that does the same thing.
-            blk_cleanup_queue(disk->rq);
-        }
-        else
+        if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
             /* Fail all bio's already on internal bio queue. */
             struct bio *bio;
@@ -933,7 +928,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->rq != NULL)
     {
-        blk_cleanup_queue(disk->rq);
+        // blk_cleanup_queue(disk->rq);
 
         if (use_workqueue == USE_QUEUE_MQ)
         {

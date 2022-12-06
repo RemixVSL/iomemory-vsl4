@@ -95,4 +95,5 @@
 #define SET_QUEUE_FLAG_DISCARD blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
 #endif
 
+
 #endif /* __FIO_KBLOCK_META_H__ */
