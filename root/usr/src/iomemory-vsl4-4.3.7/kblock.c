@@ -53,6 +53,7 @@
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
 #include <linux/blk-mq.h>
+#include <linux/blkdev.h>
 #include <kblock_meta.h>
 
 /* should these not be in a header file? */
