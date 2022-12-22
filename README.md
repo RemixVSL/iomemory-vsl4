@@ -36,11 +36,10 @@ all supply newer kernels than supported.
 ## Current version
 The current driver version is derived from iomemory-vsl-4.3.7.1205, and has
 gone through rigorous rewriting and cleaning of redundant, unused, and old code.
-This driver is aimed to only support Linux kernels from 5.0 and upwards. 
-The v4.20.0 branch is provided for convencience and is not actively maintained.
+This driver is aimed to support Linux kernels from 5.0 and upwards.
 
 ### Releases
-We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**. The latest working tested kernel is **5.16.14**.
+We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**. The latest working tested kernel is **6.1.1**.
 
 Historically releases were tagged, and were be checked out by their tag. The release tags follow Linux Kernel versions. E.g. **v5.12.1 (Boop Noodle)** will work on all 5.x kernels that are 5.12 and lower, but is not guaranteed to work on 5.13. **v4.20.2 - Big Ole Nope Rope** supports most kernels that pre-date 5.0. Again this way of following kernel releases has been abandoned. Please follow **main**.
 
