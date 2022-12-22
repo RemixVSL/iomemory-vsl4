@@ -53,6 +53,7 @@
 #include <fio/port/cdev.h>
 #include <linux/buffer_head.h>
 #include <linux/blk-mq.h>
+#include <linux/blkdev.h>
 #include <kblock_meta.h>
 
 /* should these not be in a header file? */
@@ -163,7 +164,7 @@ static int kfio_open_disk(struct fio_bdev *bdev)
     struct kfio_disk *disk = (struct kfio_disk *)bdev->bdev_gd;
     int retval = 0;
 
-    if (test_bit(QUEUE_FLAG_DEAD, &disk->rq->queue_flags))
+    if (test_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags))
     {
         return -ENXIO;
     }
@@ -191,7 +192,7 @@ static void kfio_close_disk(struct fio_bdev *bdev)
     {
         fio_bdev_release(bdev);
 
-        if (test_bit(QUEUE_FLAG_DEAD, &disk->rq->queue_flags))
+        if (test_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags))
         {
             fusion_cv_lock_irq(&disk->state_lk);
             fusion_condvar_broadcast(&disk->state_cv);
@@ -709,7 +710,9 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     if (enable_discard)
     {
-        blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
+        // https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
+        SET_QUEUE_FLAG_DISCARD;
+        // blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
         // XXXXXXX !!! WARNING - power of two sector sizes only !!! (always true in standard linux)
         blk_queue_max_discard_sectors(rq, (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9);
         rq->limits.discard_granularity = bdev->bdev_block_size;
@@ -734,7 +737,9 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     gd->fops = &fio_bdev_ops;
     gd->queue = rq;
     gd->private_data = bdev;
+    #ifndef KFIO_DISABLE_GENHD_FL_EXT_DEVT
     gd->flags = GENHD_FL_EXT_DEVT;
+    #endif
 
     fio_bdev_ops.owner = THIS_MODULE;
 
@@ -825,7 +830,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
         fusion_spin_lock_irqsave(&disk->queue_lock);
 
         /* Stop delivery of new io from user. */
-        set_bit(QUEUE_FLAG_DEAD, &disk->rq->queue_flags);
+        set_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags);
 
         /*
          * Prevent request_fn callback from interfering with
@@ -841,12 +846,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
          * coming to it anymore. Fetch remaining already queued requests
          * and fail them.
          */
-        if (disk->use_workqueue == USE_QUEUE_RQ || disk->use_workqueue == USE_QUEUE_MQ)
-        {
-            // I don't see a corresponding function in blk_mq that does the same thing.
-            blk_cleanup_queue(disk->rq);
-        }
-        else
+        if (disk->use_workqueue != USE_QUEUE_RQ && disk->use_workqueue != USE_QUEUE_MQ)
         {
             /* Fail all bio's already on internal bio queue. */
             struct bio *bio;
@@ -897,7 +897,8 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
                  mutex_unlock(SHUTDOWN_MUTEX);
 
                  fusion_cv_lock_irq(&disk->state_lk);
-                 while (linux_bdev->bd_openers > 0 && linux_bdev->bd_disk == disk->gd)
+                 // 5.19 changed bd_openers from int to atomic_t
+                 while ((BD_OPENERS) > 0 && linux_bdev->bd_disk == disk->gd)
                  {
                      fusion_condvar_wait(&disk->state_cv, &disk->state_lk);
                  }
@@ -928,7 +929,7 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
     if (disk->rq != NULL)
     {
-        blk_cleanup_queue(disk->rq);
+        // blk_cleanup_queue(disk->rq);
 
         if (use_workqueue == USE_QUEUE_MQ)
         {
@@ -1599,7 +1600,7 @@ static struct request_queue *kfio_alloc_queue(struct kfio_disk *dp,
     if (rq != NULL)
     {
         rq->queuedata = dp;
-#if (KFIOC_X_BLK_ALLOC_QUEUE_NODE_EXISTS && KFIOC_X_HAS_MAKE_REQUEST_FN)
+#if KFIOC_X_HAS_MAKE_REQUEST_FN
         blk_queue_make_request(rq, kfio_make_request);
 #endif
         // TODO:

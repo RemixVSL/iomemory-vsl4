@@ -134,7 +134,7 @@ int kfio_request_msix(kfio_pci_dev_t *pd, const char *devname, void *dev_id,
                       kfio_msix_t *msix, unsigned int vector)
 {
     struct msix_entry *msi = (struct msix_entry *) msix;
-
+    // infprint("kfio_request_msix Requesting IRQ for %s, vector: %i", devname, vector);
     return request_irq(msi[vector].vector, kfio_hq_irq, 0, devname, dev_id);
 }
 
@@ -161,7 +161,6 @@ unsigned int kfio_pci_enable_msix(kfio_pci_dev_t *__pdev, kfio_msix_t *msix, uns
         msi[i].vector = 0;
         msi[i].entry = i;
     }
-
     err = pci_enable_msix_exact(pdev, msi, nr_vecs);
 
     if (err)
@@ -527,7 +526,8 @@ static int kfio_pci_request_regions(kfio_pci_dev_t *pdev, const char *res_name)
 
 static int kfio_pci_set_dma_mask(kfio_pci_dev_t *pdev, uint64_t mask)
 {
-    return pci_set_dma_mask((struct pci_dev *)pdev, mask);
+    // kfio_pci_dev_t *pci_dev = (kfio_pci_dev_t *)linux_pci_dev;
+    return dma_set_mask(&((struct pci_dev *)pdev)->dev, mask);
 }
 
 static void kfio_pci_set_master(kfio_pci_dev_t *pdev)
@@ -698,7 +698,6 @@ int iodrive_pci_probe(struct pci_dev *linux_pci_dev, const struct pci_device_id 
     // on all platforms where MMIO interrupt renumbering is either not available
     // or disabled.
     result = kfio_pci_enable_device(pci_dev);
-
     if (result < 0)
     {
         errprint_lbl(kfio_pci_name(pci_dev), ERRID_CMN_LINUX_PCI_ENABLE_DEV,
@@ -706,10 +705,7 @@ int iodrive_pci_probe(struct pci_dev *linux_pci_dev, const struct pci_device_id 
         return result;
     }
 
-    kfio_pci_set_master(pci_dev);
-
     result = kfio_pci_request_regions(pci_dev, "iodrive");
-
     if (result < 0)
     {
         errprint_lbl(kfio_pci_name(pci_dev), ERRID_CMN_LINUX_PCI_MEM_REGION,
@@ -717,8 +713,15 @@ int iodrive_pci_probe(struct pci_dev *linux_pci_dev, const struct pci_device_id 
         goto exit_disable_device;
     }
 
-    kfio_pci_set_dma_mask(pci_dev, 0xFFFFFFFFFFFFFFFFULL);
+    result = kfio_pci_set_dma_mask(pci_dev, 0xFFFFFFFFFFFFFFFFULL);
+    if (result != 0)
+    {
+        errprint_lbl(kfio_pci_name(pci_dev), ERRID_CMN_LINUX_PCI_MEM_REGION,
+                     "ioMemory: no suitable DMA available\n");
+        goto exit_disable_device;
+    }
 
+    kfio_pci_set_master(pci_dev);
     result = iodrive_pci_attach(pci_dev);
     if (result < 0)
     {
@@ -788,6 +791,7 @@ static struct pci_error_handlers iodrive_pci_error_handlers = {
   slot_reset:iodrive_pci_slot_reset,
 };
 
+/* Suspend and resume could end up in here: https://docs.kernel.org/PCI/pci.html */
 static struct pci_driver iodrive_pci_driver = {
     .name = FIO_DRIVER_NAME,
     .id_table = iodrive_ids,

@@ -17,6 +17,9 @@ ENV{DEVTYPE}=="partition", \
   IMPORT{parent}="ID_F[!S]*", IMPORT{parent}="ID_F", \
   IMPORT{parent}="ID_FS[!_]*", IMPORT{parent}="ID_FS"
 
+# probe filesystem metadata of disks
+IMPORT{builtin}="blkid"
+
 # by-id
 KERNEL=="fio[a-z]", PROGRAM="/usr/bin/fio-status --field iom.format_uuid /dev/%k", SYMLINK+="disk/by-id/fio-%c"
 KERNEL=="fio[a-z][0-9]*", ENV{DEVTYPE}=="partition", PROGRAM="/usr/bin/fio-status --field iom.format_uuid /dev/%P", SYMLINK+="disk/by-id/fio-%c-part%n"
@@ -28,7 +31,7 @@ KERNEL=="fio[a-z][0-9]*", ENV{DEVTYPE}=="partition", PROGRAM="/usr/bin/fio-statu
 # by-uuid
 # snuf@scipio:~/$ blkid /dev/fioa1
 # /dev/fioa1: LABEL="Marvin" UUID="cda7751a-6cc1-4c5e-ba93-b08b843a7788" TYPE="ext4" PARTLABEL="marvin" PARTUUID="55574487-7748-4a44-ae71-02dc16e68a9a"
-# 
+#
 KERNEL!="fio[a-z][0-9]*", ENV{DEVTYPE}=="partition", IMPORT{program}="/sbin/blkid -o udev -p /dev/%k%n"
 KERNEL=="fio[a-z][0-9]*", ENV{DEVTYPE}=="partition", PROGRAM="/sbin/blkid -s PARTLABEL -o value /dev/%P%n", SYMLINK+="disk/by-partlabel/%c"
 KERNEL=="fio[a-z][0-9]*", ENV{DEVTYPE}=="partition", PROGRAM="/sbin/blkid -s LABEL -o value /dev/%P%n", SYMLINK+="disk/by-label/%c"
