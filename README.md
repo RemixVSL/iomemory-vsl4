@@ -105,7 +105,7 @@ There are several ways to build and package the module.
 
 Note! For many systems, the best option is to use DKMS, using the [DKMS instructions below](https://github.com/RemixVSL/iomemory-vsl4/blob/main/README.md#dkms). If you prefer to build the module directly, or to create a dpkg or rpm package, you can proceed with the options below.
 
-Please make sure that the required dependencies are installed, as mentioned in this [README](https://github.com/RemixVSL/iomemory-vsl/blob/main/README)
+Please make sure that the required dependencies are installed, as mentioned in this [README](https://github.com/RemixVSL/iomemory-vsl4/blob/main/README)
 
 ### From Source
 ```
