@@ -201,17 +201,28 @@ static void kfio_close_disk(struct fio_bdev *bdev)
     }
 }
 
+#if KFIOC_X_BDOPS_OPEN_GENDISK_AND_BLK_MODE_T
+static int kfio_open(struct gendisk *gd, blk_mode_t mode)
+{
+    struct fio_bdev *bdev = gd->private_data;
+#else
 static int kfio_open(struct block_device *blk_dev, fmode_t mode)
 {
     struct fio_bdev *bdev = blk_dev->bd_disk->private_data;
 
+#endif
     return kfio_open_disk(bdev);
 }
 
+#if KFIOC_X_BDOPS_RELEASE_1_ARG
+static void kfio_release(struct gendisk *gd)
+{
+    struct fio_bdev *bdev = gd->private_data;
+#else
 static void kfio_release(struct gendisk *gd, fmode_t mode)
 {
     struct fio_bdev *bdev = gd->private_data;
-
+#endif
     kfio_close_disk(bdev);
 }
 
