@@ -111,7 +111,9 @@ Please make sure that the required dependencies are installed, as mentioned in t
 ```
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
-git checkout <release-tag>
+# OPTIONAL: Checkout a specific release. Usually using main branch is correct.
+# DO THIS ONLY IF YOU'VE BEEN TOLD IT'S REQUIRED!
+# git checkout <release-tag>
 make module
 cd root/usr/src/iomemory-vsl4-4.3.7
 sudo insmod iomemory-vsl4.ko
@@ -121,7 +123,9 @@ sudo insmod iomemory-vsl4.ko
 ```
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
-git checkout <release-tag>
+# OPTIONAL: Checkout a specific release. Usually using main branch is correct.
+# DO THIS ONLY IF YOU'VE BEEN TOLD IT'S REQUIRED!
+# git checkout <release-tag>
 make dpkg
 ```
 
@@ -129,7 +133,9 @@ make dpkg
 ```
 git clone https://github.com/snuf/iomemory-vsl4
 cd iomemory-vsl4/
-git checkout <release-tag>
+# OPTIONAL: Checkout a specific release. Usually using main branch is correct.
+# DO THIS ONLY IF YOU'VE BEEN TOLD IT'S REQUIRED!
+# git checkout <release-tag>
 make rpm
 ```
 
