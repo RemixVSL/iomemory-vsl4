@@ -264,6 +264,8 @@ Source to build driver for SanDisk Fusion ioMemory devices
 /usr/src/iomemory-vsl4-4.3.7/module_operations.sh
 /usr/src/iomemory-vsl4-4.3.7/kfio/*
 /usr/src/iomemory-vsl4-4.3.7/include/kblock_meta.h
+/usr/src/iomemory-vsl4-4.3.7/include/kfile_meta.h
+/usr/src/iomemory-vsl4-4.3.7/include/sysrq_meta.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/arch/ppc/atomic.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/arch/ppc/bits.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/arch/ppc/cache.h

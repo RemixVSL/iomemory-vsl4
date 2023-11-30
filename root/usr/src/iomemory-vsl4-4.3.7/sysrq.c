@@ -33,6 +33,7 @@
 #include <fio/port/kfio_config.h>
 #include <fio/port/ktypes.h>
 #include <fio/port/dbgset.h>
+#include <sysrq_meta.h>
 
 /**
  * @ingroup PORT_COMMON_LINUX
@@ -45,7 +46,7 @@ extern void iodrive_dump_all_software_state(void);
 #define SYSRQ_SOFTWARE  'x'
 #define SYSRQ_CSR       'y'
 
-void iodrive_handle_sysrq(int key)
+void iodrive_handle_sysrq(HANDLE_SYSRQ_TYPE key)
 {
     switch (key)
     {
