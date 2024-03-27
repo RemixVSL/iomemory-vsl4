@@ -35,9 +35,7 @@ KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
-    ifeq ($(FIO_DRIVER_NAME), iomemory-vsl)
-        CFLAGS += -Werror
-    endif
+    CFLAGS += -Werror
 endif
 
 # Set FUSION_DEBUG=0 to compile without debugging symbols
