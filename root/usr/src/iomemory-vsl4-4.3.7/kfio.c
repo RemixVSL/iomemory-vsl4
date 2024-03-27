@@ -40,6 +40,9 @@
 #include <fio/port/kfio_config.h>
 #include <linux/kallsyms.h>
 
+void noinline fusion_spin_lock_irq(fusion_spinlock_t *s);
+void noinline fusion_spin_unlock_irq(fusion_spinlock_t *s);
+
 /**
  * @ingroup PORT_LINUX
  * @{

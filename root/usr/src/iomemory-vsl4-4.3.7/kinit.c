@@ -41,6 +41,9 @@
 #include <fio/port/kscsi.h>
 #endif
 
+int kfio_platform_init_storage_interface(void);
+int kfio_platform_teardown_storage_interface(void);
+
 /**
  * @ingroup PORT_COMMON_LINUX
  * @{
