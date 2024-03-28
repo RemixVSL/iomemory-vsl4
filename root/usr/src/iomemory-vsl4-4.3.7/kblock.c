@@ -32,7 +32,6 @@
 
 // Ignore this whole file, if the block device is not being included in the build.
 #if KFIO_BLOCK_DEVICE
-
 #include "port-internal.h"
 #include <fio/port/dbgset.h>
 #include <fio/port/kfio.h>
@@ -66,6 +65,14 @@ static void linux_bdev_backpressure(struct fio_bdev *bdev, int on);
 static void linux_bdev_lock_pending(struct fio_bdev *bdev, int pending);
 static void linux_bdev_update_stats(struct fio_bdev *bdev, int dir, uint64_t totalsize, uint64_t duration);
 static void linux_bdev_update_inflight(struct fio_bdev *bdev, int rw, int in_flight);
+int kfio_vectored_atomic(struct block_device *linux_bdev,
+                         const struct kfio_iovec *iov,
+                         uint32_t iovcnt,
+                         bool user_pages);
+int kfio_count_sectors_inuse(struct block_device *linux_bdev,
+                             uint64_t base,
+                             uint64_t length,
+                             uint64_t *count);
 
 extern int use_workqueue;
 static int fio_major;

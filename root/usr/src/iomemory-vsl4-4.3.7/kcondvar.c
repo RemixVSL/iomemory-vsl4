@@ -36,6 +36,10 @@
 #include <fio/port/ktime.h>
 #include <linux/sched.h>    // for struct task_struct used in kassert
 
+int noinline __fusion_condvar_timedwait(fusion_condvar_t *cv,
+                                        fusion_cv_lock_t *lock,
+                                        int64_t timeout_us,
+                                        int interruptible);
 
 /**
  * @ingroup PORT_COMMON_LINUX

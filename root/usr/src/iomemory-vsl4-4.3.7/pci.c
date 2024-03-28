@@ -41,6 +41,12 @@
 #include <fio/port/kpci.h>
 #include <fio/port/message_ids.h>
 
+irqreturn_t kfio_handle_irq_wrapper(int irq, void *dev_id);
+irqreturn_t kfio_hq_irq(int irq, void *dev_id);
+int iodrive_pci_probe(struct pci_dev *linux_pci_dev, const struct pci_device_id *id);
+int kfio_pci_register_driver(void);
+void kfio_pci_unregister_driver(void);
+
 /*************************************************************************************/
 /*   Legacy and MSI interrupts.                                                      */
 /*************************************************************************************/
@@ -48,7 +54,6 @@
  * @ingroup PORT_COMMON_LINUX
  * @{
  */
-
 irqreturn_t kfio_handle_irq_wrapper(int irq, void *dev_id)
 {
     (void)iodrive_intr_fast(irq, dev_id);
