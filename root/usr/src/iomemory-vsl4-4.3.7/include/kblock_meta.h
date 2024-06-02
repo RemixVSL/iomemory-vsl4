@@ -13,14 +13,23 @@
 #include <linux/part_stat.h>
 #endif
 #include <linux/blkdev.h>
+#include <kblock_meta.h>
 
 #if KFIOC_X_BLK_ALLOC_DISK_EXISTS
   #define BLK_ALLOC_QUEUE dp->gd->queue;
-  #define BLK_ALLOC_DISK blk_alloc_disk
+  #if KFIOC_X_BLK_ALLOC_DISK_HAS_QUEUE_LIMITS
+    #define BLK_ALLOC_DISK blk_alloc_disk(NULL, FIO_NUM_MINORS);
+  #else
+    #define BLK_ALLOC_DISK blk_alloc_disk(FIO_NUM_MINORS);
+  #endif
 #else /* KFIOC_X_BLK_ALLOC_DISK_EXISTS */
   #if KFIOC_X_HAS_MAKE_REQUEST_FN != 1
-    #define BLK_ALLOC_QUEUE blk_alloc_queue(node);
-  #endif
+    #if KFIOC_X_BLK_ALLOC_QUEUE_HAS_QUEUE_LIMITS
+      #define BLK_ALLOC_QUEUE blk_alloc_queue(NULL. node);
+    #else /* KFIOC_X_BLK_ALLOC_QUEUE_HAS_2ARGS*/
+      #define BLK_ALLOC_QUEUE blk_alloc_queue(node);
+    #endif /* KFIOC_X_BLK_ALLOC_QUEUE_HAS_2ARGS */
+  #endif /* KFIOC_X_HAS_MAKE_REQUEST_FN */
   #define BLK_ALLOC_DISK alloc_disk
 #endif /* KFIOC_X_BLK_ALLOC_DISK_EXISTS */
 

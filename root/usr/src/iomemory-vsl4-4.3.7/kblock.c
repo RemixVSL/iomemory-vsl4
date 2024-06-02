@@ -670,7 +670,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
+    disk->gd = gd = BLK_ALLOC_DISK
 
     switch(use_workqueue)
     {
