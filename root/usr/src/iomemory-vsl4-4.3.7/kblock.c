@@ -670,7 +670,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         return -ENODEV;
     }
 
-    disk->gd = gd = BLK_ALLOC_DISK(FIO_NUM_MINORS);
+    disk->gd = gd = BLK_ALLOC_DISK
 
     switch(use_workqueue)
     {
@@ -687,8 +687,8 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             *  all mean.
             *
             */
-
-            disk->rq = blk_mq_init_queue(&disk->tag_set);
+            // &disk->tag_set should be a variable here...
+            disk->rq = BLK_MQ_ALLOC_QUEUE
 
             if (IS_ERR(disk->rq))
                 goto err; // maybe move error handler to another function with extra logging?
