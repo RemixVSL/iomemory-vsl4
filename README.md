@@ -33,11 +33,6 @@ releases, effectively making these cards an expensive paperweight
 when running a distribution like Ubuntu / Arch / Fedora / ProxMox which
 all supply newer kernels than supported.
 
-## Current version
-The current driver version is derived from iomemory-vsl-4.3.7.1205, and has
-gone through rigorous rewriting and cleaning of redundant, unused, and old code.
-This driver is aimed to support Linux kernels from 5.0 and upwards.
-
 ### Releases
 We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**, and **6** kernels. The latest working tested kernel is **6.9**.
 
@@ -54,6 +49,7 @@ Historically releases were tagged, and were be checked out by their tag. The rel
 ## Important Note for newer Linux Kernels
 Starting with Linux kernel 5.4.0, significant changes to the kernel were made that require additional boot time kernel flags for this driver to work. These affect AMD CPUs starting with 5.4.0, and Intel CPUs after about kernel 5.8.0. 
 
+### Grub
 Add the following to your /etc/default/grub by looking for `GRUB_CMDLINE_LINUX_DEFAULT=""` and adding additional parameters inside the quotes.
 For AMD systems:
 ```
@@ -66,6 +62,14 @@ iommu=pt
 
 Example:
 ```GRUB_CMDLINE_LINUX_DEFAULT="quiet iommu=pt"```
+
+### Systemd-boot
+When using `systemd-boot` add the above options to the `options` section of the `.conf` file you're using as your loader. Typically the loader root will be `/EFI`, `/efi`, or `/boot`. Which will have a `loader/entries/` directory that contains your specific configuration files. Use your favourite editor. More information on `systemd-boot` can be found [here](https://wiki.archlinux.org/title/systemd-boot#Adding_loaders).
+
+## Current version
+The current driver version is derived from iomemory-vsl-4.3.7.1205, and has
+gone through rigorous rewriting and cleaning of redundant, unused, and old code.
+This driver is aimed to support Linux kernels from 5.0 and upwards.
 
 ### Supported Hardware
 Here's a not so exhaustive list of iomemory cards. I have only tested the 3.2TB card, and was able to crossflash back to OEM. The rest below all seem to be SX350s or PX600s. While they should all work, we don't have any PX or SX300 cards to test with.
@@ -101,11 +105,34 @@ Tests are run on an LVM volume with an ext4 filesystem. Workload testing is done
 VM's, Containers, FIO and normal desktop usage.
 
 ## Building
-There are several ways to build and package the module.
-
-Note! For many systems, the best option is to use DKMS, using the [DKMS instructions below](https://github.com/RemixVSL/iomemory-vsl4/blob/main/README.md#dkms). If you prefer to build the module directly, or to create a dpkg or rpm package, you can proceed with the options below.
+Note! For many systems, **the best option is to use DKMS**, using the [DKMS instructions below](https://github.com/RemixVSL/iomemory-vsl4/blob/main/README.md#dkms). If you prefer to build the module directly, or to create a dpkg or rpm package, you can proceed with the options below.
 
 Please make sure that the required dependencies are installed, as mentioned in this [README](https://github.com/RemixVSL/iomemory-vsl4/blob/main/README)
+
+## Installation
+DKMS is recommended, but installation can also be done with packages or from source.
+
+### DKMS
+Dynamic Kernel Module Support automates away the requirement of having to
+repackage the kernel module with every kernel and headers update that takes
+place on the system.
+
+Try building from `main` first as it works with most modern kernels up to about 5.14:
+
+```
+git clone https://github.com/snuf/iomemory-vsl4
+cd iomemory-vsl4/
+make dkms
+```
+
+If you know you need to build a specific branch based on a specific recommendation, use:
+
+```
+git clone https://github.com/snuf/iomemory-vsl4
+cd iomemory-vsl4/
+git checkout <release-tag>
+make dkms
+```
 
 ### From Source
 ```
@@ -137,32 +164,6 @@ cd iomemory-vsl4/
 # DO THIS ONLY IF YOU'VE BEEN TOLD IT'S REQUIRED!
 # git checkout <release-tag>
 make rpm
-```
-
-## Installation
-Installation can be done with created packages, DKMS or other options described
-in the original README.
-
-## DKMS
-Dynamic Kernel Module Support automates away the requirement of having to
-repackage the kernel module with every kernel and headers update that takes
-place on the system.
-
-Try building from `main` first as it works with most modern kernels up to about 5.14:
-
-```
-git clone https://github.com/snuf/iomemory-vsl4
-cd iomemory-vsl4/
-make dkms
-```
-
-If you know you need to build a specific branch based on a specific recommendation, use:
-
-```
-git clone https://github.com/snuf/iomemory-vsl4
-cd iomemory-vsl4/
-git checkout <release-tag>
-make dkms
 ```
 
 # Utils
