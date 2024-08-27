@@ -720,10 +720,10 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     }
 
     blk_limits_io_min(&rq->limits, bdev->bdev_block_size);
-    blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
-    blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
-    blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
-    blk_queue_max_segment_size(rq, PAGE_SIZE);
+    rq->limits.io_opt = fio_dev_optimal_blk_size;
+    rq->limits.max_hw_sectors = FUSION_MAX_SECTORS_PER_OS_RW_REQUEST;
+    rq->limits.max_segments = bdev->bdev_max_sg_entries;
+    rq->limits.max_segment_size = PAGE_SIZE;
     blk_queue_logical_block_size(rq, bdev->bdev_block_size);
 
     if (enable_discard)
