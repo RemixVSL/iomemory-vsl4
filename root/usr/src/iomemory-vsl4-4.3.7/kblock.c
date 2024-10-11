@@ -54,6 +54,7 @@
 #include <linux/blk-mq.h>
 #include <linux/blkdev.h>
 #include <kblock_meta.h>
+#include <linux/bio-integrity.h>
 
 /* should these not be in a header file? */
 static void linux_bdev_name_disk(struct fio_bdev *bdev);
@@ -720,11 +721,14 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     }
 
     blk_limits_io_min(&rq->limits, bdev->bdev_block_size);
-    blk_limits_io_opt(&rq->limits, fio_dev_optimal_blk_size);
-    blk_queue_max_hw_sectors(rq, FUSION_MAX_SECTORS_PER_OS_RW_REQUEST);
-    blk_queue_max_segments(rq, bdev->bdev_max_sg_entries);
-    blk_queue_max_segment_size(rq, PAGE_SIZE);
-    blk_queue_logical_block_size(rq, bdev->bdev_block_size);
+    rq->limits.io_opt = fio_dev_optimal_blk_size;
+    rq->limits.max_hw_sectors = FUSION_MAX_SECTORS_PER_OS_RW_REQUEST;
+    rq->limits.max_segments = bdev->bdev_max_sg_entries;
+    rq->limits.max_segment_size = PAGE_SIZE;
+    rq->limits.logical_block_size = bdev->bdev_block_size;
+    rq->limits.physical_block_size = bdev->bdev_block_size;
+    rq->limits.max_sectors = round_down(rq->limits.max_sectors, bdev->bdev_block_size >> SECTOR_SHIFT);
+
 
     if (enable_discard)
     {
@@ -732,16 +736,27 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         SET_QUEUE_FLAG_DISCARD;
         // blk_queue_flag_set(QUEUE_FLAG_DISCARD, rq);
         // XXXXXXX !!! WARNING - power of two sector sizes only !!! (always true in standard linux)
-        blk_queue_max_discard_sectors(rq, (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9);
+        rq->limits.max_hw_discard_sectors = (UINT_MAX & ~((unsigned int) bdev->bdev_block_size - 1)) >> 9;
         rq->limits.discard_granularity = bdev->bdev_block_size;
     }
 
     /* Enable writeback cache */
+#ifdef QUEUE_FLAG_WC
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
-    /* Tell the kernel we are a non-rotational storage device */
+#else
+    /* this may need BLK_FEAT_FUA? */
+    rq->limits.features |= BLK_FEAT_WRITE_CACHE;
+#endif
+#ifdef QUEUE_FLAG_NONROT
+    /* Tell the kernel we are a non-rotational storage device.
+     * If QUEUE_FLAG_NONROT isn't defined then non-rotational is the default */
     blk_queue_flag_set(QUEUE_FLAG_NONROT, rq);
-    /* Disable device global entropy contribution */
+#endif
+#ifdef QUEUE_FLAG_ADD_RANDOM
+    /* Disable device global entropy contribution.
+     * If QUEUE_FLAG_ADD_RANDOM isn't defined then the default is not to contribute entropy*/
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
+#endif
 
     if (disk->gd == NULL)
     {
