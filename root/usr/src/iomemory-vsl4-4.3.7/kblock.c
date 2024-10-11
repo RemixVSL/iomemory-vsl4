@@ -729,7 +729,6 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     rq->limits.physical_block_size = bdev->bdev_block_size;
     rq->limits.max_sectors = round_down(rq->limits.max_sectors, bdev->bdev_block_size >> SECTOR_SHIFT);
 
-
     if (enable_discard)
     {
         // https://lore.kernel.org/linux-btrfs/20220409045043.23593-25-hch@lst.de/
@@ -740,22 +739,22 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         rq->limits.discard_granularity = bdev->bdev_block_size;
     }
 
-    /* Enable writeback cache */
 #ifdef QUEUE_FLAG_WC
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
 #else
-    /* this may need BLK_FEAT_FUA? */
-    rq->limits.features |= BLK_FEAT_WRITE_CACHE;
+    blk_queue_flag_set(BLK_FEAT_WRITE_CACHE, rq)$
 #endif
+
 #ifdef QUEUE_FLAG_NONROT
-    /* Tell the kernel we are a non-rotational storage device.
-     * If QUEUE_FLAG_NONROT isn't defined then non-rotational is the default */
     blk_queue_flag_set(QUEUE_FLAG_NONROT, rq);
+#else
+    blk_queue_flag_clear(BLK_FEAT_ROTATIONAL, rq);
 #endif
+
 #ifdef QUEUE_FLAG_ADD_RANDOM
-    /* Disable device global entropy contribution.
-     * If QUEUE_FLAG_ADD_RANDOM isn't defined then the default is not to contribute entropy*/
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
+#else
+    blk_queue_flag_clear(BLK_FEAT_ADD_RANDOM, rq)
 #endif
 
     if (disk->gd == NULL)
