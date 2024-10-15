@@ -742,7 +742,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 #ifdef QUEUE_FLAG_WC
     blk_queue_flag_set(QUEUE_FLAG_WC, rq);
 #else
-    blk_queue_flag_set(BLK_FEAT_WRITE_CACHE, rq)$
+    blk_queue_flag_set(BLK_FEAT_WRITE_CACHE, rq);
 #endif
 
 #ifdef QUEUE_FLAG_NONROT
@@ -754,7 +754,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 #ifdef QUEUE_FLAG_ADD_RANDOM
     blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, rq);
 #else
-    blk_queue_flag_clear(BLK_FEAT_ADD_RANDOM, rq)
+    blk_queue_flag_clear(BLK_FEAT_ADD_RANDOM, rq);
 #endif
 
     if (disk->gd == NULL)
