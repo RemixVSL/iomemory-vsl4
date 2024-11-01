@@ -34,16 +34,6 @@ CFLAGS = -I$(shell pwd)/include -DBUILDING_MODULE -DLINUX_IO_SCHED -Wall
 # Start in this source directory, and fix it up in the config shell script if it isn't right.
 KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 
-# Really have to come up with something else than this hackery
-KDIR = $(or $(and $(wildcard $(KERNEL_SRC)/Makefile),"source"), "build")
-KERNEL_MAKEFILE = /lib/modules/$(KERNELVER)/$(KDIR)/Makefile
-KMAJ ?= $(shell grep -m 1 VERSION ${KERNEL_MAKEFILE} | sed 's/^.*= //g')
-KMIN ?= $(shell grep -m 1 PATCHLEVEL ${KERNEL_MAKEFILE} | sed 's/^.*= //g')
-GE_6_10 := $(shell [ "${KMAJ}" -ge "6" -a "${KMIN}" -ge "10" ] && echo true)
-ifeq ($(GE_6_10),true)
-	CFLAGS += -mfunction-return=keep
-endif
-
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
     CFLAGS += -Werror
@@ -67,9 +57,9 @@ MODULE_VERSION ?= $(shell git rev-parse --short HEAD)
 
 TARGET ?= $(FIOARCH)_cc$(CCMAJOR)$(CCMINOR)
 
-KFIO_LIB ?= kfio/$(TARGET)_libkfio.o_shipped
+KFIO_LIB ?= kfio/$(TARGET)_latest_libkfio.o_shipped
 LAST_KFIO_LIB := $(shell ls -1 kfio | grep $(LAST_CCVER) | sort | tail -1)
-KFIO_LIB_CMD ?= kfio/.$(TARGET)_libkfio.o.cmd
+KFIO_LIB_CMD ?= kfio/.$(TARGET)_latest_libkfio.o.cmd
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
 

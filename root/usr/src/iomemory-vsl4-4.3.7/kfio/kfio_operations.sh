@@ -70,7 +70,7 @@ patch_objs() {
     fi
     function_hash_file=$(dirname $0)/function_hashes.txt
     functions_in_obj=$(objdump -trS $obj_file | perl -ne 'if (m/(ifio_.*.3.2.16.1731|ifio_.*.4.3.7.1205)/) { print $1."\n" }' | uniq)
-    function_version=$(objdump -trS x86_64_libkfio.o_shipped  | head -20 | grep ifio | head -1 | perl -ne 'if (m/ifio_.*.(3.2.16.1731|4.3.7.1205)/) { print $1."\n" }')
+    function_version=$(objdump -trS $obj_file  | head -20 | grep ifio | head -1 | perl -ne 'if (m/ifio_.*.(3.2.16.1731|4.3.7.1205)/) { print $1."\n" }')
     # 00122a840b5d7efe1beb3dd8908ae37fe03eac74:lrbtree_externalize
     # hash should become:
     # ifio_00122_a840b5d7efe1beb3dd8908ae37fe03eac74_3_2_16_1731
