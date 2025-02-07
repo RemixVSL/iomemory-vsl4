@@ -34,16 +34,6 @@ CFLAGS = -I$(shell pwd)/include -DBUILDING_MODULE -DLINUX_IO_SCHED -Wall
 # Start in this source directory, and fix it up in the config shell script if it isn't right.
 KERNEL_SRC = /lib/modules/$(KERNELVER)/source
 
-# Really have to come up with something else than this hackery
-KDIR = $(or $(and $(wildcard $(KERNEL_SRC)/Makefile),"source"), "build")
-KERNEL_MAKEFILE = /lib/modules/$(KERNELVER)/$(KDIR)/Makefile
-KMAJ ?= $(shell grep -m 1 VERSION ${KERNEL_MAKEFILE} | sed 's/^.*= //g')
-KMIN ?= $(shell grep -m 1 PATCHLEVEL ${KERNEL_MAKEFILE} | sed 's/^.*= //g')
-GE_6_10 := $(shell [ "${KMAJ}" -ge "6" -a "${KMIN}" -ge "10" ] && echo true)
-ifeq ($(GE_6_10),true)
-	CFLAGS += -mfunction-return=keep
-endif
-
 # Set PORT_NO_WERROR=0 to compile without -Werror compilation flag
 ifneq ($(PORT_NO_WERROR),1)
     CFLAGS += -Werror
@@ -67,8 +57,8 @@ MODULE_VERSION ?= $(shell git rev-parse --short HEAD)
 
 TARGET ?= $(FIOARCH)_cc$(CCMAJOR)$(CCMINOR)
 
-KFIO_LIB ?= kfio/$(TARGET)_libkfio.o_shipped
-LAST_KFIO_LIB := $(shell ls -1 kfio | grep $(LAST_CCVER) | sort | tail -1)
+KFIO_LIB ?= kfio/$(TARGET)_libkfio.o
+LAST_KFIO_LIB := x86_64_latest_libkfio.o_shipped
 KFIO_LIB_CMD ?= kfio/.$(TARGET)_libkfio.o.cmd
 
 NCPUS:=$(shell grep -c ^processor /proc/cpuinfo)
@@ -83,16 +73,15 @@ fake_license:
 
 .PHONY: check_n_fix_kfio_ccver
 check_n_fix_kfio_ccver:
-	if [ "${CCVER}" -gt "${LAST_CCVER}" ];then \
-		if [ ! -f "${KFIO_LIB}" ];then \
-			cp kfio/${LAST_KFIO_LIB} ${KFIO_LIB}; \
-		fi \
-	fi
+	if [ ! -f "${KFIO_LIB}" ];then \
+		cp kfio/${LAST_KFIO_LIB} ${KFIO_LIB}; \
+	fi \
 	$(shell touch ${KFIO_LIB_CMD})
+
 
 clean modules_clean:
 	$(MAKE) \
-        -j$(NCPUS) \
+		-j$(NCPUS) \
 		-C $(KERNEL_BUILD) \
 		FIO_DRIVER_NAME=$(FIO_DRIVER_NAME) \
 		FUSION_DRIVER_DIR=$(shell pwd) \
@@ -127,7 +116,7 @@ add_module_version patch_module_version:
 
 .PHONY: dkms
 dkms:
-	sudo ./module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -d
+	sudo ./module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -l ${LAST_KFIO_LIB} -d
 
 .PHONY: dpkg
 dpkg:
@@ -137,13 +126,13 @@ dpkg:
 
 .PHONY: dpkg
 rpm:
-		# patch fio_version, fio_short_version in debian/fio_values
-		cd $(shell git rev-parse --show-toplevel) && \
+	# patch fio_version, fio_short_version in debian/fio_values
+	cd $(shell git rev-parse --show-toplevel) && \
 			$(MAKE) rpm
 
 modules modules_install: check_target_kernel check_n_fix_kfio_ccver include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
-    -j$(NCPUS) \
+	-j$(NCPUS) \
 	-C $(KERNEL_BUILD) \
 	FIO_DRIVER_NAME=$(FIO_DRIVER_NAME) \
 	FUSION_DRIVER_DIR=$(shell pwd) \
