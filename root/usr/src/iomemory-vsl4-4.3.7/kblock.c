@@ -698,7 +698,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             disk->tag_set.numa_node = bdev->bdev_numa_node;
             disk->tag_set.cmd_size = 0;
             disk->tag_set.driver_data = disk;
-            disk->tag_set.flags = BLK_MQ_F_SHOULD_MERGE;
+            SET_MQ_F_SHOULD_MERGE
             disk->tag_set.ops = &fio_mq_ops;
             // on NVME this is 32 - 2, the command size is the size of the struct they send
             // my guess is this is really inneficient?
