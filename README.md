@@ -206,6 +206,8 @@ Adapter: ioMono  (driver 4.3.6)
 	Internal voltage: avg 1.01V, max 1.02V
 	Aux voltage: avg 1.80V, max 1.83V
 ```
+## TrueNAS Support
+See [this document](https://github.com/RemixVSL/iomemory-vsl4/blob/main/TrueNAS.md) for information on how to install on TrueNAS. These steps were developed by a community contribution, and aren't generally tested with new versions of RemixVSL or TrueNAS.
 
 # How to Get Help
 - Open an issue in this Github repo
