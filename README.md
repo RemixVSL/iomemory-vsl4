@@ -37,7 +37,7 @@ all supply newer kernels than supported.
 Driver support for FusionIO cards had been lagging behind kernel releases, effectively making these cards an expensive paperweight when running a distribution like Ubuntu / Arch / Fedora / ProxMox which all supply newer kernels than supported by the original drivers.
 
 ## Releases
-We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**, **6** and **7** kernels. The latest working tested kernel is **6.19**.
+We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**, **6** and **7** kernels. The latest working tested kernel is **7.0.4**.
 
 ## Important Note for newer Linux Kernels
 Starting with Linux kernel 5.4.0, significant changes to the kernel were made that require additional boot time kernel flags for this driver to work. These affect AMD CPUs starting with 5.4.0, and Intel CPUs after about kernel 5.8.0. 
