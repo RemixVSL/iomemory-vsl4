@@ -33,18 +33,11 @@ releases, effectively making these cards an expensive paperweight
 when running a distribution like Ubuntu / Arch / Fedora / ProxMox which
 all supply newer kernels than supported.
 
-### Releases
-We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**, and **6** kernels. The latest working tested kernel is **6.9**.
+## Background
+Driver support for FusionIO cards had been lagging behind kernel releases, effectively making these cards an expensive paperweight when running a distribution like Ubuntu / Arch / Fedora / ProxMox which all supply newer kernels than supported by the original drivers.
 
-Historically releases were tagged, and were be checked out by their tag. The release tags follow Linux Kernel versions. E.g. **v5.12.1 (Boop Noodle)** will work on all 5.x kernels that are 5.12 and lower, but is not guaranteed to work on 5.13. **v4.20.2 - Big Ole Nope Rope** supports most kernels that pre-date 5.0. Again this way of following kernel releases has been abandoned. Please follow **main**.
-
-| Tag | Codename |
-| --- | --- |
-| main | |
-| v5.12.1 | Boop Noodle |
-| v5.10.0 | Spicy Nope Rope |
-| v5.6.1 | Danger Noodle |
-| v4.20.1 | Big Ole Nope Rope |
+## Releases
+We've abandoned the notion of releases, Generally `main` should be checked out. `main` is completely backwards compatible for all **5**, **6** and **7** kernels. The latest working tested kernel is **6.19**.
 
 ## Important Note for newer Linux Kernels
 Starting with Linux kernel 5.4.0, significant changes to the kernel were made that require additional boot time kernel flags for this driver to work. These affect AMD CPUs starting with 5.4.0, and Intel CPUs after about kernel 5.8.0. 
