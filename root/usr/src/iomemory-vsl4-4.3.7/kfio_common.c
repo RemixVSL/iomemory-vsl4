@@ -135,17 +135,20 @@ int kfio_strncmp(const char *s1, const char *s2, fio_size_t n)
 
 char *kfio_strncpy(char *dst, const char *src, fio_size_t n)
 {
-    return strncpy(dst, src, n);
+    strlcpy(dst, src, n);
+    return dst;
 }
 
 char *kfio_strcat(char *dst, const char *src)
 {
-    return strcat(dst, src);
+    strlcat(dst, src, strlen(dst) + strlen(src) + 1);
+    return dst;
 }
 
 char *kfio_strncat(char *dst, const char *src, int size)
 {
-    return strncat(dst, src, size);
+    strlcat(dst, src, strlen(dst) + size + 1);
+    return dst;
 }
 
 void *kfio_memset(void *dst, int c, fio_size_t n)
