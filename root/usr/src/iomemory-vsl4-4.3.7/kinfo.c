@@ -32,7 +32,15 @@
 #include <fio/port/fio-port.h>
 #include <fio/port/kinfo.h>
 #include <fio/port/common-linux/kfile.h>
+#include <fio/port/common-linux/kenum.h>
 #include <fio/port/ufio.h>
+
+/*
+ * Set when the top level directory was already there when we loaded, i.e.
+ * another generation of the driver created it and is still using it.  We then
+ * share it rather than fail, and leave it behind on unload.
+ */
+static int fio_proc_root_shared;
 
 /**
  * @ingroup PORT_LINUX
@@ -426,7 +434,21 @@ int kfio_info_os_driver_init(void)
     kfio_set_seq_ops_stop_handler (&kfio_info_linux_seq_ops, kfio_info_linux_seq_stop);
     kfio_set_seq_ops_show_handler (&kfio_info_linux_seq_ops, kfio_info_linux_seq_show);
 
-    /* This directory should be created by the nexus driver. */
+    /*
+     * This directory should be created by the nexus driver.  Another
+     * generation of the driver may already have created it, in which case it
+     * is shared rather than owned: the entries below it are created by full
+     * path anyway, so all that changes is that we must not remove it.
+     */
+    if (fio_enum_path_exists("/proc/" UFIO_KINFO_ROOT))
+    {
+        fio_proc_root_shared = 1;
+        fio_enum_resolve_base(UFIO_KINFO_ROOT, 1);
+        return 0;
+    }
+
+    fio_enum_resolve_base(UFIO_KINFO_ROOT, 0);
+
     fusion_parent_dir = kfio_proc_mkdir(UFIO_KINFO_ROOT, NULL);
     if (fusion_parent_dir == NULL)
     {
@@ -440,9 +462,25 @@ int kfio_info_os_driver_init(void)
  */
 void kfio_info_os_driver_fini(void)
 {
+    if (fio_proc_root_shared)
+    {
+        /* Belongs to the driver that created it, which is still using it. */
+        fio_proc_root_shared = 0;
+        return;
+    }
+
     if (fusion_parent_dir != NULL)
     {
-        kfio_remove_proc_entry(UFIO_KINFO_ROOT, NULL);
+        /*
+         * We created the directory, but another generation of the driver may
+         * have borrowed it since and may still have entries in it.  Removing a
+         * non-empty procfs directory leaks its children and the next load then
+         * collides recreating it, so only remove it when it is provably empty.
+         */
+        if (fio_enum_root_removable(UFIO_KINFO_ROOT))
+        {
+            kfio_remove_proc_entry(UFIO_KINFO_ROOT, NULL);
+        }
         fusion_parent_dir = NULL;
     }
 }
@@ -450,6 +488,7 @@ void kfio_info_os_driver_fini(void)
 int kfio_info_os_create_node(kfio_info_node_t *parent, kfio_info_node_t *nodep)
 {
     char root_name[sizeof("fusion/") + KFIO_INFO_MAX_NAMELEN];
+    char name_buf[FIO_ENUM_NAME_MAX];
     fusion_proc_dir_entry *parent_dir;
     fusion_proc_dir_entry *node_entry;
     const char *node_name;
@@ -476,8 +515,10 @@ int kfio_info_os_create_node(kfio_info_node_t *parent, kfio_info_node_t *nodep)
             return -EIO;
         }
 
-        /* Put root entries under global 'fusion' umbrella. */
-        kfio_snprintf(root_name, sizeof(root_name), "fusion/%s", node_name);
+        /* Put root entries under global 'fusion' umbrella, renumbered if we
+         * are sharing that umbrella with another generation of the driver. */
+        kfio_snprintf(root_name, sizeof(root_name), "fusion/%s",
+                      fio_enum_proc_name(node_name, name_buf, sizeof(name_buf)));
         node_name = root_name;
     }
     else
@@ -552,11 +593,13 @@ void kfio_info_os_remove_node(kfio_info_node_t *parent, kfio_info_node_t *nodep)
     if (parent == NULL)
     {
         char root_name[sizeof("fusion/") + KFIO_INFO_MAX_NAMELEN];
+        char name_buf[FIO_ENUM_NAME_MAX];
 
         kassert(node_type == KFIO_INFO_DIR);
 
         /* Remove root entries using full name. */
-        kfio_snprintf(root_name, sizeof(root_name), "fusion/%s", node_name);
+        kfio_snprintf(root_name, sizeof(root_name), "fusion/%s",
+                      fio_enum_proc_name(node_name, name_buf, sizeof(name_buf)));
         kfio_remove_proc_entry(root_name, NULL);
     }
     else

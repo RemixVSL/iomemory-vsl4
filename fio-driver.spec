@@ -227,6 +227,7 @@ Source to build driver for SanDisk Fusion ioMemory devices
 /usr/src/iomemory-vsl4-4.3.7/Makefile
 /usr/src/iomemory-vsl4-4.3.7/dkms.conf.example
 /usr/src/iomemory-vsl4-4.3.7/cdev.c
+/usr/src/iomemory-vsl4-4.3.7/kenum.c
 /usr/src/iomemory-vsl4-4.3.7/common_kinfo.c
 /usr/src/iomemory-vsl4-4.3.7/dbgset.c
 /usr/src/iomemory-vsl4-4.3.7/driver_init.c
@@ -342,6 +343,7 @@ Source to build driver for SanDisk Fusion ioMemory devices
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kassert.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kblock.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kcondvar.h
+/usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kenum.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kfile.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kfio.h
 /usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kpci.h

@@ -42,6 +42,7 @@
 #include <fio/port/bitops.h>
 #include <fio/port/atomic_list.h>
 #include <fio/port/common-linux/kblock.h>
+#include <fio/port/common-linux/kenum.h>
 
 // This is a duplicate definition, from include/fio/common/units.h, because apparently we can't include that here.
 #define FIO_NSEC_PER_USEC   1000
@@ -664,6 +665,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     struct request_queue *rq;
     struct gendisk       *gd;
     struct kfio_blk_add_disk_param *param;
+    char                  disk_name_buf[FIO_ENUM_NAME_MAX];
 
     disk = bdev->bdev_gd;
     if (disk == NULL)
@@ -775,7 +777,11 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     fio_bdev_ops.owner = THIS_MODULE;
 
-    strncpy(gd->disk_name, bdev->bdev_name, sizeof(gd->disk_name)-1);
+    /* Same name unless this driver is sharing the namespace with another. */
+    strncpy(gd->disk_name,
+            fio_enum_block_name(bdev->bdev_index, bdev->bdev_name,
+                                disk_name_buf, sizeof(disk_name_buf)),
+            sizeof(gd->disk_name)-1);
     gd->disk_name[sizeof(gd->disk_name)-1] = 0;
 
     set_capacity(gd, bdev->bdev_num_blocks * bdev->bdev_block_size / KERNEL_SECTOR_SIZE);
