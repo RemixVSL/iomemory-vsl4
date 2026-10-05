@@ -54,13 +54,17 @@ int noinline __fusion_condvar_timedwait(fusion_condvar_t *cv,
   increases the amount of CPU the task is recorded as using.
 
   We still want to block as uninterruptible but ensure we are counted
-  accurately as sleeping, so we must set the interruptible flag
-  and then ignore any signals which may be received.  The following
-  table explains our behavior based on the platform:
+  accurately as sleeping.  That is TASK_IDLE: uninterruptible, and left
+  out of the load average and the hung task check.  Sleeping
+  interruptible and ignoring signals, as was done before, does not
+  work: with a signal pending schedule() returns at once, and every
+  caller's wait loop spins on its lock until the condition changes.
+  The following table explains our behavior based on the platform:
 
   Linux:
+  fusion_condvar_wait()              - idle
   fusion_condvar_timedwait()         - uninterruptible
-  fusion_condvar_timedwait_noload()  - interruptible
+  fusion_condvar_timedwait_noload()  - idle
 
   Solaris, FreeBSD, etc.:
   fusion_condvar_timedwait()         - uninterruptible
@@ -133,7 +137,7 @@ void noinline fusion_condvar_wait(fusion_condvar_t *cv,
     is_irqsaved = fusion_cv_lock_is_irqsaved(lock);
     /* Linux wakes all threads in wake_up() unless
      * prepare_to_wait_exclusive() is called */
-    prepare_to_wait_exclusive(q, &_wait, TASK_INTERRUPTIBLE);
+    prepare_to_wait_exclusive(q, &_wait, TASK_IDLE);
 
     if (is_irqsaved)
     {
@@ -175,7 +179,7 @@ int noinline __fusion_condvar_timedwait(fusion_condvar_t *cv,
      * prepare_to_wait_exclusive() is called */
     if (interruptible)
     {
-        prepare_to_wait_exclusive(q, &_wait, TASK_INTERRUPTIBLE);
+        prepare_to_wait_exclusive(q, &_wait, TASK_IDLE);
     }
     else
     {
@@ -222,7 +226,7 @@ int noinline fusion_condvar_timedwait(fusion_condvar_t *cv,
 
 /**
  * This is identical to @sa fusion_condvar_timedwait() but the thread is
- *  set as interruptible to avoid adding to the load average.
+ *  set as TASK_IDLE so as not to add to the load average.
  */
 int noinline fusion_condvar_timedwait_noload(fusion_condvar_t *cv,
                                              fusion_cv_lock_t *lock,
@@ -236,7 +240,7 @@ int noinline fusion_condvar_timedwait_noload(fusion_condvar_t *cv,
 /** Same as fusion_condvar_timedwait_noload() but returns the time elapsed */
 /**
  * This is identical to @sa fusion_condvar_timedwait() but the thread is
- *  set as interruptible to avoid adding to the load average.
+ *  set as TASK_IDLE so as not to add to the load average.
  */
 uint64_t noinline fusion_condvar_timedwait_noload_elapsed(fusion_condvar_t *cv,
                                                           fusion_cv_lock_t *lock,
@@ -251,7 +255,7 @@ uint64_t noinline fusion_condvar_timedwait_noload_elapsed(fusion_condvar_t *cv,
     is_irqsaved = fusion_cv_lock_is_irqsaved(lock);
     /* Linux wakes all threads in wake_up() unless
      * prepare_to_wait_exclusive() is called */
-    prepare_to_wait_exclusive(q, &_wait, TASK_INTERRUPTIBLE);
+    prepare_to_wait_exclusive(q, &_wait, TASK_IDLE);
 
     if (is_irqsaved)
     {
