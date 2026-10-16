@@ -33,6 +33,7 @@
 #include <fio/port/dbgset.h>
 #include <fio/port/kcache.h>
 #include <linux/hardirq.h>  // in_atomic()
+#include <kfio_meta.h>
 
 /**
  * @ingroup PORT_LINUX
@@ -49,7 +50,7 @@ int noinline __kfio_create_cache(fusion_mem_cache_t *pcache, char *name, uint32_
 
 //    kassert(pcache->name);
 //    kassert(name);
-    strncpy(pcache->name, name, 39);
+    kfio_strncpy(pcache->name, name, 39);
 
     pcache->p = kmem_cache_create(pcache->name, size, align, 0, NULL);
 

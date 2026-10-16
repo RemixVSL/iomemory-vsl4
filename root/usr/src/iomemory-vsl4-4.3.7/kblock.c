@@ -54,6 +54,7 @@
 #include <linux/blk-mq.h>
 #include <linux/blkdev.h>
 #include <kblock_meta.h>
+#include <kfio_meta.h>
 #include <linux/bio-integrity.h>
 
 /* should these not be in a header file? */
@@ -775,7 +776,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
     fio_bdev_ops.owner = THIS_MODULE;
 
-    strncpy(gd->disk_name, bdev->bdev_name, sizeof(gd->disk_name)-1);
+    KFIO_STRSCPY_PAD(gd->disk_name, bdev->bdev_name, sizeof(gd->disk_name)-1);
     gd->disk_name[sizeof(gd->disk_name)-1] = 0;
 
     set_capacity(gd, bdev->bdev_num_blocks * bdev->bdev_block_size / KERNEL_SECTOR_SIZE);
