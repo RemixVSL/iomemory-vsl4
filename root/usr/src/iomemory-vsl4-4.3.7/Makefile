@@ -117,7 +117,7 @@ add_module_version patch_module_version:
 
 .PHONY: dkms
 dkms:
-	sudo ./module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -l ${LAST_KFIO_LIB} -d
+	sudo ./module_operations.sh -n "$(FIO_DRIVER_NAME)" -v "$(MODULE_VERSION)" -l ${LAST_KFIO_LIB} -d $(DKMS_FLAGS)
 
 .PHONY: dpkg
 dpkg:

@@ -5,14 +5,14 @@
 #
 set -e
 
-dkms_ver() {
+# Every version of the module in the DKMS tree, one per line. dkms 2.x prints
+# "name, version, kernel, arch: state" and dkms 3.x "name/version, kernel,
+# arch: state"; a version that is only added has no kernel in either.
+dkms_versions() {
     name=$1
-    ver=$(dkms status | grep "$name " | grep -v added | cut -d, -f2 | sed -e s/\ //)
-    if [ "$?" != "0" ]; then
-        echo "DKMS problem"
-        exit 1
-    fi
-    echo $ver
+    dkms status -m "$name" | \
+        sed -n -e "s|^$name/\([^,:]*\).*|\1|p" -e "s|^$name, \([^,:]*\).*|\1|p" | \
+        sort -u
 }
 
 dkms_remove() {
@@ -25,20 +25,33 @@ dkms_remove() {
 dkms_install() {
     name=$1
     ver=$2
-    echo "Adding, buidling and installing $name/$ver with DKMS"
+    echo "Adding, building and installing $name/$ver with DKMS"
 
-    if [ "$(dkms status | grep $name | grep added)" == "" ]; then
-      dkms add $name/$ver
+    # Run again for the same version, dkms 3 reports it built or installed,
+    # never added, and refuses to add it or build it a second time.
+    if ! dkms_versions $name | grep -qxF "$ver"; then
+        dkms add $name/$ver
     fi
-    dkms build $name/$ver
+    state=$(dkms status -m $name -v $ver -k $(uname -r))
+    if echo "$state" | grep -qE ': installed'; then
+        # dkms 2.x refuses to install the same version again, even with --force.
+        echo "$name/$ver is already installed for $(uname -r)"
+        return
+    elif echo "$state" | grep -qE ': built'; then
+        echo "$name/$ver is already built for $(uname -r)"
+    else
+        dkms build $name/$ver
+    fi
     dkms install $name/$ver --force
 }
 
 get_rel_ver() {
     version=$1
     kname=$(uname -r)
-    release=$(git describe --tag)
+    release=""
+    # Only without a version: as root, git refuses a checkout owned by somebody else.
     if [ "$version" == "" ]; then
+        release=$(git describe --tag)
         tag=$(git rev-parse --short HEAD)
     fi
     if [ "$version" == "" -a "$release" == "" ]; then
@@ -70,7 +83,8 @@ patchFile() {
         if [ ${#origVer} -ne "0" ]; then
             newVer="$tag-${origVer%% *}"
             if [ "${#newVer}" -gt "${#origVer}" ]; then
-                tag=$(git rev-parse --short HEAD)
+                # The version given with -v is that hash already; git as root may refuse the checkout.
+                tag=${VERSION:-$(git rev-parse --short HEAD)}
                 echo "${#newVer} longer than ${#origVer}, using $tag as version"
                 if [ "${#tag}" -gt "${#origVer}" ]; then
                     echo "Unable to revert to $tag for version, longer than $origVer"
@@ -98,7 +112,7 @@ patchFile() {
             newVer="$tag-${mod_ver}"
             origVer=$(perl -sne 'print $1."\n" if /($tag)/' -- -tag=$newVer $fileToPatch | head -1)
             if [ "$origVer" == "$newVer" ]; then
-                echo "Ok: $fileToPatch already already patched with $newVer"
+                echo "Ok: $fileToPatch already patched with $newVer"
             else
                 echo "Ok: $fileToPatch has no version"
             fi
@@ -136,7 +150,10 @@ sanity_check() {
 install_libvsl() {
     target_dir="/usr/lib/fio"
     mkdir -p $target_dir
-    src_dir=$(git rev-parse --show-toplevel)
+    # Not git rev-parse: this runs as root, and git refuses a checkout owned
+    # by somebody else ("dubious ownership"). The script sits four levels
+    # down, in root/usr/src/<module>-<version>.
+    src_dir=$(cd "$(dirname "$0")/../../../.." && pwd)
     libvsl=$(find ${src_dir}/root/usr/lib/fio -type f| grep libvsl)
     cp $libvsl $target_dir
 }
@@ -148,6 +165,7 @@ usage() {
   -l <library file to patch>
   -p flag: Patch module, files, license etc
   -d flag: Install module through DKMS
+  -k flag: with -d, keep the earlier versions for this kernel in the DKMS tree
   -h flag: this help
   -D flag: Debug, set -x
 "
@@ -155,8 +173,9 @@ usage() {
 
 PATCH=0
 DKMS=0
+KEEP=0
 LIBRARY_FILE=""
-while getopts ":l:n:v:pdhD" opt; do
+while getopts ":l:n:v:pdkhD" opt; do
     case ${opt} in
       l )
 	LIBRARY_FILE=$OPTARG
@@ -172,6 +191,9 @@ while getopts ":l:n:v:pdhD" opt; do
         ;;
       d )
         DKMS=1
+        ;;
+      k )
+        KEEP=1
         ;;
       D )
         set -x
@@ -212,12 +234,8 @@ if [ "$DKMS" == "0" -a "$PATCH" == "0" ]; then
 elif [ "$DKMS" == "1" ]; then
     check_root
     DKMS_DIR="/usr/src/${MODULE_NAME}-${RELEASE_VER}"
-    DKMS_VER=$(dkms_ver $MODULE_NAME)
 
     patchLicenseVersion ${RELEASE_VER}-${MODULE_VER}
-    if [ "${DKMS_VER}" != "" ]; then
-      dkms_remove $MODULE_NAME $DKMS_VER
-    fi
     if [ -d "$DKMS_DIR" ]; then
         echo "$DKMS_DIR already exists."
     else
@@ -231,4 +249,22 @@ elif [ "$DKMS" == "1" ]; then
     fi
     dkms_install $MODULE_NAME $RELEASE_VER
     install_libvsl $MODULE_NAME
+
+    # Only once the new version is installed: removed first, a failed build
+    # would leave the next boot with no module at all.
+    #
+    # Only the earlier builds for this kernel: a version is named after the
+    # kernel it was built on (get_rel_ver), so one of another kernel's name
+    # is that kernel's module, and "dkms remove --all" would take it off a
+    # kernel that may be the fallback, or have its root on this card.
+    if [ "$KEEP" == "0" ]; then
+        kprefix="$(uname -r)"
+        kprefix="${kprefix%-*}-"
+        for old in $(dkms_versions $MODULE_NAME); do
+            if [ "$old" != "$RELEASE_VER" -a "${old#$kprefix}" != "$old" ]; then
+                # The new version is installed; a removal that fails is reported, not fatal.
+                dkms_remove $MODULE_NAME $old || echo "Could not remove $MODULE_NAME/$old from DKMS" 1>&2
+            fi
+        done
+    fi
 fi
