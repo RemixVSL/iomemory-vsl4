@@ -154,8 +154,9 @@ static int __init init_fio_driver(void)
 #endif
             break;
         case USE_QUEUE_RQ:
-            infprint("Using default Linux block I/O scheduler\n");
-            break;
+            // The request-queue path is gone from kblock.c; a disk would fail to expose.
+            infprint("ERROR: USE_QUEUE_RQ is no longer supported; use the default.\n");
+            return -1;
         case USE_QUEUE_NONE:
             infprint("No Queue strategy is set.\n");
             break;

@@ -89,6 +89,7 @@ enum fio_port_linux_error_ids {
     ERRID_LINUX_KSCATTER_DMA_DETAILS,
     ERRID_LINUX_KSCATTER_UNALIGNED_DMA,
     ERRID_LINUX_KSCATTER_TOO_FEW_ENTRIES,
+    ERRID_LINUX_KBLK_ADD_DISK,
     FIO_MSGID_PORT_LINUX_CURRENT_MAX ///< Current layer maximum. New entries above.
 };
 // Triggering this assert indicates this ID range is exhausted and a new range

@@ -593,6 +593,7 @@ struct kfio_blk_add_disk_param
     struct fusion_work_struct work;
     struct kfio_disk *disk;
     bool              done;
+    int               error;
 };
 
 /*
@@ -603,7 +604,12 @@ static void kfio_blk_add_disk(fusion_work_struct_t *work)
     struct kfio_blk_add_disk_param *param = container_of(work, struct kfio_blk_add_disk_param, work);
     struct kfio_disk *disk = param->disk;
 
-    ADD_DISK
+    param->error = ADD_DISK(disk->gd);
+    if (param->error != 0)
+    {
+        errprint_all(ERRID_LINUX_KBLK_ADD_DISK, "%s: add_disk failed: %d\n",
+                     disk->gd->disk_name, param->error);
+    }
 
     /* Tell waiter we are done. */
     fusion_cv_lock_irq(&disk->state_lk);
@@ -665,6 +671,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
     struct request_queue *rq;
     struct gendisk       *gd;
     struct kfio_blk_add_disk_param *param;
+    int                   add_error;
 
     disk = bdev->bdev_gd;
     if (disk == NULL)
@@ -692,8 +699,12 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
             // &disk->tag_set should be a variable here...
             disk->rq = BLK_MQ_ALLOC_QUEUE
 
-            if (IS_ERR(disk->rq))
-                goto err; // maybe move error handler to another function with extra logging?
+            if (IS_ERR_OR_NULL(disk->rq))
+            {
+                // hide_disk() tests disk->rq for NULL: never leave it an error pointer.
+                disk->rq = NULL;
+                goto err;
+            }
 
             // success: manually add our preferred NUMA node and driver data now.
             disk->tag_set.numa_node = bdev->bdev_numa_node;
@@ -708,8 +719,12 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
         }
         case USE_QUEUE_NONE:
             disk->rq = kfio_alloc_queue(disk, bdev->bdev_numa_node);
-            if (IS_ERR(disk->rq))
-                goto err; // maybe move error handler to another function with extra logging?
+            // NULL before 5.15, when the queue was allocated on its own.
+            if (IS_ERR_OR_NULL(disk->rq))
+            {
+                disk->rq = NULL;
+                goto err;
+            }
             break;
         default:
             goto err; // this should not happen
@@ -797,6 +812,7 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
         param->disk = disk;
         param->done = false;
+        param->error = 0;
         fusion_schedule_work(&param->work);
 
         /* Wait for work thread to expose our disk. */
@@ -809,7 +825,21 @@ static int linux_bdev_expose_disk(struct fio_bdev *bdev)
 
         fusion_destroy_work(&param->work);
 
+        add_error = param->error;
         kfio_free(param, sizeof(*param));
+
+        if (add_error != 0)
+        {
+            /*
+             * The disk was never added: it is put, not deleted, exactly as
+             * when the parameter block could not be allocated below, and the
+             * core hears of the failure instead of a disk that is not there.
+             */
+            put_disk(disk->gd);
+            disk->gd = NULL;
+            linux_bdev_hide_disk(bdev, KFIO_DISK_OP_SHUTDOWN | KFIO_DISK_OP_FORCE);
+            return add_error;
+        }
     }
     else
     {
@@ -862,16 +892,23 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
 
         fusion_spin_lock_irqsave(&disk->queue_lock);
 
-        /* Stop delivery of new io from user. */
-        set_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags);
-
         /*
-         * Prevent request_fn callback from interfering with
-         * the queue shutdown.
+         * The error paths of linux_bdev_expose_disk() come here with a disk
+         * and no queue yet.
          */
-        if (disk->rq->mq_ops)
+        if (disk->rq != NULL)
         {
-            blk_mq_stop_hw_queues(disk->rq);
+            /* Stop delivery of new io from user. */
+            set_bit(QUEUE_FLAG_DYING, &disk->rq->queue_flags);
+
+            /*
+             * Prevent request_fn callback from interfering with
+             * the queue shutdown.
+             */
+            if (disk->rq->mq_ops)
+            {
+                blk_mq_stop_hw_queues(disk->rq);
+            }
         }
 
         /*
@@ -964,7 +1001,8 @@ static int linux_bdev_hide_disk(struct fio_bdev *bdev, uint32_t opflags)
     {
         // blk_cleanup_queue(disk->rq);
 
-        if (use_workqueue == USE_QUEUE_MQ)
+        // The mode this disk was created in, not the module parameter's value now.
+        if (disk->use_workqueue == USE_QUEUE_MQ)
         {
             blk_mq_free_tag_set(&disk->tag_set);
         }

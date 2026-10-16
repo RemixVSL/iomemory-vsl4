@@ -159,12 +159,18 @@ fusion_page_t noinline kfio_alloc_0_page(kfio_maa_t flags)
     gfp_t lflags = 0;
     fusion_page_t page = NULL;
 
-    if (flags & KFIO_MAA_NORMAL)
-        lflags |= GFP_KERNEL;
-    if (flags & KFIO_MAA_NOIO)
-        lflags |= GFP_NOIO;
+    /*
+     * The most restrictive flag wins. The gfp masks cannot be OR-ed: GFP_KERNEL
+     * carries __GFP_IO and __GFP_FS and GFP_NOIO is its subset, so NORMAL | NOIO
+     * came out as GFP_KERNEL and reclaim could recurse into I/O on this card;
+     * NORMAL | NOWAIT came out able to sleep. No flag at all stays 0, as before.
+     */
     if (flags & KFIO_MAA_NOWAIT)
-        lflags |= (GFP_NOWAIT | __GFP_NOWARN);
+        lflags = GFP_NOWAIT | __GFP_NOWARN;
+    else if (flags & KFIO_MAA_NOIO)
+        lflags = GFP_NOIO;
+    else if (flags & KFIO_MAA_NORMAL)
+        lflags = GFP_KERNEL;
 /** linux-2.6.11 introduced __GFP_ZERO
  * We don't have a KFIOC_ for this because defines are trivially detectable.
  */

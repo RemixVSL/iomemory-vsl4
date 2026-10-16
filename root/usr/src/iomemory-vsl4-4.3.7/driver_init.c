@@ -46,7 +46,10 @@ module_param_array (numa_node_override, charp, &num_numa_node_override, S_IRUGO 
 
 
 int use_workqueue = USE_QUEUE_NONE;
-module_param (use_workqueue, int, S_IRUGO | S_IWUSR);
+// Read-only: the queue mode is fixed when a disk is created, and parts of
+// kblock.c read the parameter again later, so changing it under a live disk
+// mixed two modes in one teardown.
+module_param (use_workqueue, int, S_IRUGO);
 
 // TODO: do we need any of this?
 #if FUSION_MEDIA_TEST_TOOL

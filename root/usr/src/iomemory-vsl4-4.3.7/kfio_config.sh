@@ -334,13 +334,15 @@ KFIOC_X_VOID_ADD_DISK()
     local test_flag="$1"
     local test_code='
 #include <linux/blkdev.h>
-int kfioc_check_void_add_disk(void);
-int kfioc_check_void_add_disk(void)
+void kfioc_check_void_add_disk(void);
+void kfioc_check_void_add_disk(void)
 {
+  /* Compiles only where add_disk() returns void: the pointer types differ otherwise. */
+  void (*fn)(struct gendisk *) = add_disk;
   struct gendisk *gd = NULL;
-  return add_disk(gd)
-}
 
+  fn(gd);
+}
 '
     kfioc_test "$test_code" "$test_flag" 1 -Werror
 }
