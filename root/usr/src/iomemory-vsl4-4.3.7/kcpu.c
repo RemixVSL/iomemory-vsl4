@@ -125,10 +125,15 @@ int kfio_create_kthread_on_cpu(fusion_kthread_func_t func, void *data,
 
 static void __kfio_bind_task_to_cpumask(struct task_struct *tsk, cpumask_t *mask)
 {
+    /*
+     * cpumask_copy(), not "= *mask": with CONFIG_CPUMASK_OFFSTACK the node
+     * masks are allocated for nr_cpu_ids bits only, and a struct copy
+     * reads a full NR_CPUS-bit cpumask_t out of them.
+     */
 #if KFIOC_X_TASK_HAS_CPUS_MASK
-    tsk->cpus_mask = *mask;
+    cpumask_copy(&tsk->cpus_mask, mask);
 #else
-    tsk->cpus_allowed = *mask;
+    cpumask_copy(&tsk->cpus_allowed, mask);
 #endif
     tsk->nr_cpus_allowed = cpumask_weight(mask);
 }
@@ -181,6 +186,14 @@ void kfio_free_cpu_topology(struct kfio_cpu_topology *top)
     kfio_free(top->cpu_to_node, sizeof(kfio_cpu_t) * top->numcpus);
 }
 
+// cpu_to_node() as an index into a per-node array; a CPU with no node counts as node 0.
+static uint32_t kfio_cpu_node_index(kfio_cpu_t cpu, uint32_t node_ids)
+{
+    int node = cpu_to_node(cpu);
+
+    return (node < 0 || (uint32_t)node >= node_ids) ? 0 : (uint32_t)node;
+}
+
 #define SET_MAP(cpu_ix, queue_ix) \
     cpu_to_read_queue[cpu_ix] = \
       (struct hw_comp_queue *)(((uint8_t *)read_queues) + struct_hw_comp_queue_size * (queue_ix));
@@ -208,12 +221,14 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
                                  kfio_pci_dev_t *pci_dev,
                                  struct hw_comp_queue **cpu_to_read_queue)
 {
-    const uint32_t num_nodes = num_online_nodes();
-    const uint32_t nodes_possible = num_possible_nodes();
+    // Node numbers can be sparse: index by node id, up to nr_node_ids.
+    const uint32_t node_ids = nr_node_ids;
     uint32_t node_ndx, node_counter;
-    uint32_t *node_hist = kfio_malloc(nodes_possible * sizeof(uint32_t));
-    uint32_t *node_map = kfio_malloc(nodes_possible * sizeof(uint32_t));
+    uint32_t used_nodes;
+    uint32_t *node_hist;
+    uint32_t *node_map;
     kfio_cpu_t cpu;
+    int rc;
 
     dbgprint(DBGS_MULTQ,
              "%s: read_queues:%p read_queue_count:%u struct_hw_comp_queue_size:%lu\n",
@@ -224,14 +239,22 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     dbgprint(DBGS_MULTQ, "%s: num_online_cpus:%u num_online_nodes:%u\n",
              __func__, num_online_cpus(), num_online_nodes());
 
-    kfio_memset(node_hist, 0, sizeof(uint32_t)*nodes_possible);
+    node_hist = kfio_malloc(node_ids * sizeof(uint32_t));
+    node_map = kfio_malloc(node_ids * sizeof(uint32_t));
+    if (node_hist == NULL || node_map == NULL)
+    {
+        rc = -ENOMEM;
+        goto out;
+    }
+
+    kfio_memset(node_hist, 0, sizeof(uint32_t)*node_ids);
     for (cpu = 0; cpu < cpu_topology->numcpus; ++cpu)
     {
-        node_hist[cpu_to_node(cpu)]++;
+        node_hist[kfio_cpu_node_index(cpu, node_ids)]++;
     }
 
 #if FUSION_DEBUG
-    for (node_ndx=0; node_ndx<nodes_possible; node_ndx++)
+    for (node_ndx=0; node_ndx<node_ids; node_ndx++)
     {
         dbgprint(DBGS_MULTQ, "%s: CPU Node Histogram: %4u : %4u\n",
                  __func__, node_ndx, node_hist[node_ndx]);
@@ -245,22 +268,25 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
     // NB: It might be useful to initialize this map to -1 (or some other flag
     // value) and test and abort later if we end up with an unmapped CPU.
     // Or perhaps just restart the whole exercise?
+    //
+    // The nodes that have CPUs are numbered densely, 0 to used_nodes - 1.
+    // This used to advance the number by searching node_hist, which both
+    // read past its end and, with a node without CPUs between two with,
+    // handed out numbers past the cluster count, and so queues past the end
+    // of read_queues.
     node_counter=0;
-    kfio_memset(node_map, 0, sizeof(uint32_t)*nodes_possible);
-    for (node_ndx=0; node_ndx<nodes_possible; node_ndx++)
+    kfio_memset(node_map, 0, sizeof(uint32_t)*node_ids);
+    for (node_ndx=0; node_ndx<node_ids; node_ndx++)
     {
         if (node_hist[node_ndx] != 0)
         {
-            node_map[node_ndx] = node_counter;
-
-            // find the next node that has entries
-            while (node_hist[++node_counter] == 0 && node_counter < num_nodes)
-                ;
+            node_map[node_ndx] = node_counter++;
         }
 
         dbgprint(DBGS_MULTQ, "%s: CPU Node Map: %4u : %4u\n",
                  __func__, node_ndx, node_map[node_ndx]);
     }
+    used_nodes = node_counter != 0 ? node_counter : 1;
 
     /*
      * If we have enough queues to have one per CPU, lets do that.
@@ -290,9 +316,12 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
 
         if (queues_used < read_queue_count)
         {
-            return (int)queues_used;
+            rc = (int)queues_used;
         }
-        return (int)read_queue_count;
+        else
+        {
+            rc = (int)read_queue_count;
+        }
     }
     else
     {
@@ -312,22 +341,22 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
         uint32_t cpus_in_cluster[IODRIVE_MAX_COMP_QUEUES] = {0};
         uint32_t queues_per_cluster = 1;
         uint32_t nodes_per_cluster = 1;
-        uint32_t cluster_count = num_nodes;
+        uint32_t cluster_count = used_nodes;
 
-        if (read_queue_count < num_nodes)
+        if (read_queue_count < used_nodes)
         {
             // Don't have one queue per NUMA node available. Start grouping NUMA
             // nodes into clusters until we have one queue per cluster.
             while (cluster_count > read_queue_count)
             {
                 nodes_per_cluster++;
-                cluster_count = (num_nodes + nodes_per_cluster - 1) / nodes_per_cluster;
+                cluster_count = (used_nodes + nodes_per_cluster - 1) / nodes_per_cluster;
             }
         }
         else
         {
             // We have at least one queue per NUMA node, maybe more.
-            queues_per_cluster = read_queue_count / num_nodes;
+            queues_per_cluster = read_queue_count / used_nodes;
         }
 
         dbgprint(DBGS_MULTQ,
@@ -336,7 +365,7 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
 
         for (cpu = 0; cpu < cpu_topology->numcpus; ++cpu)
         {
-            uint32_t node = cpu_to_node(cpu);
+            uint32_t node = kfio_cpu_node_index(cpu, node_ids);
             uint32_t cluster;
             uint32_t read_q;
 
@@ -357,8 +386,13 @@ int kfio_map_cpus_to_read_queues(struct hw_comp_queue *read_queues,
             }
         }
 
-        return (int)(cluster_count * queues_per_cluster);
+        rc = (int)(cluster_count * queues_per_cluster);
     }
+
+out:
+    kfio_free(node_map, node_ids * sizeof(uint32_t));
+    kfio_free(node_hist, node_ids * sizeof(uint32_t));
+    return rc;
 }
 
 #endif // PORT_SUPPORTS_PER_CPU

@@ -37,6 +37,7 @@
 #include <linux/cpu.h>
 #include <linux/list.h>
 #include <linux/notifier.h>
+#include <linux/mutex.h>
 
 /**
  * @ingroup PORT_LINUX
@@ -52,6 +53,12 @@ static spinlock_t hotplug_lock = SPIN_LOCK_UNLOCKED;
 #endif
 static int hotplug_initialized;
 static LIST_HEAD(notify_list);
+/*
+ * Orders the first registration, which sets the hotplug states up, against
+ * the last unregistration, which removes them; both sleep, so the spinlock
+ * cannot. hotplug_initialized and the two state numbers are under it.
+ */
+static DEFINE_MUTEX(hotplug_mutex);
 
 struct kfio_cpu_notify
 {
@@ -91,24 +98,21 @@ int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
 {
 #ifdef CONFIG_SMP
     struct kfio_cpu_notify *kcn;
-    int do_register = 0;
+    int offline_state, online_state;
+    int rc;
 
     kcn = kmalloc(sizeof(*kcn), GFP_KERNEL);
     if (!kcn)
         return -ENOMEM;
 
+    mutex_lock(&hotplug_mutex);
+
     spin_lock(&hotplug_lock);
     kcn->func = func;
     list_add_tail(&kcn->list, &notify_list);
-
-    if (!hotplug_initialized)
-    {
-        do_register = 1;
-        hotplug_initialized = 1;
-    }
     spin_unlock(&hotplug_lock);
 
-    if (do_register)
+    if (!hotplug_initialized)
     {
         // Fancy footwork to handle various kernel idiosyncracies...
         // Kernels less than 4.8 only use register_cpu_notifier().
@@ -119,19 +123,46 @@ int kfio_register_cpu_notifier(kfio_cpu_notify_fn *func)
         //  for 'offline'.
         // Kernel 4.10 and above have symmetrical CPUHP_..._DYN states for online and offline callbacks.
         // Whether kernel has states removal bug or not, now setup our real callback.
-        cpuhp_offline_dyn_state =
+        // A _DYN state comes back as its number, or as a negative error.
+        offline_state =
         cpuhp_setup_state_nocalls(CPUHP_BP_PREPARE_DYN,
                                    "block/iomemory_vsl4:offline",
                                    NULL,
                                    kfio_cpu_notify_offline);
-        cpuhp_online_dyn_state =
+        if (offline_state < 0)
+        {
+            rc = offline_state;
+            goto fail;
+        }
+        online_state =
         cpuhp_setup_state_nocalls(CPUHP_AP_ONLINE_DYN,
                                   "block/iomemory_vsl4:online",
                                   kfio_cpu_notify_online,
                                   NULL);
+        if (online_state < 0)
+        {
+            cpuhp_remove_state_nocalls(offline_state);
+            rc = online_state;
+            goto fail;
+        }
+        cpuhp_offline_dyn_state = offline_state;
+        cpuhp_online_dyn_state = online_state;
+        hotplug_initialized = 1;
     }
+
+    mutex_unlock(&hotplug_mutex);
 #endif  /* CONFIG_SMP */
     return 0;
+
+#ifdef CONFIG_SMP
+fail:
+    spin_lock(&hotplug_lock);
+    list_del(&kcn->list);
+    spin_unlock(&hotplug_lock);
+    mutex_unlock(&hotplug_mutex);
+    kfree(kcn);
+    return rc;
+#endif  /* CONFIG_SMP */
 }
 
 void kfio_unregister_cpu_notifier(kfio_cpu_notify_fn *func)
@@ -140,6 +171,7 @@ void kfio_unregister_cpu_notifier(kfio_cpu_notify_fn *func)
     struct kfio_cpu_notify *kcn;
     int do_unregister = 0;
 
+    mutex_lock(&hotplug_mutex);
     spin_lock(&hotplug_lock);
 
     list_for_each_entry(kcn, &notify_list, list)
@@ -152,7 +184,7 @@ void kfio_unregister_cpu_notifier(kfio_cpu_notify_fn *func)
         }
     }
 
-    if (list_empty(&notify_list))
+    if (list_empty(&notify_list) && hotplug_initialized)
     {
         hotplug_initialized = 0;
         do_unregister = 1;
@@ -168,6 +200,7 @@ void kfio_unregister_cpu_notifier(kfio_cpu_notify_fn *func)
         cpuhp_remove_state_nocalls(cpuhp_online_dyn_state);
         cpuhp_remove_state_nocalls(cpuhp_offline_dyn_state);
     }
+    mutex_unlock(&hotplug_mutex);
 
 #endif  /* CONFIG_SMP */
 }

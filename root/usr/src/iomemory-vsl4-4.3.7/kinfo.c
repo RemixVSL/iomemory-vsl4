@@ -57,12 +57,11 @@ static fio_ssize_t fio_proc_read_buffer(const char *local_buf, fio_ssize_t len,
 
     if (len > 0)
     {
-        int result = kfio_copy_to_user(user_buf, local_buf + *ppos, len);
+        // copy_to_user() returns the bytes it did not copy, not an error.
+        if (kfio_copy_to_user(user_buf, local_buf + *ppos, len) != 0)
+            return -EFAULT;
 
-        if (result == 0)
-            *ppos += len;
-        else
-            len = result;
+        *ppos += len;
     }
 
     return len;
@@ -176,8 +175,18 @@ static fio_ssize_t kfio_info_os_type_write(fusion_file *file, const char __user 
     value.size = kfio_info_node_get_size(nodep);
     value.data = local_buf;
 
+    /*
+     * Leave room for a terminating NUL in either case: the string is
+     * handed on at its full node size, and the numbers are parsed by
+     * strtoul(), which reads until it finds one.
+     */
     if (value.type == KFIO_INFO_STRING)
     {
+        if (count >= value.size)
+        {
+            return -EINVAL;
+        }
+
         if (value.size > sizeof(local_buf))
         {
             size = value.size;
@@ -188,27 +197,26 @@ static fio_ssize_t kfio_info_os_type_write(fusion_file *file, const char __user 
             }
         }
 
-        if (count > value.size)
-        {
-            return -EINVAL;
-        }
+        // The handler copies value.size bytes: none of them may be stale.
+        kfio_memset(value.data, 0, value.size);
     }
     else
     {
-        if (count > sizeof(local_buf))
+        if (count >= sizeof(local_buf))
         {
             return -EINVAL;
         }
+
+        kfio_memset(local_buf, 0, sizeof(local_buf));
     }
 
-    rc = kfio_copy_from_user(value.data, buf, count);
-    if (rc != 0)
+    if (kfio_copy_from_user(value.data, buf, count) != 0)
     {
         if (value.data != local_buf)
         {
             kfio_vfree(value.data, size);
         }
-        return rc;
+        return -EFAULT;
     }
 
     *ppos += count;
@@ -334,7 +342,12 @@ static void *kfio_info_linux_seq_start(fusion_seq_file *sfile, fio_loff_t *pos)
     rc = kfio_info_alloc_data_handle(nodep, buf, size, &dbh);
     if (rc != 0)
     {
-        return NULL;
+        /*
+         * The private data is still the node, not a data handle, and
+         * seq_file calls stop() all the same: an error pointer tells
+         * kfio_info_linux_seq_stop() so, and the read returns the error.
+         */
+        return ERR_PTR(-ENOMEM);
     }
     kfio_fseq_set_private(sfile, dbh);
 
@@ -351,8 +364,17 @@ static void *kfio_info_linux_seq_next(fusion_seq_file *sfile, void *cookie, fio_
 
 static void kfio_info_linux_seq_stop(fusion_seq_file *sfile, void *cookie)
 {
-    kfio_info_data_t *dbh   = kfio_fseq_private(sfile);
-    kfio_info_node_t *nodep = kfio_info_data_node(dbh);
+    kfio_info_data_t *dbh;
+    kfio_info_node_t *nodep;
+
+    // kfio_info_linux_seq_start() failed: there is no data handle to undo.
+    if (IS_ERR(cookie))
+    {
+        return;
+    }
+
+    dbh   = kfio_fseq_private(sfile);
+    nodep = kfio_info_data_node(dbh);
 
     kfio_info_seq_stop(nodep, cookie);
     kfio_fseq_set_private(sfile, nodep);

@@ -5,13 +5,18 @@ KERNEL_BUILD=$objtree
 objtool="$KERNEL_BUILD/tools/objtool/objtool"
 
 args=$(echo "$*" | sed s/--werror//)
-if [ -z "$objtool" ]; then
-    echo "$(basename "$0"): No objtool?" 1>&2
+if [ ! -x "$objtool" ]; then
+    echo "$(basename "$0"): No objtool at $objtool" 1>&2
     exit 255;
 fi
 [ "$DEBUG" != "" ] && echo "Running objtool $objtool $args"
 $objtool --sec-address $args
 rc=$?
 [ "$DEBUG" != "" ] && echo "objtool returned $rc"
+# --werror is dropped because the shipped core cannot pass objtool's checks,
+# and the build goes on whatever objtool says. A failure is still reported,
+# because the object then lacks what objtool would have added to it.
+if [ $rc -ne 0 ]; then
+    echo "$(basename "$0"): objtool exited $rc: $args" 1>&2
+fi
 exit 0
-

@@ -32,6 +32,25 @@
 const char *MSG_LEVEL_STR[] = { "fioerr", "fiowrn", "fioinf", "fioeng", "fiodbg" };
 #endif
 
+/*
+ * msg_ctx becomes part of the format string, so each '%' in it is doubled
+ * to print as itself rather than be taken for a conversion.
+ */
+static void kmsg_escape_ctx(char *dst, fio_size_t len, const char *src)
+{
+    fio_size_t i = 0;
+
+    while (*src != '\0' && i + 2 < len)
+    {
+        if (*src == '%')
+        {
+            dst[i++] = '%';
+        }
+        dst[i++] = *src++;
+    }
+    dst[i] = '\0';
+}
+
 /**
  * @brief filtering messages based on configuration
  * @param msg_lvl Message level, MSG_LEVEL_ERR - MSG_LEVEL_INFO
@@ -52,6 +71,7 @@ kmsg_filter(msg_level_t msg_lvl, const char *msg_ctx, int32_t id,
     char complete_fmt[MSG_FMT_LEN_MAX];
 
     char pad_id[MSG_ID_LEN_MAX];
+    char ctx[64];
     //TODO: some filtering here ...
 
     if (id != NO_MSG_ID)
@@ -67,8 +87,9 @@ kmsg_filter(msg_level_t msg_lvl, const char *msg_ctx, int32_t id,
     // assemble a complete format string as "fioerr <dev name> <original fmt>"
     if (msg_ctx && kfio_strlen(msg_ctx) > 0)
     {
+        kmsg_escape_ctx(ctx, sizeof(ctx), msg_ctx);
         rc = kfio_snprintf(complete_fmt, MSG_FMT_LEN_MAX, "%s %s: %s%s",
-                           MSG_LEVEL_STR[msg_lvl], msg_ctx, pad_id, fmt);
+                           MSG_LEVEL_STR[msg_lvl], ctx, pad_id, fmt);
     }
     else
     {

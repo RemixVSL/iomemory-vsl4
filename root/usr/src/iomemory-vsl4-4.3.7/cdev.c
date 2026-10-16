@@ -165,6 +165,10 @@ int coms_port_cdev_create(struct coms_cdev *cdev, void *port_param, void **handl
     init_waitqueue_head((wait_queue_head_t *) coms_cdev_get_poll_struct(cdev));
 
     md = kfio_malloc(sizeof(*md));
+    if (md == NULL)
+    {
+        return -ENOMEM;
+    }
 
     misc_dev_init(md, coms_cdev_get_name(cdev));
 
@@ -198,8 +202,15 @@ void coms_port_cdev_destroy(void *port_cdev)
 static int coms_path_lookup(const char *filename)
 {
     struct path path;
+    int rc;
 
-    return kern_path(filename, LOOKUP_PARENT, &path);
+    rc = kern_path(filename, LOOKUP_PARENT, &path);
+    if (rc == 0)
+    {
+        // A successful lookup holds the path; only its existence was wanted.
+        path_put(&path);
+    }
+    return rc;
 }
 
 /**
