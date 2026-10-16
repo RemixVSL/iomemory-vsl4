@@ -133,9 +133,19 @@ int kfio_strncmp(const char *s1, const char *s2, fio_size_t n)
     return strncmp(s1, s2, n);
 }
 
+/*
+ * Must match strncpy() exactly, not strscpy_pad(): libkfio.o calls this
+ * with n == strlen(src), where strscpy_pad() drops the last character.
+ * memcpy_and_pad() (since 4.14) reproduces strncpy() semantics.
+ */
 char *kfio_strncpy(char *dst, const char *src, fio_size_t n)
 {
-    return strncpy(dst, src, n);
+    size_t len = strlen(src);
+
+    if (len > n)
+        len = n;
+    memcpy_and_pad(dst, n, src, len, 0);
+    return dst;
 }
 
 char *kfio_strcat(char *dst, const char *src)
