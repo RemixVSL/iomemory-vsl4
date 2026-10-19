@@ -63,6 +63,7 @@ usr/src/iomemory-vsl4-4.3.7/include/fio/port/bitops.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/div64.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kfio.h
+usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kenum.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/kfile.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/errno.h
 usr/src/iomemory-vsl4-4.3.7/include/fio/port/common-linux/ufio.h
@@ -142,6 +143,7 @@ usr/src/iomemory-vsl4-4.3.7/kblock.c
 usr/src/iomemory-vsl4-4.3.7/kcondvar.c
 usr/src/iomemory-vsl4-4.3.7/module_param.c
 usr/src/iomemory-vsl4-4.3.7/cdev.c
+usr/src/iomemory-vsl4-4.3.7/kenum.c
 usr/src/iomemory-vsl4-4.3.7/Makefile
 usr/src/iomemory-vsl4-4.3.7/kscsi_host.c
 usr/src/iomemory-vsl4-4.3.7/kscsi.c

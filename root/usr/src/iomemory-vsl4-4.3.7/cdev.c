@@ -30,6 +30,7 @@
 #include <fio/port/dbgset.h>
 #include <fio/port/porting_cdev.h>
 #include <fio/port/cdev.h>
+#include <fio/port/common-linux/kenum.h>
 #include <fio/port/message_ids.h>
 
 #include <linux/miscdevice.h>
@@ -160,19 +161,25 @@ static void misc_dev_init(struct miscdevice *md, const char *dev_name)
 int coms_port_cdev_create(struct coms_cdev *cdev, void *port_param, void **handlep)
 {
     struct miscdevice *md;
+    const char *dev_name;
     int result;
 
     init_waitqueue_head((wait_queue_head_t *) coms_cdev_get_poll_struct(cdev));
 
     md = kfio_malloc(sizeof(*md));
 
-    misc_dev_init(md, coms_cdev_get_name(cdev));
+    /* Same name unless this driver is sharing the namespace with another.
+     * cdev.h declares coms_cdev_get_dev_number(), but the driver object does
+     * not define it, so the number is read back out of the name instead. */
+    dev_name = fio_enum_control_name_parsed(coms_cdev_get_name(cdev));
+
+    misc_dev_init(md, dev_name);
 
     result = misc_register(md);
     if (result < 0)
     {
         errprint_lbl(coms_cdev_get_bus_name(cdev), ERRID_CMN_LINUX_CDEV_INIT_FAIL,
-                     "Unable to initialize misc device '%s'\n", coms_cdev_get_name(cdev));
+                     "Unable to initialize misc device '%s'\n", dev_name);
         kfio_free(md, sizeof(*md));
     }
     else
@@ -180,7 +187,7 @@ int coms_port_cdev_create(struct coms_cdev *cdev, void *port_param, void **handl
         *handlep = md;
 // TODO: Whadawhadawhada!!!!!?
 #if !defined(__TENCENT_KERNEL__)
-        coms_wait_for_dev(coms_cdev_get_name(cdev));
+        coms_wait_for_dev(dev_name);
 #endif
     }
 

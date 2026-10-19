@@ -31,6 +31,7 @@
 #include <fio/port/kfio_config.h>
 
 #include "fio/port/kfio.h"
+#include "fio/port/common-linux/kenum.h"
 
 module_param(auto_attach, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(auto_attach, "Automatically attach drive during driver initialization: 0 = disable attach, 1 = enable attach (default). Note for Windows only: The driver will only attach if there was a clean shutdown, otherwise the fiochkdrv utility will perform the full scan attach except when 2 or 3. 2 forces the driver to do a full rescan before the OS GUI boot. 3 forces the driver to rescan in a thread and allows the OS to continue to boot.");
@@ -114,3 +115,8 @@ module_param(rsort_memory_limit_MiB, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(rsort_memory_limit_MiB, "Memory limit in MiBytes for rsort rescan.");
 module_param(use_large_pcie_rx_buffer, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(use_large_pcie_rx_buffer, "If true, use 1024 byte PCIe rx buffer. This improves performance but causes NMIs on some specific hardware.");
+
+// Owned by the porting layer rather than by the driver object, and only read
+// while the first device is enumerated, so it is not writable after load.
+module_param(fio_dev_index_base, int, S_IRUGO);
+MODULE_PARM_DESC(fio_dev_index_base, "First device number to use, for sharing the ioMemory namespace with another generation of the driver. -1 detects the first free number at load time, 0 always enumerates from fct0.");
