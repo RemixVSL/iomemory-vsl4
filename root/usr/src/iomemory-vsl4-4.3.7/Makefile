@@ -131,6 +131,11 @@ rpm:
 	cd $(shell git rev-parse --show-toplevel) && \
 			$(MAKE) rpm
 
+# CONFIG_KLP_BUILD= keeps objtool running on each object file. On kernels
+# built with CONFIG_KLP_BUILD=y (e.g. Ubuntu 26.04, 7.0) kbuild otherwise runs
+# objtool once on the linked module, which includes the prebuilt libkfio blob.
+# objtool fails on the blob, objtool_wrapper hides the failure, and the module
+# loads without .return_sites/.retpoline_sites ("Unpatched return thunk in use").
 modules modules_install: check_target_kernel check_n_fix_kfio_ccver include/fio/port/linux/kfio_config.h add_module_version
 	$(MAKE) \
 	-j$(NCPUS) \
@@ -144,6 +149,7 @@ modules modules_install: check_target_kernel check_n_fix_kfio_ccver include/fio/
 	INSTALL_MOD_PATH=$(INSTALL_ROOT) \
 	KFIO_LIB=$(KFIO_LIB) \
 	objtool=$(shell pwd)/objtool_wrapper \
+	CONFIG_KLP_BUILD= \
 	$@
 
 endif
